@@ -1,0 +1,51 @@
+<!--
+Copyright (c) 2019, salesforce.com, inc.
+All rights reserved.
+Licensed under the BSD 3-Clause license.
+For full license text, see LICENSE.txt file in the repo root or
+https://opensource.org/licenses/BSD-3-Clause
+-->
+<html>
+<head>
+    <title>Sloop Debug</title>
+    <link rel='shortcut icon' type='image/x-icon' href='/webfiles/favicon.ico' />
+</head>
+<body>
+[ <a href="/">Home</a> ][ <a href="/debug/">List Keys</a> ][ <a href="/debug/config/">Config</a> ]<br/><br/>
+
+<table bgcolor="silver" width="500px"><tr><td style="padding: 20px">
+<form action="/debug/" method="get">
+    <label for="table">Time Range:</label><br/>
+    <select name="table" id="table">
+        <option value="watch">watch</option>
+        <option value="ressum">ressum</option>
+        <option value="eventcount">eventcount</option>
+        <option value="watchactivity">watchactivity</option>
+    </select><br><br>
+
+    <label for="keymatch">Key RegEx Filter:</label><br>
+    <input type="text" name="keymatch" id="keymatch"><br><br>
+
+    <label for="maxrows">Max Rows:</label><br>
+    <input type="text" name="maxrows" id="maxrows"><br><br>
+
+    <input type="submit">
+</form>
+</td></tr></table>
+<br/>
+
+<b>Key List</b>:<br/>
+<ol>
+{{range .}}
+  <li><a href='/debug/view?k={{.}}'>{{.}}</a>
+{{end}}
+</ol>
+</body>
+
+<script src="/webfiles/filter.js"></script>
+<script>
+    setText("keymatch", "keymatch", ".*")
+    setText("maxrows", "maxrows", "1000")
+    setDropdown("table", "table", "watch")
+</script>
+</html>

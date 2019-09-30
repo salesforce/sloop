@@ -1,0 +1,36 @@
+html, body {
+	height: 100%;
+	padding: 0px;
+	margin: 0px;
+	overflow: hidden;
+}
+
+.sloopleftnav {
+	background-color: DimGrey;
+	padding-left: 10px;
+	padding-top: 10px;
+	font-family: Arial;
+	font-size: 13px;
+	color: white;
+}
+
+#sloopleftnav a:link { color: lightgray }
+#sloopleftnav a:visited { color: lightgray }
+#sloopleftnav a:hover { color: white }
+#sloopleftnav a:active { color: lightgray }
+
+.custom_progress {
+	display: inline-block;
+	vertical-align: top;
+	text-align: center;
+	height: 100%;
+}
+
+.gantt_task_line .gantt_task_content {
+    padding: 0 0px;
+}
+
+a[target="_blank"]:after {
+	content: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAQElEQVR42qXKwQkAIAxDUUdxtO6/RBQkQZvSi8I/pL4BoGw/XPkh4XigPmsUgh0626AjRsgxHTkUThsG2T/sIlzdTsp52kSS1wAAAABJRU5ErkJggg==);
+	margin: 0 3px 0 5px;
+}

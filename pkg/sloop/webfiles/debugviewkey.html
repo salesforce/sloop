@@ -1,0 +1,24 @@
+<!--
+Copyright (c) 2019, salesforce.com, inc.
+All rights reserved.
+Licensed under the BSD 3-Clause license.
+For full license text, see LICENSE.txt file in the repo root or
+https://opensource.org/licenses/BSD-3-Clause
+-->
+<html>
+  <head>
+      <title>Sloop Debug</title>
+      <link rel='shortcut icon' type='image/x-icon' href='/webfiles/favicon.ico' />
+  </head>
+<body>
+[ <a href="/">Home</a> ][ <a href="/debug/">Back</a>]<br>
+<b>Record View</b><br>
+<table border="1">
+    <tr><td>Key</td><td>{{.Key}}</td></tr>
+    <tr><td>Payload</td><td><pre>{{.Payload}}</pre></td></tr>
+    {{if not (eq "" .ExtraName) }}
+    <tr><td>{{.ExtraName}}</td><td><pre>{{.ExtraValue}}</pre></td></tr>
+    {{end}}
+</table>
+
+</body></html>

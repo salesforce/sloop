@@ -1,0 +1,115 @@
+<!--
+Copyright (c) 2019, salesforce.com, inc.
+All rights reserved.
+Licensed under the BSD 3-Clause license.
+For full license text, see LICENSE.txt file in the repo root or
+https://opensource.org/licenses/BSD-3-Clause
+-->
+<!DOCTYPE html>
+<!--suppress HtmlUnknownTarget, JSUnresolvedVariable -->
+<style type="text/css">
+    body {
+        font-family: sans-serif;
+        font-size: 10px;
+    }
+    .svg-container {
+        border:2px solid #000;
+        height: 100%;
+        overflow: scroll;
+        background-color: whitesmoke;
+    }
+    svg {
+        z-index: -1;
+    }
+</style>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <title>Sloop{{if (ne .CurrentContext "")}} - {{.CurrentContext}}{{end}}</title>
+    <link rel="stylesheet" type="text/css" href="/webfiles/sloop.css">
+    <link rel='shortcut icon' type='image/x-icon' href='/webfiles/favicon.ico'/>
+</head>
+
+<body>
+<div style="display: flex; width:100%; height:100%">
+    <div id="sloopleftnav" class="sloopleftnav" style="height: 100%; width: 250px; padding-right: 20px">
+        <span style="font-size:20px">Sloop v0.2</span><br>
+        <span style="font-size:12px">Kubernetes History Visualization</span><br><br>
+{{if (ne .CurrentContext "")}}
+        <label for="currentContext">Kubernetes Context:</label><br/>
+        <input type="text" id="currentContext" value="{{.CurrentContext}}" disabled="true" style="width:100%"><br><br>
+{{end}}
+        <form action="/" method="get">
+            <!-- Not showing the query drop down as we only have one query at the moment -->
+            <!-- <label for="filterquery">Query:</label><br /> -->
+            <select name="query" id="filterquery" hidden="true"> </select>
+            <!-- <br><br> -->
+
+            <label for="filterlookback">Time Range:</label><br/>
+            <select name="lookback" id="filterlookback" style="width:100%">
+                <option value="1h">1 Hour</option>
+                <option value="3h">3 Hours</option>
+                <option value="6h">6 Hours</option>
+                <option value="12h">12 Hours</option>
+                <option value="24h">1 Day</option>
+                <option value="168h">1 Week</option>
+                <option value="336h">2 Weeks</option>
+            </select><br><br>
+
+            <label for="filternamespace">Filter Namespace:</label><br/>
+            <select name="namespace" id="filternamespace" style="width:100%">
+            </select>
+            <br><br>
+
+            <label for="filterkind">Filter Kind: </label><br/>
+            <select id="filterkind" name="kind" style="width:100%">
+            </select><br><br>
+
+            <label for="filtersort">Sort:</label><br>
+            <select name="sort" id="filtersort" style="width:100%">
+                <option value="starttime">Start Time</option>
+                <option value="mostevents">Most Events</option>
+                <option value="name">Name</option>
+            </select><br><br>
+
+            <label for="filternamematch">Name Filter:</label><br>
+            <input type="text" name="namematch" id="filternamematch" style="width:100%"><br><br>
+
+            <input type="submit">
+        </form>
+
+        <br><br>
+
+        <h2>Links</h2>
+        <a href="/debug/">List Keys</a><br/>
+        <a href="/debug/config">View Config</a><br/>
+        <a href="" id="datafilelink">Query Data File</a><br/>
+        <a href="https://github.com/salesforce/sloop" target="_blank">Source Code on GitHub</a><br/>
+{{range .LeftBarLinks}}
+        <a href="{{.Url}}" target="_blank">{{.Text}}</a><br/>
+{{end}}
+
+    </div><div id="d3_here" class="svg-container" style='width: 100%; height:100%;'>
+    </div>
+    <script src="https://d3js.org/d3.v5.js"></script>
+    <script
+            src="https://code.jquery.com/jquery-3.4.1.min.js"
+            integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+            crossorigin="anonymous"></script>
+    <script
+            src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"
+            integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU="
+            crossorigin="anonymous"></script>
+
+    <script src="https://unpkg.com/axios/dist/axios.min.js" async="" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js" async="" type="text/javascript"></script>
+    <script src="https://unpkg.com/nprogress@0.2.0/nprogress.js" async="" type="text/javascript"></script>
+    <script src="/webfiles/filter.js"></script>
+
+    <script>
+        // When we reload the page this will set the correct selections for the drop-downs based on passed in parameters
+        dataQueryUrl = setFiltersAndReturnQueryUrl("{{.DefaultLookback}}", "{{.DefaultKind}}", "{{.DefaultNamespace}}");
+        document.getElementById("datafilelink").href = dataQueryUrl;
+    </script>
+    <script src="/webfiles/sloop_ui.js"></script>
+    </div>
+</body>

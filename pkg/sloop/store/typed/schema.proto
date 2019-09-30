@@ -1,0 +1,58 @@
+/**
+ * Copyright (c) 2019, salesforce.com, inc.
+ * All rights reserved.
+ * Licensed under the BSD 3-Clause license.
+ * For full license text, see LICENSE.txt file in the repo root or
+ * https://opensource.org/licenses/BSD-3-Clause
+ */
+
+syntax = 'proto3';
+
+package typed;
+
+import "google/protobuf/timestamp.proto";
+
+message KubeWatchResult {
+  enum WatchType {
+    ADD = 0;
+    UPDATE = 1;
+    DELETE = 2;
+  }
+
+  google.protobuf.Timestamp timestamp = 1; // This is a bit of a pain to convert, but uint64 is just as bad
+  string kind = 2;
+  WatchType watchType = 3;
+  string payload = 4;
+}
+
+// Enough information to draw a timeline and hierarchy
+// Key: /<kind>/<namespace>/<name>/<uid>
+message ResourceSummary {
+  google.protobuf.Timestamp firstSeen = 1; // Scoped to this partition
+  google.protobuf.Timestamp lastSeen = 2; // Also scoped to this partition
+  google.protobuf.Timestamp createTime = 3; // Taken from in resource
+  bool deletedAtEnd = 4; // Tells us that the lastSeen time is also when it was deleted
+  // List of relationships.  Direction does not matter.  Examples:
+  // A Pod has a relationship to its namespace, ReplicaSet or StatefulSet, node
+  // A ReplicaSet has a relationship to deployment and namespace
+  // A node might have a relationship to a rack (maybe latery, as this is virtual)
+  // We dont need relationships in both directions.  We can union them at query time
+  // Uses same key format here as this overall table
+  repeated string relationships = 5;
+}
+
+message EventCounts {
+    map<string, int32> mapReasonToCount = 1;
+}
+
+message ResourceEventCounts {
+    map<int64, EventCounts> mapMinToEvents = 1;
+}
+
+// Track when 'watch' occurred for a resource within partition
+message WatchActivity {
+    // List of timestamps where `watch` event did not contain changes from previous event
+    repeated int64 NoChangeAt = 1;
+    // List of timestamps where 'watch' event contained a change from previous event
+    repeated int64 ChangedAt = 2;
+}

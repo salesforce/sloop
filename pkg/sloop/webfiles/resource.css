@@ -1,0 +1,25 @@
+html, body {
+    overflow: auto;
+}
+
+#resource_event_table {
+    font-family: Helvetica, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+#resource_event_table td, #resource_event_table th {
+    border: 1px solid lightgrey;
+    padding: 4px;
+}
+
+#resource_event_table tr:nth-child(even){background-color: whitesmoke;}
+
+#resource_event_table tr:hover {background-color: lightgrey;}
+
+#resource_event_table th {
+    text-align: left;
+    background-color: midnightblue;
+    color: white;
+    cursor:pointer;
+}
