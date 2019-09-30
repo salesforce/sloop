@@ -49,7 +49,7 @@ type kubeWatcherImpl struct {
 	currentContext  string
 }
 
-/* config.yaml snippet
+/* config.yaml snippet - namespace optional
 crds:
 - namespace: csc-sam
   resourceArg: bundles.v1.samcrd.salesforce.com
