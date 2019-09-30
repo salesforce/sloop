@@ -11,18 +11,24 @@ package ingress
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/golang/glog"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
+	"os"
+	"sync"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
-	"k8s.io/client-go/tools/cache"
-	"sync"
 )
 
 /*
@@ -43,22 +49,33 @@ type kubeWatcherImpl struct {
 	currentContext  string
 }
 
+/* config.yaml snippet
+crds:
+- namespace: csc-sam
+  resourceArg: bundles.v1.samcrd.salesforce.com
+ */
+type CrdWatch struct {
+	ResourceArg string `json:"resourceArg"`
+	Namespace   string `json:"namespace,omitempty"`
+}
+
 var (
 	metricIngressKubewatchcount = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchcount"}, []string{"kind", "watchtype", "namespace"})
 	metricIngressKubewatchbytes = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchbytes"}, []string{"kind", "watchtype", "namespace"})
 )
 
 // Todo: Add additional parameters for filtering
-func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.KubeWatchResult, resync time.Duration) (KubeWatcher, error) {
+func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.KubeWatchResult, resync time.Duration, crds []CrdWatch) (KubeWatcher, error) {
 	kw := &kubeWatcherImpl{resync: resync, outchanlock: &sync.Mutex{}}
 	kw.stopChan = make(chan struct{})
 	kw.outchan = outChan
 
-	kw.startInformer(kubeClient, true)
+	kw.startWellKnownInformers(kubeClient, true)
+	kw.startCustomInformers(crds)
 	return kw, nil
 }
 
-func (i *kubeWatcherImpl) startInformer(kubeclient kubernetes.Interface, includeEvents bool) {
+func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interface, includeEvents bool) {
 	i.informerFactory = informers.NewSharedInformerFactory(kubeclient, i.resync)
 
 	i.informerFactory.Apps().V1beta1().Deployments().Informer().AddEventHandler(i.getEventHandlerForResource("Deployment"))
@@ -77,6 +94,36 @@ func (i *kubeWatcherImpl) startInformer(kubeclient kubernetes.Interface, include
 	i.informerFactory.Storage().V1().StorageClasses().Informer().AddEventHandler(i.getEventHandlerForResource("StorageClass"))
 	i.informerFactory.Core().V1().Events().Informer().AddEventHandler(i.getEventHandlerForResource("Event"))
 	i.informerFactory.Start(i.stopChan)
+}
+
+func (i *kubeWatcherImpl) startCustomInformers(requested []CrdWatch) {
+	kubeCfg, err := rest.InClusterConfig()
+	if kubeConfig := os.Getenv("KUBECONFIG"); kubeConfig != "" {
+		kubeCfg, err = clientcmd.BuildConfigFromFlags("", kubeConfig)
+	}
+	if err != nil {
+		glog.Errorf("Failed to read config while starting custom informers: %v", err)
+		return
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(kubeCfg)
+	if err != nil {
+		glog.Errorf("Failed to instantiate client for custom informers: %v", err)
+		return
+	}
+
+	for _, watch := range requested {
+		if watch.ResourceArg == "" {
+			continue
+		}
+		f := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynamicClient, i.resync, watch.Namespace, nil)
+		resource, _ := schema.ParseResourceArg(watch.ResourceArg)
+		informer := f.ForResource(*resource)
+		informer.Informer().AddEventHandler(i.getEventHandlerForResource(resource.Resource))
+
+		glog.Infof("Starting customer informer for: %s  [namespace: %s]", watch.ResourceArg, watch.Namespace)
+		go informer.Informer().Run(i.stopChan)
+	}
 }
 
 func (i *kubeWatcherImpl) getEventHandlerForResource(resourceKind string) cache.ResourceEventHandler {
@@ -138,6 +185,7 @@ func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResul
 	metricIngressKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Inc()
 	metricIngressKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Add(float64(len(resourceJson)))
 
+	glog.V(2).Infof("Informer update - Name: %s, Namespace: %s, ResourceVersion: %s", kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion)
 	watchResult.Payload = resourceJson
 	i.writeToOutChan(watchResult)
 }

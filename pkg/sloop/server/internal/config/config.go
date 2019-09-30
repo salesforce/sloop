@@ -12,6 +12,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/ghodss/yaml"
+	"github.com/golang/glog"
+	"github.com/salesforce/sloop/pkg/sloop/ingress"
 	"github.com/salesforce/sloop/pkg/sloop/webserver"
 	"io/ioutil"
 	"os"
@@ -20,12 +22,14 @@ import (
 
 const sloopConfigEnvVar = "SLOOP_CONFIG"
 
+
 type SloopConfig struct {
 	// These fields can only come from command line
 	ConfigFile string
 	// These fields can only come from file because they use complex types
 	LeftBarLinks  []webserver.LinkTemplate         `json:"leftBarLinks"`
 	ResourceLinks []webserver.ResourceLinkTemplate `json:"resourceLinks"`
+	Crds          []ingress.CrdWatch               `json:"crds"`
 	// Normal fields that can come from file or cmd line
 	DisableKubeWatcher      bool          `json:"disableKubeWatch"`
 	KubeWatchResyncInterval time.Duration `json:"kubeWatchResyncInterval"`
@@ -84,8 +88,10 @@ func Init() *SloopConfig {
 	newConfig := &SloopConfig{}
 
 	configFilename := preParseConfigFlag()
+	glog.Infof("Config flag: %s", configFilename)
 	if configFilename == "" {
 		configFilename = os.Getenv(sloopConfigEnvVar)
+		glog.Infof("Config env: %s", configFilename)
 	}
 	if configFilename != "" {
 		newConfig = loadFromFile(configFilename)
