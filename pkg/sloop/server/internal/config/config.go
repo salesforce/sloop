@@ -33,10 +33,8 @@ type SloopConfig struct {
 	StoreRoot               string        `json:"storeRoot"`
 	MaxLookback             time.Duration `json:"maxLookBack"`
 	MaxDiskMb               int           `json:"maxDiskMb"`
-	DebugDisableWebServer   bool          `json:"disableWebServer"`
 	DebugPlaybackFile       string        `json:"debugPlaybackFile"`
 	DebugRecordFile         string        `json:"debugRecordFile"`
-	DebugRunQuery           string        `json:"runQuery"`
 	UseMockBadger           bool          `json:"mockBadger"`
 	DisableStoreManager     bool          `json:"disableStoreManager"`
 	CleanupFrequency        time.Duration `json:"cleanupFrequency" validate:"min=1h,max=120h"`
@@ -59,10 +57,8 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.StringVar(&config.StoreRoot, "store-root", "./data", "Path to store history data")
 	fs.DurationVar(&config.MaxLookback, "max-look-back", time.Duration(14*24)*time.Hour, "Max history data to keep")
 	fs.IntVar(&config.MaxDiskMb, "max-disk-mb", 32*1024, "Max disk storage in MB")
-	fs.BoolVar(&config.DebugDisableWebServer, "disable-web-server", false, "Disable web server")
 	fs.StringVar(&config.DebugPlaybackFile, "playback-file", "", "Read watch data from a playback file")
 	fs.StringVar(&config.DebugRecordFile, "record-file", "", "Record watch data to a playback file")
-	fs.StringVar(&config.DebugRunQuery, "run-query", "", "Load store, run this one query, and exit")
 	fs.BoolVar(&config.UseMockBadger, "use-mock-badger", false, "Use a fake in-memory mock of badger")
 	fs.BoolVar(&config.DisableStoreManager, "disable-store-manager", false, "Turn off store manager which is to clean up database")
 	fs.DurationVar(&config.CleanupFrequency, "cleanup-frequency", time.Minute,

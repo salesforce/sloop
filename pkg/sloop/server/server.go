@@ -9,6 +9,7 @@ package server
 
 import (
 	"flag"
+	"github.com/pkg/errors"
 	"github.com/salesforce/sloop/pkg/sloop/ingress"
 	"github.com/salesforce/sloop/pkg/sloop/server/internal/config"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
@@ -19,49 +20,43 @@ import (
 
 	"github.com/golang/glog"
 
-	"fmt"
 	"github.com/salesforce/sloop/pkg/sloop/processing"
-	"github.com/salesforce/sloop/pkg/sloop/queries"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/salesforce/sloop/pkg/sloop/storemanager"
 	"github.com/salesforce/sloop/pkg/sloop/webserver"
 	"github.com/spf13/afero"
-	"net/url"
 	"time"
 )
 
 const alsologtostderr = "alsologtostderr"
 
-// For easier use in e2e tests
-// This is a little ugly and we may want a better solution, but if config says
-// to run a single query it returns the output.  When running webserver the output is nil
-func RunWithConfig(conf *config.SloopConfig) ([]byte, error) {
+func RealMain() error {
+	defer glog.Flush()
+	setupStdErrLogging()
+
+	conf := config.Init() // internally this calls flag.parse
+	glog.Infof("SloopConfig: %v", conf.ToYaml())
+
 	err := conf.Validate()
 	if err != nil {
-		return []byte{}, err
+		return errors.Wrap(err, "config validation failed")
 	}
 
 	kubeClient, kubeContext, err := ingress.MakeKubernetesClient(conf.ApiServerHost, conf.UseKubeContext)
 	if err != nil {
-		return []byte{}, err
+		return errors.Wrap(err, "failed to create kubernetes client")
 	}
 
 	// Channel used for updates from ingress to store
 	// The channel is owned by this function, and no external code should close this!
 	kubeWatchChan := make(chan typed.KubeWatchResult, 1000)
 
-	var factory badgerwrap.Factory
-	// Setup badger
-	if conf.UseMockBadger {
-		factory = &badgerwrap.MockFactory{}
-	} else {
-		factory = &badgerwrap.BadgerFactory{}
-	}
+	factory := &badgerwrap.BadgerFactory{}
 
 	storeRootWithKubeContext := path.Join(conf.StoreRoot, kubeContext)
 	db, err := untyped.OpenStore(factory, storeRootWithKubeContext, time.Duration(1)*time.Hour)
 	if err != nil {
-		return []byte{}, fmt.Errorf("failed to init untyped store: %v", err)
+		return errors.Wrap(err, "failed to init untyped store")
 	}
 	defer untyped.CloseStore(db)
 
@@ -74,7 +69,7 @@ func RunWithConfig(conf *config.SloopConfig) ([]byte, error) {
 	if !conf.DisableKubeWatcher {
 		kubeWatcherSource, err = ingress.NewKubeWatcherSource(kubeClient, kubeWatchChan, conf.KubeWatchResyncInterval)
 		if err != nil {
-			return []byte{}, fmt.Errorf("failed to initialize kubeWatcher: %v", err)
+			return errors.Wrap(err, "failed to initialize kubeWatcher")
 		}
 	}
 
@@ -82,7 +77,7 @@ func RunWithConfig(conf *config.SloopConfig) ([]byte, error) {
 	if conf.DebugPlaybackFile != "" {
 		err = ingress.PlayFile(kubeWatchChan, conf.DebugPlaybackFile)
 		if err != nil {
-			return []byte{}, fmt.Errorf("failed to play back file: %v", err)
+			return errors.Wrap(err, "failed to play back file")
 		}
 	}
 
@@ -103,23 +98,22 @@ func RunWithConfig(conf *config.SloopConfig) ([]byte, error) {
 	if conf.DisplayContext != "" {
 		displayContext = conf.DisplayContext
 	}
-	if !conf.DebugDisableWebServer {
-		webConfig := webserver.WebConfig{
-			Port:             conf.Port,
-			WebFilesPath:     conf.WebFilesPath,
-			ConfigYaml:       conf.ToYaml(),
-			MaxLookback:      conf.MaxLookback,
-			DefaultNamespace: conf.DefaultNamespace,
-			DefaultLookback:  conf.DefaultLookback,
-			DefaultResources: conf.DefaultKind,
-			ResourceLinks:    conf.ResourceLinks,
-			LeftBarLinks:     conf.LeftBarLinks,
-			CurrentContext:   displayContext,
-		}
-		err = webserver.Run(webConfig, tables)
-		if err != nil {
-			return []byte{}, fmt.Errorf("failed to run webserver: %v", err)
-		}
+
+	webConfig := webserver.WebConfig{
+		Port:             conf.Port,
+		WebFilesPath:     conf.WebFilesPath,
+		ConfigYaml:       conf.ToYaml(),
+		MaxLookback:      conf.MaxLookback,
+		DefaultNamespace: conf.DefaultNamespace,
+		DefaultLookback:  conf.DefaultLookback,
+		DefaultResources: conf.DefaultKind,
+		ResourceLinks:    conf.ResourceLinks,
+		LeftBarLinks:     conf.LeftBarLinks,
+		CurrentContext:   displayContext,
+	}
+	err = webserver.Run(webConfig, tables)
+	if err != nil {
+		return errors.Wrap(err, "failed to run webserver")
 	}
 
 	// Initiate shutdown with the following order:
@@ -132,18 +126,6 @@ func RunWithConfig(conf *config.SloopConfig) ([]byte, error) {
 	close(kubeWatchChan)
 	processor.Wait()
 
-	if conf.DebugRunQuery != "" {
-		params := url.Values(map[string][]string{
-			queries.NamespaceParam: {queries.AllNamespaces},
-			queries.KindParam:      {queries.AllKinds},
-		})
-		queryData, err := queries.RunQuery(conf.DebugRunQuery, params, tables, conf.MaxLookback, "server")
-		if err != nil {
-			return []byte{}, fmt.Errorf("run debug query failed with: %v", err)
-		}
-		return queryData, nil
-	}
-
 	if recorder != nil {
 		recorder.Close()
 	}
@@ -153,7 +135,7 @@ func RunWithConfig(conf *config.SloopConfig) ([]byte, error) {
 	}
 
 	glog.Infof("RunWithConfig finished")
-	return []byte{}, nil
+	return nil
 }
 
 // By default glog will not print anything to console, which can confuse users
@@ -168,15 +150,4 @@ func setupStdErrLogging() {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func RealMain() error {
-	defer glog.Flush()
-	setupStdErrLogging()
-
-	config := config.Init() // internally this calls flag.parse
-	glog.Infof("SloopConfig: %v", config.ToYaml())
-
-	_, err := RunWithConfig(config)
-	return err
 }
