@@ -11,6 +11,7 @@ package ingress
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
@@ -64,6 +65,10 @@ var (
 	metricIngressKubewatchbytes = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchbytes"}, []string{"kind", "watchtype", "namespace"})
 )
 
+const (
+	KubeConfigEnv = "KUBECONFIG"
+)
+
 // Todo: Add additional parameters for filtering
 func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.KubeWatchResult, resync time.Duration, crds []CrdWatch) (KubeWatcher, error) {
 	kw := &kubeWatcherImpl{resync: resync, outchanlock: &sync.Mutex{}}
@@ -71,7 +76,12 @@ func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.Ku
 	kw.outchan = outChan
 
 	kw.startWellKnownInformers(kubeClient, true)
-	kw.startCustomInformers(crds)
+	if len(crds) != 0 {
+		err := kw.startCustomInformers(crds)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return kw, nil
 }
 
@@ -96,20 +106,18 @@ func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interfac
 	i.informerFactory.Start(i.stopChan)
 }
 
-func (i *kubeWatcherImpl) startCustomInformers(requested []CrdWatch) {
+func (i *kubeWatcherImpl) startCustomInformers(requested []CrdWatch) error {
 	kubeCfg, err := rest.InClusterConfig()
-	if kubeConfig := os.Getenv("KUBECONFIG"); kubeConfig != "" {
+	if kubeConfig := os.Getenv(KubeConfigEnv); kubeConfig != "" {
 		kubeCfg, err = clientcmd.BuildConfigFromFlags("", kubeConfig)
 	}
 	if err != nil {
-		glog.Errorf("Failed to read config while starting custom informers: %v", err)
-		return
+		return errors.Wrap(err, "failed to read config while starting custom informers")
 	}
 
 	dynamicClient, err := dynamic.NewForConfig(kubeCfg)
 	if err != nil {
-		glog.Errorf("Failed to instantiate client for custom informers: %v", err)
-		return
+		return errors.Wrap(err, "failed to instantiate client for custom informers")
 	}
 
 	for _, watch := range requested {
@@ -124,6 +132,8 @@ func (i *kubeWatcherImpl) startCustomInformers(requested []CrdWatch) {
 		glog.Infof("Starting customer informer for: %s  [namespace: %s]", watch.ResourceArg, watch.Namespace)
 		go informer.Informer().Run(i.stopChan)
 	}
+
+	return nil
 }
 
 func (i *kubeWatcherImpl) getEventHandlerForResource(resourceKind string) cache.ResourceEventHandler {
