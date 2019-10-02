@@ -70,7 +70,7 @@ In this mode, data is written to a memory-backed volume and is discarded after e
 ## Contributing
 
 Refer to [CONTRIBUTING.md](CONTRIBUTING.md)<br>
-[Join in our Slack](https://join.slack.com/t/sfdc-sloop/shared_invite/enQtNzgzOTcxOTUzMjM4LTgzMWJhZGU5ZTRjM2ZmNGE5ZDI1OTg4MTc2NDI4ZjAxMTZhMzE1MTc3NTI0M2M0MTcwY2JjOTQ0ZTIzMWU5OWQ)
+[Join our Slack](https://join.slack.com/t/sfdc-sloop/shared_invite/enQtNzgzOTcxOTUzMjM4LTgzMWJhZGU5ZTRjM2ZmNGE5ZDI1OTg4MTc2NDI4ZjAxMTZhMzE1MTc3NTI0M2M0MTcwY2JjOTQ0ZTIzMWU5OWQ)
 
 ## License
 
