@@ -202,7 +202,7 @@ func (t *KubeWatchResultTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]str
 	ok, minPar, maxPar := t.GetMinMaxPartitions(txn)
 	if ok {
 		parDuration := untyped.GetPartitionDuration()
-		for curPar := minPar; curPar < maxPar; {
+		for curPar := minPar; curPar <= maxPar; {
 			resources = append(resources, curPar)
 			// update curPar
 			partInt, err := strconv.ParseInt(curPar, 10, 64)
@@ -217,10 +217,10 @@ func (t *KubeWatchResultTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]str
 }
 
 //todo: need to add unit test
-func (t *KubeWatchResultTable) GetPreviousKey(txn badgerwrap.Txn, key WatchTableKey, keyPrefix WatchTableKey) (WatchTableKey, error) {
+func (t *KubeWatchResultTable) GetPreviousKey(txn badgerwrap.Txn, key *WatchTableKey, keyPrefix *WatchTableKey) (*WatchTableKey, error) {
 	partitionList, err := t.GetUniquePartitionList(txn)
 	if err != nil {
-		return WatchTableKey{}, errors.Wrapf(err, "failed to get partition list from table:%v", t.tableName)
+		return &WatchTableKey{}, errors.Wrapf(err, "failed to get partition list from table:%v", t.tableName)
 	}
 	currentPartition := key.PartitionId
 	for i := len(partitionList) - 1; i >= 0; i-- {
@@ -230,41 +230,43 @@ func (t *KubeWatchResultTable) GetPreviousKey(txn badgerwrap.Txn, key WatchTable
 		} else {
 			prevFound, prevKey, err := t.getLastMatchingKeyInPartition(txn, prePart, key, keyPrefix)
 			if err != nil {
-				return WatchTableKey{}, errors.Wrapf(err, "Failure getting previous key for %v, for partition id:%v", key.String(), prePart)
+				return &WatchTableKey{}, errors.Wrapf(err, "Failure getting previous key for %v, for partition id:%v", key.String(), prePart)
 			}
 			if prevFound && err == nil {
 				return prevKey, nil
 			}
 		}
 	}
-	return WatchTableKey{}, fmt.Errorf("failed to get any previous key in table:%v, for key:%v, keyPrefix:%v", t.tableName, key.String(), keyPrefix)
+	return &WatchTableKey{}, fmt.Errorf("failed to get any previous key in table:%v, for key:%v, keyPrefix:%v", t.tableName, key.String(), keyPrefix)
 }
 
 //todo: need to add unit test
-func (t *KubeWatchResultTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPartition string, key WatchTableKey, keyPrefix WatchTableKey) (bool, WatchTableKey, error) {
+func (t *KubeWatchResultTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPartition string, curKey *WatchTableKey, keyPrefix *WatchTableKey) (bool, *WatchTableKey, error) {
 	iterOpt := badger.DefaultIteratorOptions
 	iterOpt.Reverse = true
 	itr := txn.NewIterator(iterOpt)
 	defer itr.Close()
 
+	oldKey := curKey.String()
+
 	// update partition with current value
-	key.SetPartitionId(curPartition)
-	keySeekStr := key.String()
+	curKey.SetPartitionId(curPartition)
+	keySeekStr := curKey.String() + string(rune(255))
 
 	itr.Seek([]byte(keySeekStr))
 
 	// if the result is same as key, we want to check its previous one
-	keyRes := string(itr.Item().Key())
-	if keyRes == key.String() {
+	if oldKey == string(itr.Item().Key()) {
 		itr.Next()
 	}
+
 	if itr.ValidForPrefix([]byte(keyPrefix.String())) {
-		key := WatchTableKey{}
+		key := &WatchTableKey{}
 		err := key.Parse(string(itr.Item().Key()))
 		if err != nil {
-			return true, WatchTableKey{}, err
+			return true, &WatchTableKey{}, err
 		}
 		return true, key, nil
 	}
-	return false, WatchTableKey{}, nil
+	return false, &WatchTableKey{}, nil
 }

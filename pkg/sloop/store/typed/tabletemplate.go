@@ -202,7 +202,7 @@ func (t *ValueTypeTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]string, e
 	ok, minPar, maxPar := t.GetMinMaxPartitions(txn)
 	if ok {
 		parDuration := untyped.GetPartitionDuration()
-		for curPar := minPar; curPar < maxPar; {
+		for curPar := minPar; curPar <= maxPar; {
 			resources = append(resources, curPar)
 			// update curPar
 			partInt, err := strconv.ParseInt(curPar, 10, 64)
@@ -217,10 +217,10 @@ func (t *ValueTypeTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]string, e
 }
 
 //todo: need to add unit test
-func (t *ValueTypeTable) GetPreviousKey(txn badgerwrap.Txn, key KeyType, keyPrefix KeyType) (KeyType, error) {
+func (t *ValueTypeTable) GetPreviousKey(txn badgerwrap.Txn, key *KeyType, keyPrefix *KeyType) (*KeyType, error) {
 	partitionList, err := t.GetUniquePartitionList(txn)
 	if err != nil {
-		return KeyType{}, errors.Wrapf(err, "failed to get partition list from table:%v", t.tableName)
+		return &KeyType{}, errors.Wrapf(err, "failed to get partition list from table:%v", t.tableName)
 	}
 	currentPartition := key.PartitionId
 	for i := len(partitionList) - 1; i >= 0; i-- {
@@ -230,41 +230,43 @@ func (t *ValueTypeTable) GetPreviousKey(txn badgerwrap.Txn, key KeyType, keyPref
 		} else {
 			prevFound, prevKey, err := t.getLastMatchingKeyInPartition(txn, prePart, key, keyPrefix)
 			if err != nil {
-				return KeyType{}, errors.Wrapf(err, "Failure getting previous key for %v, for partition id:%v", key.String(), prePart)
+				return &KeyType{}, errors.Wrapf(err, "Failure getting previous key for %v, for partition id:%v", key.String(), prePart)
 			}
 			if prevFound && err == nil {
 				return prevKey, nil
 			}
 		}
 	}
-	return KeyType{}, fmt.Errorf("failed to get any previous key in table:%v, for key:%v, keyPrefix:%v", t.tableName, key.String(), keyPrefix)
+	return &KeyType{}, fmt.Errorf("failed to get any previous key in table:%v, for key:%v, keyPrefix:%v", t.tableName, key.String(), keyPrefix)
 }
 
 //todo: need to add unit test
-func (t *ValueTypeTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPartition string, key KeyType, keyPrefix KeyType) (bool, KeyType, error) {
+func (t *ValueTypeTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPartition string, curKey *KeyType, keyPrefix *KeyType) (bool, *KeyType, error) {
 	iterOpt := badger.DefaultIteratorOptions
 	iterOpt.Reverse = true
 	itr := txn.NewIterator(iterOpt)
 	defer itr.Close()
 
+	oldKey := curKey.String()
+
 	// update partition with current value
-	key.SetPartitionId(curPartition)
-	keySeekStr := key.String()
+	curKey.SetPartitionId(curPartition)
+	keySeekStr := curKey.String() + string(rune(255))
 
 	itr.Seek([]byte(keySeekStr))
 
 	// if the result is same as key, we want to check its previous one
-	keyRes := string(itr.Item().Key())
-	if keyRes == key.String() {
+	if oldKey == string(itr.Item().Key()) {
 		itr.Next()
 	}
+
 	if itr.ValidForPrefix([]byte(keyPrefix.String())) {
-		key := KeyType{}
+		key := &KeyType{}
 		err := key.Parse(string(itr.Item().Key()))
 		if err != nil {
-			return true, KeyType{}, err
+			return true, &KeyType{}, err
 		}
 		return true, key, nil
 	}
-	return false, KeyType{}, nil
+	return false, &KeyType{}, nil
 }

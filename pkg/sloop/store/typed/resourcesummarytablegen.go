@@ -202,7 +202,7 @@ func (t *ResourceSummaryTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]str
 	ok, minPar, maxPar := t.GetMinMaxPartitions(txn)
 	if ok {
 		parDuration := untyped.GetPartitionDuration()
-		for curPar := minPar; curPar < maxPar; {
+		for curPar := minPar; curPar <= maxPar; {
 			resources = append(resources, curPar)
 			// update curPar
 			partInt, err := strconv.ParseInt(curPar, 10, 64)
@@ -217,10 +217,10 @@ func (t *ResourceSummaryTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]str
 }
 
 //todo: need to add unit test
-func (t *ResourceSummaryTable) GetPreviousKey(txn badgerwrap.Txn, key ResourceSummaryKey, keyPrefix ResourceSummaryKey) (ResourceSummaryKey, error) {
+func (t *ResourceSummaryTable) GetPreviousKey(txn badgerwrap.Txn, key *ResourceSummaryKey, keyPrefix *ResourceSummaryKey) (*ResourceSummaryKey, error) {
 	partitionList, err := t.GetUniquePartitionList(txn)
 	if err != nil {
-		return ResourceSummaryKey{}, errors.Wrapf(err, "failed to get partition list from table:%v", t.tableName)
+		return &ResourceSummaryKey{}, errors.Wrapf(err, "failed to get partition list from table:%v", t.tableName)
 	}
 	currentPartition := key.PartitionId
 	for i := len(partitionList) - 1; i >= 0; i-- {
@@ -230,41 +230,43 @@ func (t *ResourceSummaryTable) GetPreviousKey(txn badgerwrap.Txn, key ResourceSu
 		} else {
 			prevFound, prevKey, err := t.getLastMatchingKeyInPartition(txn, prePart, key, keyPrefix)
 			if err != nil {
-				return ResourceSummaryKey{}, errors.Wrapf(err, "Failure getting previous key for %v, for partition id:%v", key.String(), prePart)
+				return &ResourceSummaryKey{}, errors.Wrapf(err, "Failure getting previous key for %v, for partition id:%v", key.String(), prePart)
 			}
 			if prevFound && err == nil {
 				return prevKey, nil
 			}
 		}
 	}
-	return ResourceSummaryKey{}, fmt.Errorf("failed to get any previous key in table:%v, for key:%v, keyPrefix:%v", t.tableName, key.String(), keyPrefix)
+	return &ResourceSummaryKey{}, fmt.Errorf("failed to get any previous key in table:%v, for key:%v, keyPrefix:%v", t.tableName, key.String(), keyPrefix)
 }
 
 //todo: need to add unit test
-func (t *ResourceSummaryTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPartition string, key ResourceSummaryKey, keyPrefix ResourceSummaryKey) (bool, ResourceSummaryKey, error) {
+func (t *ResourceSummaryTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPartition string, curKey *ResourceSummaryKey, keyPrefix *ResourceSummaryKey) (bool, *ResourceSummaryKey, error) {
 	iterOpt := badger.DefaultIteratorOptions
 	iterOpt.Reverse = true
 	itr := txn.NewIterator(iterOpt)
 	defer itr.Close()
 
+	oldKey := curKey.String()
+
 	// update partition with current value
-	key.SetPartitionId(curPartition)
-	keySeekStr := key.String()
+	curKey.SetPartitionId(curPartition)
+	keySeekStr := curKey.String() + string(rune(255))
 
 	itr.Seek([]byte(keySeekStr))
 
 	// if the result is same as key, we want to check its previous one
-	keyRes := string(itr.Item().Key())
-	if keyRes == key.String() {
+	if oldKey == string(itr.Item().Key()) {
 		itr.Next()
 	}
+
 	if itr.ValidForPrefix([]byte(keyPrefix.String())) {
-		key := ResourceSummaryKey{}
+		key := &ResourceSummaryKey{}
 		err := key.Parse(string(itr.Item().Key()))
 		if err != nil {
-			return true, ResourceSummaryKey{}, err
+			return true, &ResourceSummaryKey{}, err
 		}
 		return true, key, nil
 	}
-	return false, ResourceSummaryKey{}, nil
+	return false, &ResourceSummaryKey{}, nil
 }

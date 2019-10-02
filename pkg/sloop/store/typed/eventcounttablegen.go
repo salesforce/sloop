@@ -202,7 +202,7 @@ func (t *ResourceEventCountsTable) GetUniquePartitionList(txn badgerwrap.Txn) ([
 	ok, minPar, maxPar := t.GetMinMaxPartitions(txn)
 	if ok {
 		parDuration := untyped.GetPartitionDuration()
-		for curPar := minPar; curPar < maxPar; {
+		for curPar := minPar; curPar <= maxPar; {
 			resources = append(resources, curPar)
 			// update curPar
 			partInt, err := strconv.ParseInt(curPar, 10, 64)
@@ -217,10 +217,10 @@ func (t *ResourceEventCountsTable) GetUniquePartitionList(txn badgerwrap.Txn) ([
 }
 
 //todo: need to add unit test
-func (t *ResourceEventCountsTable) GetPreviousKey(txn badgerwrap.Txn, key EventCountKey, keyPrefix EventCountKey) (EventCountKey, error) {
+func (t *ResourceEventCountsTable) GetPreviousKey(txn badgerwrap.Txn, key *EventCountKey, keyPrefix *EventCountKey) (*EventCountKey, error) {
 	partitionList, err := t.GetUniquePartitionList(txn)
 	if err != nil {
-		return EventCountKey{}, errors.Wrapf(err, "failed to get partition list from table:%v", t.tableName)
+		return &EventCountKey{}, errors.Wrapf(err, "failed to get partition list from table:%v", t.tableName)
 	}
 	currentPartition := key.PartitionId
 	for i := len(partitionList) - 1; i >= 0; i-- {
@@ -230,41 +230,43 @@ func (t *ResourceEventCountsTable) GetPreviousKey(txn badgerwrap.Txn, key EventC
 		} else {
 			prevFound, prevKey, err := t.getLastMatchingKeyInPartition(txn, prePart, key, keyPrefix)
 			if err != nil {
-				return EventCountKey{}, errors.Wrapf(err, "Failure getting previous key for %v, for partition id:%v", key.String(), prePart)
+				return &EventCountKey{}, errors.Wrapf(err, "Failure getting previous key for %v, for partition id:%v", key.String(), prePart)
 			}
 			if prevFound && err == nil {
 				return prevKey, nil
 			}
 		}
 	}
-	return EventCountKey{}, fmt.Errorf("failed to get any previous key in table:%v, for key:%v, keyPrefix:%v", t.tableName, key.String(), keyPrefix)
+	return &EventCountKey{}, fmt.Errorf("failed to get any previous key in table:%v, for key:%v, keyPrefix:%v", t.tableName, key.String(), keyPrefix)
 }
 
 //todo: need to add unit test
-func (t *ResourceEventCountsTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPartition string, key EventCountKey, keyPrefix EventCountKey) (bool, EventCountKey, error) {
+func (t *ResourceEventCountsTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPartition string, curKey *EventCountKey, keyPrefix *EventCountKey) (bool, *EventCountKey, error) {
 	iterOpt := badger.DefaultIteratorOptions
 	iterOpt.Reverse = true
 	itr := txn.NewIterator(iterOpt)
 	defer itr.Close()
 
+	oldKey := curKey.String()
+
 	// update partition with current value
-	key.SetPartitionId(curPartition)
-	keySeekStr := key.String()
+	curKey.SetPartitionId(curPartition)
+	keySeekStr := curKey.String() + string(rune(255))
 
 	itr.Seek([]byte(keySeekStr))
 
 	// if the result is same as key, we want to check its previous one
-	keyRes := string(itr.Item().Key())
-	if keyRes == key.String() {
+	if oldKey == string(itr.Item().Key()) {
 		itr.Next()
 	}
+
 	if itr.ValidForPrefix([]byte(keyPrefix.String())) {
-		key := EventCountKey{}
+		key := &EventCountKey{}
 		err := key.Parse(string(itr.Item().Key()))
 		if err != nil {
-			return true, EventCountKey{}, err
+			return true, &EventCountKey{}, err
 		}
 		return true, key, nil
 	}
-	return false, EventCountKey{}, nil
+	return false, &EventCountKey{}, nil
 }

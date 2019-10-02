@@ -53,7 +53,7 @@ type kubeWatcherImpl struct {
 crds:
 - namespace: csc-sam
   resourceArg: bundles.v1.samcrd.salesforce.com
- */
+*/
 type CrdWatch struct {
 	ResourceArg string `json:"resourceArg"`
 	Namespace   string `json:"namespace,omitempty"`
