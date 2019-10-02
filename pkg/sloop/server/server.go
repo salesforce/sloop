@@ -67,7 +67,7 @@ func RealMain() error {
 	// Real kubernetes watcher
 	var kubeWatcherSource ingress.KubeWatcher
 	if !conf.DisableKubeWatcher {
-		kubeWatcherSource, err = ingress.NewKubeWatcherSource(kubeClient, kubeWatchChan, conf.KubeWatchResyncInterval)
+		kubeWatcherSource, err = ingress.NewKubeWatcherSource(kubeClient, kubeWatchChan, conf.KubeWatchResyncInterval, conf.Crds)
 		if err != nil {
 			return errors.Wrap(err, "failed to initialize kubeWatcher")
 		}
