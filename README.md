@@ -69,7 +69,8 @@ In this mode, data is written to a memory-backed volume and is discarded after e
 
 ## Contributing
 
-Refer to [CONTRIBUTING.md](CONTRIBUTING.md)
+Refer to [CONTRIBUTING.md](CONTRIBUTING.md)<br>
+[Join in our Slack](https://app.slack.com/client/TNT9SGV17/CNN8BSEQ3)
 
 ## License
 
