@@ -21,7 +21,6 @@ import (
 
 const sloopConfigEnvVar = "SLOOP_CONFIG"
 
-
 type SloopConfig struct {
 	// These fields can only come from command line
 	ConfigFile string
