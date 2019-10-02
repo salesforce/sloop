@@ -38,34 +38,6 @@ func Test_EventCountTableKey_ParseCorrect(t *testing.T) {
 	assert.Equal(t, someUid, k.Uid)
 }
 
-func helper_update_eventcount_table(t *testing.T) (badgerwrap.DB, *ResourceEventCountsTable) {
-	untyped.TestHookSetPartitionDuration(time.Hour)
-	var keys []string
-	for i := 'a'; i < 'd'; i++ {
-		// add keys in ascending order
-		keys = append(keys, NewEventCountKey(someTs, someKind, someNamespace, someName+string(i), someUid).String())
-	}
-	expectedResult := &ResourceEventCounts{MapMinToEvents: make(map[int64]*EventCounts)}
-	expectedResult.MapMinToEvents[someMinute] = &EventCounts{MapReasonToCount: make(map[string]int32)}
-	expectedResult.MapMinToEvents[someMinute].MapReasonToCount[someReason] = someCount
-
-	b, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
-	assert.Nil(t, err)
-	et := OpenResourceEventCountsTable()
-	err = b.Update(func(txn badgerwrap.Txn) error {
-		var txerr error
-		for _, key := range keys {
-			txerr = et.Set(txn, key, expectedResult)
-			if txerr != nil {
-				return txerr
-			}
-		}
-		return nil
-	})
-	assert.Nil(t, err)
-	return b, et
-}
-
 func Test_EventCount_PutThenGet_SameData(t *testing.T) {
 	untyped.TestHookSetPartitionDuration(time.Hour)
 	key := NewEventCountKey(someTs, someKind, someNamespace, someName, someUid).String()
@@ -101,7 +73,7 @@ func Test_EventCount_PutThenGet_SameData(t *testing.T) {
 }
 
 func Test_EventCount_TestMinAndMaxKeys(t *testing.T) {
-	db, rt := helper_update_eventcount_table(t)
+	db, rt := helper_update_ResourceEventCountsTable(t, (&EventCountKey{}).SetTestKeys(), (&EventCountKey{}).SetTestValue())
 	var minKey string
 	var maxKey string
 	err := db.View(func(txn badgerwrap.Txn) error {
@@ -110,12 +82,12 @@ func Test_EventCount_TestMinAndMaxKeys(t *testing.T) {
 		return nil
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, "/eventcount/001546398000/somekind/somenamespace/somenamea/68510937-4ffc-11e9-8e26-1418775557c8", minKey)
-	assert.Equal(t, "/eventcount/001546398000/somekind/somenamespace/somenamec/68510937-4ffc-11e9-8e26-1418775557c8", maxKey)
+	assert.Equal(t, "/eventcount/001546398000/somekind/somenamespace/somename/68510937-4ffc-11e9-8e26-1418775557c80", minKey)
+	assert.Equal(t, "/eventcount/001546405200/somekind/somenamespace/somenamec/68510937-4ffc-11e9-8e26-1418775557c8", maxKey)
 }
 
 func Test_EventCount_TestGetMinMaxPartitions(t *testing.T) {
-	db, rt := helper_update_eventcount_table(t)
+	db, rt := helper_update_ResourceEventCountsTable(t, (&EventCountKey{}).SetTestKeys(), (&EventCountKey{}).SetTestValue())
 	var minPartition string
 	var maxPartition string
 	var found bool
@@ -126,8 +98,106 @@ func Test_EventCount_TestGetMinMaxPartitions(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.True(t, found)
-	assert.Equal(t, untyped.GetPartitionId(someTs), minPartition)
-	assert.Equal(t, untyped.GetPartitionId(someTs), maxPartition)
+	assert.Equal(t, someMinPartition, minPartition)
+	assert.Equal(t, someMaxPartition, maxPartition)
+}
+
+func Test_EventCount_GetPreviousKey_Success(t *testing.T) {
+	db, wt := helper_update_ResourceEventCountsTable(t, (&EventCountKey{}).SetTestKeys(), (&EventCountKey{}).SetTestValue())
+	var partRes *EventCountKey
+	var err1 error
+	curKey := NewEventCountKey(someTs.Add(2*time.Hour), someKind, someNamespace, someName+"c", someUid)
+	keyPrefix := NewEventCountKey(someTs.Add(1*time.Hour), someKind, someNamespace, someName+"b", someUid)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
+		return err1
+	})
+	assert.Nil(t, err)
+	expectedKey := NewEventCountKey(someTs.Add(1*time.Hour), someKind, someNamespace, someName+"b", someUid)
+	assert.Equal(t, expectedKey, partRes)
+}
+
+func Test_EventCount_GetPreviousKey_Fail(t *testing.T) {
+	db, wt := helper_update_ResourceEventCountsTable(t, (&EventCountKey{}).SetTestKeys(), (&EventCountKey{}).SetTestValue())
+	var partRes *EventCountKey
+	var err1 error
+	curKey := NewEventCountKey(someTs.Add(2*time.Hour), someKind, someNamespace, someName, someUid)
+	keyPrefix := NewEventCountKey(someTs.Add(1*time.Hour), someKind+"b", someNamespace, someName, someUid)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
+		return err1
+	})
+	assert.NotNil(t, err)
+	assert.Equal(t, &EventCountKey{}, partRes)
+}
+
+func Test_EventCount_getLastMatchingKeyInPartition_FoundInPreviousPartition(t *testing.T) {
+	db, wt := helper_update_ResourceEventCountsTable(t, (&EventCountKey{}).SetTestKeys(), (&EventCountKey{}).SetTestValue())
+	var keyRes *EventCountKey
+	var err1 error
+	var found bool
+	curKey := NewEventCountKey(someTs.Add(2*time.Hour), someKind, someNamespace, someName+"c", someUid)
+	keyPrefix := NewEventCountKey(someTs.Add(1*time.Hour), someKind, someNamespace, someName+"b", someUid)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMiddlePartition, curKey, keyPrefix)
+		return err1
+	})
+	assert.True(t, found)
+	expectedKey := NewEventCountKey(someTs.Add(1*time.Hour), someKind, someNamespace, someName+"b", someUid)
+	assert.Equal(t, expectedKey, keyRes)
+	assert.Nil(t, err)
+}
+
+func Test_EventCount_getLastMatchingKeyInPartition_FoundInSamePartition(t *testing.T) {
+	db, wt := helper_update_ResourceEventCountsTable(t, (&EventCountKey{}).SetTestKeys(), (&EventCountKey{}).SetTestValue())
+	var keyRes *EventCountKey
+	var err1 error
+	var found bool
+	curKey := NewEventCountKey(someTs, someKind, someNamespace, someName+"a", someUid)
+	keyPrefix := NewEventCountKey(someTs, someKind, someNamespace, someName, someUid+"0")
+	err := db.View(func(txn badgerwrap.Txn) error {
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyPrefix)
+		return err1
+	})
+
+	assert.True(t, found)
+	expectedKey := NewEventCountKey(someTs, someKind, someNamespace, someName, someUid+"0")
+	assert.Equal(t, expectedKey, keyRes)
+	assert.Nil(t, err)
+}
+
+func Test_EventCount_getLastMatchingKeyInPartition_SameKeySearch(t *testing.T) {
+	db, wt := helper_update_ResourceEventCountsTable(t, (&EventCountKey{}).SetTestKeys(), (&EventCountKey{}).SetTestValue())
+	var keyRes *EventCountKey
+	var err1 error
+	var found bool
+	curKey := NewEventCountKey(someTs, someKind, someNamespace, someName+"a", someUid)
+	keyPrefix := NewEventCountKey(someTs, someKind, someNamespace, someName+"a", someUid)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyPrefix)
+		return err1
+	})
+
+	assert.False(t, found)
+	assert.Equal(t, &EventCountKey{}, keyRes)
+	assert.Nil(t, err)
+}
+
+func Test_EventCount_getLastMatchingKeyInPartition_NotFound(t *testing.T) {
+	db, wt := helper_update_ResourceEventCountsTable(t, (&EventCountKey{}).SetTestKeys(), (&EventCountKey{}).SetTestValue())
+	var keyRes *EventCountKey
+	var err1 error
+	var found bool
+	curKey := NewEventCountKey(someTs.Add(2*time.Hour), someKind, someNamespace, someName, someUid)
+	keyPrefix := NewEventCountKey(someTs, someKind, someNamespace, someName+"dfd", someUid)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyPrefix)
+		return err1
+	})
+
+	assert.False(t, found)
+	assert.Equal(t, &EventCountKey{}, keyRes)
+	assert.Nil(t, err)
 }
 
 func (_ *EventCountKey) GetTestKey() string {
@@ -137,4 +207,27 @@ func (_ *EventCountKey) GetTestKey() string {
 
 func (_ *EventCountKey) GetTestValue() *ResourceEventCounts {
 	return &ResourceEventCounts{}
+}
+
+func (_ *EventCountKey) SetTestKeys() []string {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	var keys []string
+
+	//add another key in same partition for testing purpose
+	keys = append(keys, NewEventCountKey(someTs, someKind, someNamespace, someName, someUid+"0").String())
+	gap := 0
+	for i := 'a'; i < 'd'; i++ {
+		// add keys in ascending order
+		keys = append(keys, NewEventCountKey(someTs.Add(time.Hour*time.Duration(gap)), someKind, someNamespace, someName+string(i), someUid).String())
+		gap++
+	}
+	return keys
+}
+
+func (_ *EventCountKey) SetTestValue() *ResourceEventCounts {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	expectedResult := &ResourceEventCounts{MapMinToEvents: make(map[int64]*EventCounts)}
+	expectedResult.MapMinToEvents[someMinute] = &EventCounts{MapReasonToCount: make(map[string]int32)}
+	expectedResult.MapMinToEvents[someMinute].MapReasonToCount[someReason] = someCount
+	return expectedResult
 }

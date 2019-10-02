@@ -234,7 +234,6 @@ func Test_ResourceSummary_TestGetMinMaxParititons(t *testing.T) {
 }
 
 func Test_ResourceSummary_RangeReadWithTimeRange(t *testing.T) {
-	var someTs = time.Date(2019, 1, 2, 3, 4, 5, 6, time.UTC)
 	keysFn := func() []string {
 		var keys []string
 		for i := 'a'; i < 'c'; i++ {
@@ -273,6 +272,104 @@ func Test_ResourceSummary_RangeReadWithTimeRange(t *testing.T) {
 	assert.Contains(t, retval, *expectedKey)
 }
 
+func Test_ResourceSummary_GetPreviousKey_Success(t *testing.T) {
+	db, wt := helper_update_ResourceSummaryTable(t, (&ResourceSummaryKey{}).SetTestKeys(), (&ResourceSummaryKey{}).SetTestValue())
+	var partRes *ResourceSummaryKey
+	var err1 error
+	curKey := NewResourceSummaryKey(someTs.Add(2*time.Hour), someKind+"c", someNamespace, someName+"c", someUid)
+	keyPrefix := NewResourceSummaryKey(someTs.Add(1*time.Hour), someKind+"b", someNamespace, someName+"b", someUid)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
+		return err1
+	})
+	assert.Nil(t, err)
+	expectedKey := NewResourceSummaryKey(someTs.Add(1*time.Hour), someKind+"b", someNamespace, someName+"b", someUid)
+	assert.Equal(t, expectedKey, partRes)
+}
+
+func Test_ResourceSummary_GetPreviousKey_Fail(t *testing.T) {
+	db, wt := helper_update_ResourceSummaryTable(t, (&ResourceSummaryKey{}).SetTestKeys(), (&ResourceSummaryKey{}).SetTestValue())
+	var partRes *ResourceSummaryKey
+	var err1 error
+	curKey := NewResourceSummaryKey(someTs.Add(2*time.Hour), someKind, someNamespace, someName, someUid)
+	keyPrefix := NewResourceSummaryKey(someTs.Add(1*time.Hour), someKind+"b", someNamespace, someName, someUid)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
+		return err1
+	})
+	assert.NotNil(t, err)
+	assert.Equal(t, &ResourceSummaryKey{}, partRes)
+}
+
+func Test_ResourceSummary_getLastMatchingKeyInPartition_FoundInPreviousPartition(t *testing.T) {
+	db, wt := helper_update_ResourceSummaryTable(t, (&ResourceSummaryKey{}).SetTestKeys(), (&ResourceSummaryKey{}).SetTestValue())
+	var keyRes *ResourceSummaryKey
+	var err1 error
+	var found bool
+	curKey := NewResourceSummaryKey(someTs.Add(2*time.Hour), someKind+"c", someNamespace, someName+"c", someUid)
+	keyPrefix := NewResourceSummaryKey(someTs.Add(1*time.Hour), someKind+"b", someNamespace, someName+"b", someUid)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMiddlePartition, curKey, keyPrefix)
+		return err1
+	})
+	assert.True(t, found)
+	expectedKey := NewResourceSummaryKey(someTs.Add(1*time.Hour), someKind+"b", someNamespace, someName+"b", someUid)
+	assert.Equal(t, expectedKey, keyRes)
+	assert.Nil(t, err)
+}
+
+func Test_ResourceSummary_getLastMatchingKeyInPartition_FoundInSamePartition(t *testing.T) {
+	db, wt := helper_update_ResourceSummaryTable(t, (&ResourceSummaryKey{}).SetTestKeys(), (&ResourceSummaryKey{}).SetTestValue())
+	var keyRes *ResourceSummaryKey
+	var err1 error
+	var found bool
+	curKey := NewResourceSummaryKey(someTs, someKind+"a", someNamespace, someName+"a", someUid)
+	keyPrefix := NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+"0")
+	err := db.View(func(txn badgerwrap.Txn) error {
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyPrefix)
+		return err1
+	})
+
+	assert.True(t, found)
+	expectedKey := NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+"0")
+	assert.Equal(t, expectedKey, keyRes)
+	assert.Nil(t, err)
+}
+
+func Test_ResourceSummary_getLastMatchingKeyInPartition_SameKeySearch(t *testing.T) {
+	db, wt := helper_update_ResourceSummaryTable(t, (&ResourceSummaryKey{}).SetTestKeys(), (&ResourceSummaryKey{}).SetTestValue())
+	var keyRes *ResourceSummaryKey
+	var err1 error
+	var found bool
+	curKey := NewResourceSummaryKey(someTs, someKind+"a", someNamespace, someName+"a", someUid)
+	keyPrefix := NewResourceSummaryKey(someTs, someKind+"a", someNamespace, someName+"a", someUid)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyPrefix)
+		return err1
+	})
+
+	assert.False(t, found)
+	assert.Equal(t, &ResourceSummaryKey{}, keyRes)
+	assert.Nil(t, err)
+}
+
+func Test_ResourceSummary_getLastMatchingKeyInPartition_NotFound(t *testing.T) {
+	db, wt := helper_update_ResourceSummaryTable(t, (&ResourceSummaryKey{}).SetTestKeys(), (&ResourceSummaryKey{}).SetTestValue())
+	var keyRes *ResourceSummaryKey
+	var err1 error
+	var found bool
+	curKey := NewResourceSummaryKey(someTs.Add(2*time.Hour), someKind, someNamespace, someName, someUid)
+	keyPrefix := NewResourceSummaryKey(someTs, someKind+"c", someNamespace, someName, someUid)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyPrefix)
+		return err1
+	})
+
+	assert.False(t, found)
+	assert.Equal(t, &ResourceSummaryKey{}, keyRes)
+	assert.Nil(t, err)
+}
+
 func (_ *ResourceSummaryKey) GetTestKey() string {
 	k := NewResourceSummaryKey(someTs, "someKind", "someNamespace", "someName", "someUuid")
 	return k.String()
@@ -280,4 +377,22 @@ func (_ *ResourceSummaryKey) GetTestKey() string {
 
 func (_ *ResourceSummaryKey) GetTestValue() *ResourceSummary {
 	return &ResourceSummary{}
+}
+
+func (_ *ResourceSummaryKey) SetTestKeys() []string {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	var keys []string
+	keys = append(keys, NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+"0").String())
+	gap := 0
+	for i := 'a'; i < 'd'; i++ {
+		// add keys in ascending order
+		keys = append(keys, NewResourceSummaryKey(someTs.Add(time.Hour*time.Duration(gap)), someKind+string(i), someNamespace, someName+string(i), someUid).String())
+		gap++
+	}
+	return keys
+}
+
+func (_ *ResourceSummaryKey) SetTestValue() *ResourceSummary {
+	createTimeProto, _ := ptypes.TimestampProto(someFirstSeenTime)
+	return &ResourceSummary{FirstSeen: createTimeProto}
 }

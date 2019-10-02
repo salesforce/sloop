@@ -132,7 +132,6 @@ func (t *ValueTypeTable) GetMinMaxPartitions(txn badgerwrap.Txn) (bool, string, 
 	return true, minKey.PartitionId, maxKey.PartitionId
 }
 
-//todo: need to add unit test
 func (t *ValueTypeTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]string, error) {
 	resources := []string{}
 	ok, minPar, maxPar := t.GetMinMaxPartitions(txn)
@@ -152,7 +151,6 @@ func (t *ValueTypeTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]string, e
 	return resources, nil
 }
 
-//todo: need to add unit test
 func (t *ValueTypeTable) GetPreviousKey(txn badgerwrap.Txn, key *KeyType, keyComparator *KeyType) (*KeyType, error) {
 	partitionList, err := t.GetUniquePartitionList(txn)
 	if err != nil {
@@ -176,7 +174,6 @@ func (t *ValueTypeTable) GetPreviousKey(txn badgerwrap.Txn, key *KeyType, keyCom
 	return &KeyType{}, fmt.Errorf("failed to get any previous key in table:%v, for key:%v, keyComparator:%v", t.tableName, key.String(), keyComparator)
 }
 
-//todo: need to add unit test
 func (t *ValueTypeTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPartition string, curKey *KeyType, keyComparator *KeyType) (bool, *KeyType, error) {
 	iterOpt := badger.DefaultIteratorOptions
 	iterOpt.Reverse = true

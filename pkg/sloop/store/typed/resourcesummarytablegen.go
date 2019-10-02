@@ -132,7 +132,6 @@ func (t *ResourceSummaryTable) GetMinMaxPartitions(txn badgerwrap.Txn) (bool, st
 	return true, minKey.PartitionId, maxKey.PartitionId
 }
 
-//todo: need to add unit test
 func (t *ResourceSummaryTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]string, error) {
 	resources := []string{}
 	ok, minPar, maxPar := t.GetMinMaxPartitions(txn)
@@ -152,7 +151,6 @@ func (t *ResourceSummaryTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]str
 	return resources, nil
 }
 
-//todo: need to add unit test
 func (t *ResourceSummaryTable) GetPreviousKey(txn badgerwrap.Txn, key *ResourceSummaryKey, keyComparator *ResourceSummaryKey) (*ResourceSummaryKey, error) {
 	partitionList, err := t.GetUniquePartitionList(txn)
 	if err != nil {
@@ -176,7 +174,6 @@ func (t *ResourceSummaryTable) GetPreviousKey(txn badgerwrap.Txn, key *ResourceS
 	return &ResourceSummaryKey{}, fmt.Errorf("failed to get any previous key in table:%v, for key:%v, keyComparator:%v", t.tableName, key.String(), keyComparator)
 }
 
-//todo: need to add unit test
 func (t *ResourceSummaryTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPartition string, curKey *ResourceSummaryKey, keyComparator *ResourceSummaryKey) (bool, *ResourceSummaryKey, error) {
 	iterOpt := badger.DefaultIteratorOptions
 	iterOpt.Reverse = true

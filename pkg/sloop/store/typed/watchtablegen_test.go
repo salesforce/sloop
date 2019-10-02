@@ -48,5 +48,67 @@ func Test_KubeWatchResultTable_SetWorks(t *testing.T) {
 		return nil
 	})
 	assert.Nil(t, err)
+}
 
+func helper_update_KubeWatchResultTable(t *testing.T, keys []string, val *KubeWatchResult) (badgerwrap.DB, *KubeWatchResultTable) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	b, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
+	assert.Nil(t, err)
+	wt := OpenKubeWatchResultTable()
+	err = b.Update(func(txn badgerwrap.Txn) error {
+		var txerr error
+		for _, key := range keys {
+			txerr = wt.Set(txn, key, val)
+			if txerr != nil {
+				return txerr
+			}
+		}
+		// Add some keys outside the range
+		txerr = txn.Set([]byte("/a/123/"), []byte{})
+		if txerr != nil {
+			return txerr
+		}
+		txerr = txn.Set([]byte("/zzz/123/"), []byte{})
+		if txerr != nil {
+			return txerr
+		}
+		return nil
+	})
+	assert.Nil(t, err)
+	return b, wt
+}
+
+func Test_KubeWatchResultTable_GetUniquePartitionList_Success(t *testing.T) {
+	if helper_KubeWatchResult_ShouldSkip() {
+		return
+	}
+
+	db, wt := helper_update_KubeWatchResultTable(t, (&WatchTableKey{}).SetTestKeys(), (&WatchTableKey{}).SetTestValue())
+	var partList []string
+	var err1 error
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partList, err1 = wt.GetUniquePartitionList(txn)
+		return nil
+	})
+	assert.Nil(t, err)
+	assert.Nil(t, err1)
+	assert.Len(t, partList, 3)
+	assert.Contains(t, partList, someMinPartition)
+	assert.Contains(t, partList, someMaxPartition)
+}
+
+func Test_KubeWatchResultTable_GetUniquePartitionList_EmptyPartition(t *testing.T) {
+	if helper_KubeWatchResult_ShouldSkip() {
+		return
+	}
+
+	db, wt := helper_update_KubeWatchResultTable(t, []string{}, &KubeWatchResult{})
+	var partList []string
+	var err1 error
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partList, err1 = wt.GetUniquePartitionList(txn)
+		return err1
+	})
+	assert.Nil(t, err)
+	assert.Len(t, partList, 0)
 }
