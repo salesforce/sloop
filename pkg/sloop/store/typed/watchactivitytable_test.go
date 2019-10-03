@@ -66,7 +66,7 @@ func Test_WatchActivity_TestMinAndMaxKeys(t *testing.T) {
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, "/watchactivity/001546398000/somekind/somenamespace/somename/68510937-4ffc-11e9-8e26-1418775557c8", minKey)
-	assert.Equal(t, "/watchactivity/001546405200/somekind/somenamespace/somename/68510937-4ffc-11e9-8e26-1418775557c8", maxKey)
+	assert.Equal(t, "/watchactivity/001546405200/somekind/somenamespace/somename/68510937-4ffc-11e9-8e26-1418775557c8c", maxKey)
 }
 
 func Test_WatchActivity_TestGetMinMaxPartitions(t *testing.T) {
@@ -96,7 +96,7 @@ func Test_WatchActivity_GetPreviousKey_Success(t *testing.T) {
 		return err1
 	})
 	assert.Nil(t, err)
-	expectedKey := NewWatchActivityKey(someMiddlePartition, someKind, someNamespace, someName, someUid)
+	expectedKey := NewWatchActivityKey(someMiddlePartition, someKind, someNamespace, someName, someUid+"b")
 	assert.Equal(t, expectedKey, partRes)
 }
 
@@ -127,7 +127,7 @@ func Test_WatchActivity_getLastMatchingKeyInPartition_FoundInPreviousPartition(t
 		return err1
 	})
 	assert.True(t, found)
-	expectedKey := NewWatchActivityKey(someMiddlePartition, someKind, someNamespace, someName, someUid)
+	expectedKey := NewWatchActivityKey(someMiddlePartition, someKind, someNamespace, someName, someUid+"b")
 	assert.Equal(t, expectedKey, keyRes)
 	assert.Nil(t, err)
 }
@@ -155,8 +155,8 @@ func Test_WatchActivity_getLastMatchingKeyInPartition_SameKeySearch_NotFound(t *
 	var keyRes *WatchActivityKey
 	var err1 error
 	var found bool
-	curKey := NewWatchActivityKey(someMaxPartition, someKind, someNamespace, someName, someUid)
-	keyPrefix := NewWatchActivityKey(someMaxPartition, someKind, someNamespace, someName, someUid)
+	curKey := NewWatchActivityKey(someMaxPartition, someKind, someNamespace, someName, someUid+"c")
+	keyPrefix := NewWatchActivityKey(someMaxPartition, someKind, someNamespace, someName, someUid+"c")
 	err := db.View(func(txn badgerwrap.Txn) error {
 		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMaxPartition, curKey, keyPrefix)
 		return err1
@@ -198,10 +198,11 @@ func (_ *WatchActivityKey) SetTestKeys() []string {
 	var keys []string
 	var partitionId string
 	gap := 0
-	for i := 0; i < 3; i++ {
+	for i := 'a'; i < 'd'; i++ {
 		// add keys in ascending order
 		partitionId = untyped.GetPartitionId(someTs.Add(time.Hour * time.Duration(gap)))
 		keys = append(keys, NewWatchActivityKey(partitionId, someKind, someNamespace, someName, someUid).String())
+		keys = append(keys, NewWatchActivityKey(partitionId, someKind, someNamespace, someName, someUid+string(i)).String())
 		gap++
 	}
 	return keys

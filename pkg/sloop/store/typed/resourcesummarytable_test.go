@@ -324,14 +324,14 @@ func Test_ResourceSummary_getLastMatchingKeyInPartition_FoundInSamePartition(t *
 	var err1 error
 	var found bool
 	curKey := NewResourceSummaryKey(someTs, someKind+"a", someNamespace, someName+"a", someUid)
-	keyPrefix := NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+"0")
+	keyPrefix := NewResourceSummaryKey(someTs, someKind+"a", someNamespace, someName, someUid)
 	err := db.View(func(txn badgerwrap.Txn) error {
 		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyPrefix)
 		return err1
 	})
 
 	assert.True(t, found)
-	expectedKey := NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+"0")
+	expectedKey := NewResourceSummaryKey(someTs, someKind+"a", someNamespace, someName, someUid)
 	assert.Equal(t, expectedKey, keyRes)
 	assert.Nil(t, err)
 }
@@ -382,10 +382,10 @@ func (_ *ResourceSummaryKey) GetTestValue() *ResourceSummary {
 func (_ *ResourceSummaryKey) SetTestKeys() []string {
 	untyped.TestHookSetPartitionDuration(time.Hour)
 	var keys []string
-	keys = append(keys, NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+"0").String())
 	gap := 0
 	for i := 'a'; i < 'd'; i++ {
 		// add keys in ascending order
+		keys = append(keys, NewResourceSummaryKey(someTs.Add(time.Hour*time.Duration(gap)), someKind+string(i), someNamespace, someName, someUid).String())
 		keys = append(keys, NewResourceSummaryKey(someTs.Add(time.Hour*time.Duration(gap)), someKind+string(i), someNamespace, someName+string(i), someUid).String())
 		gap++
 	}

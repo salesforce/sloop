@@ -74,7 +74,7 @@ func Test_WatchTable_TestMinAndMaxKeys(t *testing.T) {
 		return nil
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, "/watch/001546398000/somekind/somenamespace/somename/1546398245000000006", minKey)
+	assert.Equal(t, "/watch/001546398000/somekind/somenamespace/somename/1546380245000000006", minKey)
 	assert.Equal(t, "/watch/001546405200/somekind/somenamespace/somename/1546398245000000006", maxKey)
 }
 
@@ -154,7 +154,7 @@ func Test_getLastMatchingKeyInPartition_FoundInSamePartition(t *testing.T) {
 	})
 
 	assert.True(t, found)
-	expectedKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs.Add(time.Hour*-24))
+	expectedKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs.Add(time.Hour*-5))
 	assert.Equal(t, expectedKey, keyRes)
 	assert.Nil(t, err)
 }
@@ -211,12 +211,10 @@ func (_ *WatchTableKey) SetTestKeys() []string {
 	for i := 0; i < 3; i++ {
 		// add keys in ascending order
 		partitionId = untyped.GetPartitionId(someTs.Add(time.Hour * time.Duration(gap)))
+		keys = append(keys, NewWatchTableKey(partitionId, someKind, someNamespace, someName, someTs.Add(time.Hour*-5)).String())
 		keys = append(keys, NewWatchTableKey(partitionId, someKind, someNamespace, someName, someTs).String())
 		gap++
 	}
-
-	//add another key in same partition for testing purpose
-	keys = append(keys, NewWatchTableKey(partitionId, someKind, someNamespace, someName, someTs.Add(time.Hour*-24)).String())
 	return keys
 }
 func (_ *WatchTableKey) SetTestValue() *KubeWatchResult {
