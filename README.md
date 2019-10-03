@@ -39,12 +39,12 @@ with [version 1.13 or greater installed](https://golang.org/doc/install).
 Clone the sloop repository and build using `make`:
 
 ```sh
-$ mkdir -p $GOPATH/src/github.com/salesforce
-$ cd $GOPATH/src/github.com/salesforce
-$ git clone https://github.com/salesforce/sloop.git
-$ cd sloop
-$ make
-$ ~/go/bin/sloop
+mkdir -p $GOPATH/src/github.com/salesforce
+cd $GOPATH/src/github.com/salesforce
+git clone https://github.com/salesforce/sloop.git
+cd sloop
+make
+~/go/bin/sloop
 ```
 
 When complete, you should have a running Sloop version accessing the current context from your kubeConfig. Just point your browser at http://localhost:8080/
@@ -61,8 +61,8 @@ Other makefile targets:
 To run from Docker you need to host mount your kubeconfig:
 
 ```shell script
-$ make docker
-$ docker run --rm -it -p 8080:8080 -v ~/.kube/:/kube/ -e KUBECONFIG=/kube/config sloop
+make docker
+docker run --rm -it -p 8080:8080 -v ~/.kube/:/kube/ -e KUBECONFIG=/kube/config sloop
 ```
 
 In this mode, data is written to a memory-backed volume and is discarded after each run. To preserve the data, you can host-mount /data with something like `-v /data/:/some_path_on_host/`
