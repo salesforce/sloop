@@ -270,3 +270,86 @@ func (t *ResourceSummaryTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn,
 	}
 	return false, &ResourceSummaryKey{}, nil
 }
+
+
+func (t *ResourceSummaryTable) RangeReadPerPartition(txn badgerwrap.Txn, keyPredicateFn func(string) bool,
+	valPredicateFn func(*ResourceSummary) bool, startTime time.Time, endTime time.Time) (map[ResourceSummaryKey]*ResourceSummary, RangeReadStats, error) {
+	resources := map[ResourceSummaryKey]*ResourceSummary{}
+	stats := RangeReadStats{}
+	before := time.Now()
+	partitionList, err := t.GetUniquePartitionList(txn)
+	if err != nil {
+		return resources, stats,errors.Wrapf(err, "failed to get partition list from table:%v", t.tableName)
+	}
+
+	keyPrefix := "/" + t.tableName + "/"
+	iterOpt := badger.DefaultIteratorOptions
+	iterOpt.Prefix = []byte(keyPrefix)
+	itr := txn.NewIterator(iterOpt)
+	defer itr.Close()
+
+	startPartition := untyped.GetPartitionId(startTime)
+	startPartitionPrefix := keyPrefix + startPartition + "/"
+	endPartition := untyped.GetPartitionId(endTime)
+
+	for i := len(partitionList) - 1; i >= 0; i-- {
+		prePart := partitionList[i]
+		if prePart > endPartition {
+			continue
+		} else {
+			prevFound, prevKey, err := t.getLastMatchingKeyInPartition(txn, prePart, key, keyPrefix)
+			if err != nil {
+				return &ResourceSummaryKey{}, errors.Wrapf(err, "Failure getting previous key for %v, for partition id:%v", key.String(), prePart)
+			}
+			if prevFound && err == nil {
+				return prevKey, nil
+			}
+		}
+	}
+
+
+
+
+
+
+	lastPartition := ""
+	for itr.Seek([]byte(startPartitionPrefix)); itr.ValidForPrefix([]byte(keyPrefix)); itr.Next() {
+		stats.RowsVisitedCount += 1
+		if !keyPredicateFn(string(itr.Item().Key())) {
+			continue
+		}
+		stats.RowsPassedKeyPredicateCount += 1
+
+		key := ResourceSummaryKey{}
+		err := key.Parse(string(itr.Item().Key()))
+		if err != nil {
+			return nil, stats, err
+		}
+		if key.PartitionId != lastPartition {
+			stats.PartitionCount += 1
+			lastPartition = key.PartitionId
+		}
+		// partitions are zero padded to 12 digits so we can compare them lexicographically
+		if key.PartitionId > endPartition {
+			// end of range
+			break
+		}
+		valueBytes, err := itr.Item().ValueCopy([]byte{})
+		if err != nil {
+			return nil, stats, err
+		}
+		retValue := &ResourceSummary{}
+		err = proto.Unmarshal(valueBytes, retValue)
+		if err != nil {
+			return nil, stats, err
+		}
+		if valPredicateFn != nil && !valPredicateFn(retValue) {
+			continue
+		}
+		stats.RowsPassedValuePredicateCount += 1
+		resources[key] = retValue
+	}
+	stats.Elapsed = time.Since(before)
+	stats.TableName = (&ResourceSummaryKey{}).TableName()
+	return resources, stats, nil
+}
