@@ -278,63 +278,77 @@ func (t *ValueTypeTable) RangeReadPerPartition(txn badgerwrap.Txn, keyPrefix *Ke
 
 	stats := RangeReadStats{}
 	before := time.Now()
-	partitionList, err := t.GetUniquePartitionList(txn)
+
+	partitionList, err := t.GetPartitionsFromTimeRange(txn, startTime, endTime)
 	if err != nil {
-		return resources, stats, errors.Wrapf(err, "failed to get partition list from table:%v", t.tableName)
+		return resources, stats, errors.Wrapf(err, "failed to get partitions from table:%v, from startTime:%v, to endTime:%v", t.tableName, startTime, endTime)
 	}
 
 	tablePrefix := "/" + t.tableName + "/"
 	iterOpt := badger.DefaultIteratorOptions
-	iterOpt.Prefix = []byte(tablePrefix)
 	itr := txn.NewIterator(iterOpt)
 	defer itr.Close()
 
-	startPartition := untyped.GetPartitionId(startTime)
-	endPartition := untyped.GetPartitionId(endTime)
 	lastPartition := ""
-	for i := len(partitionList) - 1; i >= 0; i-- {
-		currentPartition := partitionList[i]
-		if currentPartition > endPartition {
-			continue
-		} else if currentPartition < startPartition {
-			break
-		} else {
-			curPartitionPrefix := tablePrefix + currentPartition + "/"
-			itr.Seek([]byte(curPartitionPrefix))
-			stats.RowsVisitedCount += 1
+	for _, currentPartition := range partitionList {
 
-			if itr.ValidForPrefix([]byte(keyPrefix.String())) {
-				stats.RowsPassedKeyPredicateCount += 1
-				key := KeyType{}
-				err := key.Parse(string(itr.Item().Key()))
-				if err != nil {
-					return nil, stats, err
-				}
+		// update keyPrefix's partition with current partition
+		keyPrefix.SetPartitionId(currentPartition)
 
-				if key.PartitionId != lastPartition {
-					stats.PartitionCount += 1
-					lastPartition = key.PartitionId
-				}
+		curPartitionPrefix := tablePrefix + currentPartition + "/"
+		itr.Seek([]byte(curPartitionPrefix))
+		stats.RowsVisitedCount += 1
 
-				valueBytes, err := itr.Item().ValueCopy([]byte{})
-				if err != nil {
-					return nil, stats, err
-				}
-				retValue := &ValueType{}
-				err = proto.Unmarshal(valueBytes, retValue)
-				if err != nil {
-					return nil, stats, err
-				}
-				if valPredicateFn != nil && !valPredicateFn(retValue) {
-					continue
-				}
-				stats.RowsPassedValuePredicateCount += 1
-				resources[key] = retValue
+		if itr.ValidForPrefix([]byte(keyPrefix.String())) {
+			stats.RowsPassedKeyPredicateCount += 1
+			key := KeyType{}
+			err := key.Parse(string(itr.Item().Key()))
+			if err != nil {
+				return nil, stats, err
 			}
+
+			if key.PartitionId != lastPartition {
+				stats.PartitionCount += 1
+				lastPartition = key.PartitionId
+			}
+
+			valueBytes, err := itr.Item().ValueCopy([]byte{})
+			if err != nil {
+				return nil, stats, err
+			}
+			retValue := &ValueType{}
+			err = proto.Unmarshal(valueBytes, retValue)
+			if err != nil {
+				return nil, stats, err
+			}
+			if valPredicateFn != nil && !valPredicateFn(retValue) {
+				continue
+			}
+			stats.RowsPassedValuePredicateCount += 1
+			resources[key] = retValue
 		}
 	}
 
 	stats.Elapsed = time.Since(before)
 	stats.TableName = (&KeyType{}).TableName()
 	return resources, stats, nil
+}
+
+//todo: need to add unit test
+func (t *ValueTypeTable) GetPartitionsFromTimeRange(txn badgerwrap.Txn, startTime time.Time, endTime time.Time) ([]string, error) {
+	resources := []string{}
+	startPartition := untyped.GetPartitionId(startTime)
+	endPartition := untyped.GetPartitionId(endTime)
+	parDuration := untyped.GetPartitionDuration()
+	for curPar := startPartition; curPar <= endPartition; {
+		resources = append(resources, curPar)
+		// update curPar
+		partInt, err := strconv.ParseInt(curPar, 10, 64)
+		if err != nil {
+			return resources, errors.Wrapf(err, "failed to get partition:%v", curPar)
+		}
+		parTime := time.Unix(partInt, 0).UTC().Add(parDuration)
+		curPar = untyped.GetPartitionId(parTime)
+	}
+	return resources, nil
 }
