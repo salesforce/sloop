@@ -270,3 +270,71 @@ func (t *ValueTypeTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPa
 	}
 	return false, &KeyType{}, nil
 }
+
+//todo: add unit tests
+func (t *ValueTypeTable) RangeReadPerPartition(txn badgerwrap.Txn, keyPrefix *KeyType,
+	valPredicateFn func(*ValueType) bool, startTime time.Time, endTime time.Time) (map[KeyType]*ValueType, RangeReadStats, error) {
+	resources := map[KeyType]*ValueType{}
+
+	stats := RangeReadStats{}
+	before := time.Now()
+	partitionList, err := t.GetUniquePartitionList(txn)
+	if err != nil {
+		return resources, stats, errors.Wrapf(err, "failed to get partition list from table:%v", t.tableName)
+	}
+
+	tablePrefix := "/" + t.tableName + "/"
+	iterOpt := badger.DefaultIteratorOptions
+	iterOpt.Prefix = []byte(tablePrefix)
+	itr := txn.NewIterator(iterOpt)
+	defer itr.Close()
+
+	startPartition := untyped.GetPartitionId(startTime)
+	endPartition := untyped.GetPartitionId(endTime)
+	lastPartition := ""
+	for i := len(partitionList) - 1; i >= 0; i-- {
+		currentPartition := partitionList[i]
+		if currentPartition > endPartition {
+			continue
+		} else if currentPartition < startPartition {
+			break
+		} else {
+			curPartitionPrefix := tablePrefix + currentPartition + "/"
+			itr.Seek([]byte(curPartitionPrefix))
+			stats.RowsVisitedCount += 1
+
+			if itr.ValidForPrefix([]byte(keyPrefix.String())) {
+				stats.RowsPassedKeyPredicateCount += 1
+				key := KeyType{}
+				err := key.Parse(string(itr.Item().Key()))
+				if err != nil {
+					return nil, stats, err
+				}
+
+				if key.PartitionId != lastPartition {
+					stats.PartitionCount += 1
+					lastPartition = key.PartitionId
+				}
+
+				valueBytes, err := itr.Item().ValueCopy([]byte{})
+				if err != nil {
+					return nil, stats, err
+				}
+				retValue := &ValueType{}
+				err = proto.Unmarshal(valueBytes, retValue)
+				if err != nil {
+					return nil, stats, err
+				}
+				if valPredicateFn != nil && !valPredicateFn(retValue) {
+					continue
+				}
+				stats.RowsPassedValuePredicateCount += 1
+				resources[key] = retValue
+			}
+		}
+	}
+
+	stats.Elapsed = time.Since(before)
+	stats.TableName = (&KeyType{}).TableName()
+	return resources, stats, nil
+}

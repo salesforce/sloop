@@ -270,3 +270,71 @@ func (t *WatchActivityTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, c
 	}
 	return false, &WatchActivityKey{}, nil
 }
+
+//todo: add unit tests
+func (t *WatchActivityTable) RangeReadPerPartition(txn badgerwrap.Txn, keyPrefix *WatchActivityKey,
+	valPredicateFn func(*WatchActivity) bool, startTime time.Time, endTime time.Time) (map[WatchActivityKey]*WatchActivity, RangeReadStats, error) {
+	resources := map[WatchActivityKey]*WatchActivity{}
+
+	stats := RangeReadStats{}
+	before := time.Now()
+	partitionList, err := t.GetUniquePartitionList(txn)
+	if err != nil {
+		return resources, stats, errors.Wrapf(err, "failed to get partition list from table:%v", t.tableName)
+	}
+
+	tablePrefix := "/" + t.tableName + "/"
+	iterOpt := badger.DefaultIteratorOptions
+	iterOpt.Prefix = []byte(tablePrefix)
+	itr := txn.NewIterator(iterOpt)
+	defer itr.Close()
+
+	startPartition := untyped.GetPartitionId(startTime)
+	endPartition := untyped.GetPartitionId(endTime)
+	lastPartition := ""
+	for i := len(partitionList) - 1; i >= 0; i-- {
+		currentPartition := partitionList[i]
+		if currentPartition > endPartition {
+			continue
+		} else if currentPartition < startPartition {
+			break
+		} else {
+			curPartitionPrefix := tablePrefix + currentPartition + "/"
+			itr.Seek([]byte(curPartitionPrefix))
+			stats.RowsVisitedCount += 1
+
+			if itr.ValidForPrefix([]byte(keyPrefix.String())) {
+				stats.RowsPassedKeyPredicateCount += 1
+				key := WatchActivityKey{}
+				err := key.Parse(string(itr.Item().Key()))
+				if err != nil {
+					return nil, stats, err
+				}
+
+				if key.PartitionId != lastPartition {
+					stats.PartitionCount += 1
+					lastPartition = key.PartitionId
+				}
+
+				valueBytes, err := itr.Item().ValueCopy([]byte{})
+				if err != nil {
+					return nil, stats, err
+				}
+				retValue := &WatchActivity{}
+				err = proto.Unmarshal(valueBytes, retValue)
+				if err != nil {
+					return nil, stats, err
+				}
+				if valPredicateFn != nil && !valPredicateFn(retValue) {
+					continue
+				}
+				stats.RowsPassedValuePredicateCount += 1
+				resources[key] = retValue
+			}
+		}
+	}
+
+	stats.Elapsed = time.Since(before)
+	stats.TableName = (&WatchActivityKey{}).TableName()
+	return resources, stats, nil
+}
