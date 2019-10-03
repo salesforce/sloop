@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/dgraph-io/badger"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
+	"reflect"
 	"strings"
 )
 
@@ -79,4 +80,15 @@ func (t *WatchActivityTable) GetOrDefault(txn badgerwrap.Txn, key string) (*Watc
 		}
 	}
 	return rec, nil
+}
+
+func (t *WatchActivityKey) GetKeyPrefixString() string {
+	v := reflect.ValueOf(*t)
+	str := "/" + t.TableName()
+	for i := 0; i < v.NumField(); i++ {
+		if v.Field(i).String() != "" {
+			str += fmt.Sprintf("/%v", v.Field(i).String())
+		}
+	}
+	return str
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -52,6 +53,8 @@ func (k *EventCountKey) Parse(key string) error {
 	return nil
 }
 
+//when some filed is empty, we dont want to return /tablename/partition/////
+//instead we just want to return /tablename/partition
 func (k *EventCountKey) String() string {
 	return fmt.Sprintf("/%v/%v/%v/%v/%v/%v", k.TableName(), k.PartitionId, k.Kind, k.Namespace, k.Name, k.Uid)
 }
@@ -75,4 +78,15 @@ func (t *ResourceEventCountsTable) GetOrDefault(txn badgerwrap.Txn, key string) 
 
 func (k *EventCountKey) SetPartitionId(newPartitionId string) {
 	k.PartitionId = newPartitionId
+}
+
+func (k *EventCountKey) GetKeyPrefixString() string {
+	v := reflect.ValueOf(*k)
+	str := "/" + k.TableName()
+	for i := 0; i < v.NumField(); i++ {
+		if v.Field(i).String() != "" {
+			str += fmt.Sprintf("/%v", v.Field(i).String())
+		}
+	}
+	return str
 }

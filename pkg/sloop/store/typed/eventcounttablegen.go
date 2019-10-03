@@ -132,6 +132,7 @@ func (t *ResourceEventCountsTable) GetMinMaxPartitions(txn badgerwrap.Txn) (bool
 	return true, minKey.PartitionId, maxKey.PartitionId
 }
 
+//TODO: will be replaced by GetPartitionsFromTimeRange in future
 func (t *ResourceEventCountsTable) RangeRead(
 	txn badgerwrap.Txn,
 	keyPredicateFn func(string) bool,
@@ -291,15 +292,14 @@ func (t *ResourceEventCountsTable) RangeReadPerPartition(txn badgerwrap.Txn, key
 
 	lastPartition := ""
 	for _, currentPartition := range partitionList {
-
-		// update keyPrefix's partition with current partition
-		keyPrefix.SetPartitionId(currentPartition)
-
 		curPartitionPrefix := tablePrefix + currentPartition + "/"
 		itr.Seek([]byte(curPartitionPrefix))
 		stats.RowsVisitedCount += 1
 
-		if itr.ValidForPrefix([]byte(keyPrefix.String())) {
+		// update keyPrefix's partition with current partition
+		keyPrefix.SetPartitionId(currentPartition)
+		prefixStr := keyPrefix.GetKeyPrefixString()
+		if itr.ValidForPrefix([]byte(prefixStr)) {
 			stats.RowsPassedKeyPredicateCount += 1
 			key := EventCountKey{}
 			err := key.Parse(string(itr.Item().Key()))

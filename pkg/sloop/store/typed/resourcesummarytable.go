@@ -10,6 +10,7 @@ package typed
 import (
 	"fmt"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -69,4 +70,15 @@ func (k *ResourceSummaryKey) SetPartitionId(newPartitionId string) {
 func (_ *ResourceSummaryKey) ValidateKey(key string) error {
 	newKey := ResourceSummaryKey{}
 	return newKey.Parse(key)
+}
+
+func (k *ResourceSummaryKey) GetKeyPrefixString() string {
+	v := reflect.ValueOf(*k)
+	str := "/" + k.TableName()
+	for i := 0; i < v.NumField(); i++ {
+		if v.Field(i).String() != "" {
+			str += fmt.Sprintf("/%v", v.Field(i).String())
+		}
+	}
+	return str
 }

@@ -130,6 +130,38 @@ func Test_EventCount_TestGetMinMaxPartitions(t *testing.T) {
 	assert.Equal(t, untyped.GetPartitionId(someTs), maxPartition)
 }
 
+func Test_GetKeyPrefixString_Success(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	k := &EventCountKey{}
+	k.PartitionId = "001546398000"
+	k.Kind = someKind
+	k.Namespace = someNamespace
+	k.Name = someName
+	k.Uid = someUid
+	res := k.GetKeyPrefixString()
+	expectedRes := "/eventcount/001546398000/somekind/somenamespace/somename/68510937-4ffc-11e9-8e26-1418775557c8"
+	assert.Equal(t, expectedRes, res)
+}
+
+func Test_GetKeyPrefixString_MissingField(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	k := &EventCountKey{}
+	k.PartitionId = "001546398000"
+	k.Kind = someKind
+	k.Namespace = someNamespace
+	res := k.GetKeyPrefixString()
+	expectedRes := "/eventcount/001546398000/somekind/somenamespace"
+	assert.Equal(t, expectedRes, res)
+}
+
+func Test_GetKeyPrefixString_Empty(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	k := &EventCountKey{}
+	res := k.GetKeyPrefixString()
+	expectedRes := "/eventcount"
+	assert.Equal(t, expectedRes, res)
+}
+
 func (_ *EventCountKey) GetTestKey() string {
 	k := NewEventCountKey(someTs, "someKind", "someNamespace", "someName", "someUuid")
 	return k.String()
