@@ -44,7 +44,7 @@ cd $GOPATH/src/github.com/salesforce
 git clone https://github.com/salesforce/sloop.git
 cd sloop
 make
-~/go/bin/sloop
+$GOPATH/bin/sloop
 ```
 
 When complete, you should have a running Sloop version accessing the current context from your kubeConfig. Just point your browser at http://localhost:8080/
