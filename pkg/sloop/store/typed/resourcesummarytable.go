@@ -10,7 +10,6 @@ package typed
 import (
 	"fmt"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
-	"reflect"
 	"strings"
 	"time"
 )
@@ -59,6 +58,7 @@ func (k *ResourceSummaryKey) Parse(key string) error {
 	return nil
 }
 
+//todo: need to make sure it can work as keyPrefix when some fields are empty
 func (k *ResourceSummaryKey) String() string {
 	return fmt.Sprintf("/%v/%v/%v/%v/%v/%v", k.TableName(), k.PartitionId, k.Kind, k.Namespace, k.Name, k.Uid)
 }
@@ -70,15 +70,4 @@ func (k *ResourceSummaryKey) SetPartitionId(newPartitionId string) {
 func (_ *ResourceSummaryKey) ValidateKey(key string) error {
 	newKey := ResourceSummaryKey{}
 	return newKey.Parse(key)
-}
-
-func (k *ResourceSummaryKey) GetKeyPrefixString() string {
-	v := reflect.ValueOf(*k)
-	str := "/" + k.TableName()
-	for i := 0; i < v.NumField(); i++ {
-		if v.Field(i).String() != "" {
-			str += fmt.Sprintf("/%v", v.Field(i).String())
-		}
-	}
-	return str
 }

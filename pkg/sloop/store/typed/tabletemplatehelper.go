@@ -60,10 +60,6 @@ func (_ *KeyType) SetPartitionId(newPartitionId string) {
 	panic("Placeholder key should not be used")
 }
 
-func (_ *KeyType) GetKeyPrefixString() string {
-	panic("Placeholder key should not be used")
-}
-
 type RangeReadStats struct {
 	TableName                     string
 	PartitionCount                int

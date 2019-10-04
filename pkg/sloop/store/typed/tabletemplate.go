@@ -281,36 +281,38 @@ func (t *ValueTypeTable) RangeReadPerPartition(txn badgerwrap.Txn, keyPrefix *Ke
 	before := time.Now()
 
 	partitionList, err := t.GetPartitionsFromTimeRange(txn, startTime, endTime)
+	stats.PartitionCount = len(partitionList)
 	if err != nil {
 		return resources, stats, errors.Wrapf(err, "failed to get partitions from table:%v, from startTime:%v, to endTime:%v", t.tableName, startTime, endTime)
 	}
 
 	tablePrefix := "/" + t.tableName + "/"
-	iterOpt := badger.DefaultIteratorOptions
-	itr := txn.NewIterator(iterOpt)
-	defer itr.Close()
-
-	lastPartition := ""
 	for _, currentPartition := range partitionList {
-		curPartitionPrefix := tablePrefix + currentPartition + "/"
-		itr.Seek([]byte(curPartitionPrefix))
-		stats.RowsVisitedCount += 1
+		var seekStr string
 
-		// update keyPrefix's partition with current partition
-		keyPrefix.SetPartitionId(currentPartition)
-		prefixStr := keyPrefix.GetKeyPrefixString()
-		if itr.ValidForPrefix([]byte(prefixStr)) {
-			stats.RowsPassedKeyPredicateCount += 1
+		// when keyPrefix does not have partition info(which implies it may not contain kind,namespace,and etc), we seek from /tableName/currentPartition/
+		if keyPrefix.PartitionId == "" {
+			seekStr = tablePrefix + currentPartition + "/"
+		} else {
+			// update keyPrefix with current partition
+			keyPrefix.SetPartitionId(currentPartition)
+			seekStr = keyPrefix.String()
+		}
+
+		itr := txn.NewIterator(badger.IteratorOptions{Prefix: []byte(seekStr)})
+		defer itr.Close()
+
+		//in worst case, when seekStr = /table/partition, we need to iterate a key list and return all of them
+		//in most cases, we should only hit one result per partition
+		for itr.Seek([]byte(seekStr)); itr.ValidForPrefix([]byte(seekStr)); itr.Next() {
+			stats.RowsVisitedCount += 1
 			key := KeyType{}
 			err := key.Parse(string(itr.Item().Key()))
 			if err != nil {
 				return nil, stats, err
 			}
 
-			if key.PartitionId != lastPartition {
-				stats.PartitionCount += 1
-				lastPartition = key.PartitionId
-			}
+			stats.RowsPassedKeyPredicateCount += 1
 
 			valueBytes, err := itr.Item().ValueCopy([]byte{})
 			if err != nil {

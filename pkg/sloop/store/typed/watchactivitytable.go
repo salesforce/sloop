@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"github.com/dgraph-io/badger"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"reflect"
 	"strings"
 )
 
@@ -57,6 +56,7 @@ func (k *WatchActivityKey) Parse(key string) error {
 	return nil
 }
 
+//todo: need to make sure it can work as keyPrefix when some fields are empty
 func (k *WatchActivityKey) String() string {
 	return fmt.Sprintf("/%v/%v/%v/%v/%v/%v", k.TableName(), k.PartitionId, k.Kind, k.Namespace, k.Name, k.Uid)
 }
@@ -80,15 +80,4 @@ func (t *WatchActivityTable) GetOrDefault(txn badgerwrap.Txn, key string) (*Watc
 		}
 	}
 	return rec, nil
-}
-
-func (t *WatchActivityKey) GetKeyPrefixString() string {
-	v := reflect.ValueOf(*t)
-	str := "/" + t.TableName()
-	for i := 0; i < v.NumField(); i++ {
-		if v.Field(i).String() != "" {
-			str += fmt.Sprintf("/%v", v.Field(i).String())
-		}
-	}
-	return str
 }
