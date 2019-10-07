@@ -51,7 +51,6 @@ func Test_ResourceEventCountsTable_SetWorks(t *testing.T) {
 }
 
 func helper_update_ResourceEventCountsTable(t *testing.T, keys []string, val *ResourceEventCounts) (badgerwrap.DB, *ResourceEventCountsTable) {
-	untyped.TestHookSetPartitionDuration(time.Hour)
 	b, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
 	assert.Nil(t, err)
 	wt := OpenResourceEventCountsTable()
@@ -102,7 +101,7 @@ func Test_ResourceEventCountsTable_GetUniquePartitionList_EmptyPartition(t *test
 		return
 	}
 
-	db, wt := helper_update_ResourceEventCountsTable(t, []string{}, &ResourceEventCounts{})
+	db, wt := helper_update_ResourceEventCountsTable(t, []string{}, (&EventCountKey{}).GetTestValue())
 	var partList []string
 	var err1 error
 	err := db.View(func(txn badgerwrap.Txn) error {
@@ -111,4 +110,33 @@ func Test_ResourceEventCountsTable_GetUniquePartitionList_EmptyPartition(t *test
 	})
 	assert.Nil(t, err)
 	assert.Len(t, partList, 0)
+}
+
+func Test_EventCount_GetPreviousKey_Success(t *testing.T) {
+	db, wt := helper_update_ResourceEventCountsTable(t, (&EventCountKey{}).SetTestKeys(), (&EventCountKey{}).SetTestValue())
+	var partRes *EventCountKey
+	var err1 error
+	curKey := NewEventCountKey(someMaxTs, someKind, someNamespace, someName, someUid+"c")
+	keyPrefix := NewEventCountKey(someMiddleTs, someKind, someNamespace, someName, someUid+"b")
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
+		return err1
+	})
+	assert.Nil(t, err)
+	expectedKey := NewEventCountKey(someMiddleTs, someKind, someNamespace, someName, someUid+"b")
+	assert.Equal(t, expectedKey, partRes)
+}
+
+func Test_EventCount_GetPreviousKey_Fail(t *testing.T) {
+	db, wt := helper_update_ResourceEventCountsTable(t, (&EventCountKey{}).SetTestKeys(), (&EventCountKey{}).SetTestValue())
+	var partRes *EventCountKey
+	var err1 error
+	curKey := NewEventCountKey(someMaxTs, someKind, someNamespace, someName, someUid)
+	keyPrefix := NewEventCountKey(someMiddleTs, someKind+"b", someNamespace, someName, someUid)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
+		return err1
+	})
+	assert.NotNil(t, err)
+	assert.Equal(t, &EventCountKey{}, partRes)
 }

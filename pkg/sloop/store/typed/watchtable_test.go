@@ -16,6 +16,8 @@ import (
 )
 
 var someTs = time.Date(2019, 1, 2, 3, 4, 5, 6, time.UTC)
+var someMiddleTs = time.Date(2019, 1, 2, 4, 4, 5, 6, time.UTC)
+var someMaxTs = time.Date(2019, 1, 2, 5, 4, 5, 6, time.UTC)
 var zeroData time.Time
 
 const someKind = "somekind"
@@ -24,6 +26,7 @@ const someName = "somename"
 const someMinPartition = "001546398000"
 const someMiddlePartition = "001546401600"
 const someMaxPartition = "001546405200"
+
 
 func Test_WatchTableKey_OutputCorrect(t *testing.T) {
 	untyped.TestHookSetPartitionDuration(time.Hour)
@@ -93,35 +96,6 @@ func Test_WatchTable_TestGetMinMaxPartitions(t *testing.T) {
 	assert.Equal(t, someMinPartition, minPartition)
 	assert.Equal(t, someMiddlePartition, minPartition)
 	assert.Equal(t, someMaxPartition, maxPartition)
-}
-
-func Test_GetPreviousKey_Success(t *testing.T) {
-	db, wt := helper_update_KubeWatchResultTable(t, (&WatchTableKey{}).SetTestKeys(), (&WatchTableKey{}).SetTestValue())
-	var partRes *WatchTableKey
-	var err1 error
-	curKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs)
-	keyPrefix := NewWatchTableKey(someMiddlePartition, someKind, someNamespace, someName, zeroData)
-	err := db.View(func(txn badgerwrap.Txn) error {
-		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
-		return err1
-	})
-	assert.Nil(t, err)
-	expectedKey := NewWatchTableKey(someMiddlePartition, someKind, someNamespace, someName, someTs)
-	assert.Equal(t, expectedKey, partRes)
-}
-
-func Test_GetPreviousKey_Fail(t *testing.T) {
-	db, wt := helper_update_KubeWatchResultTable(t, (&WatchTableKey{}).SetTestKeys(), (&WatchTableKey{}).SetTestValue())
-	var partRes *WatchTableKey
-	var err1 error
-	curKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs)
-	keyPrefix := NewWatchTableKey(someMiddlePartition, someKind+"c", someNamespace, someName, zeroData)
-	err := db.View(func(txn badgerwrap.Txn) error {
-		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
-		return err1
-	})
-	assert.NotNil(t, err)
-	assert.Equal(t, &WatchTableKey{}, partRes)
 }
 
 func Test_getLastMatchingKeyInPartition_FoundInPreviousPartition(t *testing.T) {
@@ -207,16 +181,16 @@ func (_ *WatchTableKey) SetTestKeys() []string {
 	untyped.TestHookSetPartitionDuration(time.Hour)
 	var keys []string
 	var partitionId string
-	gap := 0
-	for i := 0; i < 3; i++ {
+	for curTime := someTs; !curTime.After(someMaxTs); curTime = curTime.Add(untyped.GetPartitionDuration()) {
 		// add keys in ascending order
-		partitionId = untyped.GetPartitionId(someTs.Add(time.Hour * time.Duration(gap)))
+		partitionId = untyped.GetPartitionId(curTime)
 		keys = append(keys, NewWatchTableKey(partitionId, someKind, someNamespace, someName, someTs.Add(time.Hour*-5)).String())
 		keys = append(keys, NewWatchTableKey(partitionId, someKind, someNamespace, someName, someTs).String())
-		gap++
 	}
+
 	return keys
 }
+
 func (_ *WatchTableKey) SetTestValue() *KubeWatchResult {
 	return &KubeWatchResult{Kind: someKind}
 }

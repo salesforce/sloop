@@ -51,7 +51,6 @@ func Test_ValueTypeTable_SetWorks(t *testing.T) {
 }
 
 func helper_update_ValueTypeTable(t *testing.T, keys []string, val *ValueType) (badgerwrap.DB, *ValueTypeTable) {
-	untyped.TestHookSetPartitionDuration(time.Hour)
 	b, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
 	assert.Nil(t, err)
 	wt := OpenValueTypeTable()

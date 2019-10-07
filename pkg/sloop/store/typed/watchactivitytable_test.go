@@ -85,35 +85,6 @@ func Test_WatchActivity_TestGetMinMaxPartitions(t *testing.T) {
 	assert.Equal(t, someMaxPartition, maxPartition)
 }
 
-func Test_WatchActivity_GetPreviousKey_Success(t *testing.T) {
-	db, wt := helper_update_WatchActivityTable(t, (&WatchActivityKey{}).SetTestKeys(), (&WatchActivityKey{}).GetTestValue())
-	var partRes *WatchActivityKey
-	var err1 error
-	curKey := NewWatchActivityKey(someMaxPartition, someKind, someNamespace, someName, someUid)
-	keyPrefix := NewWatchActivityKey(someMiddlePartition, someKind, someNamespace, someName, someUid)
-	err := db.View(func(txn badgerwrap.Txn) error {
-		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
-		return err1
-	})
-	assert.Nil(t, err)
-	expectedKey := NewWatchActivityKey(someMiddlePartition, someKind, someNamespace, someName, someUid+"b")
-	assert.Equal(t, expectedKey, partRes)
-}
-
-func Test_WatchActivity_GetPreviousKey_Fail(t *testing.T) {
-	db, wt := helper_update_WatchActivityTable(t, (&WatchActivityKey{}).SetTestKeys(), (&WatchActivityKey{}).GetTestValue())
-	var partRes *WatchActivityKey
-	var err1 error
-	curKey := NewWatchActivityKey(someMaxPartition, someKind, someNamespace, someName, someUid)
-	keyPrefix := NewWatchActivityKey(someMiddlePartition, someKind+"a", someNamespace, someName, someUid)
-	err := db.View(func(txn badgerwrap.Txn) error {
-		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
-		return err1
-	})
-	assert.NotNil(t, err)
-	assert.Equal(t, &WatchActivityKey{}, partRes)
-}
-
 func Test_WatchActivity_getLastMatchingKeyInPartition_FoundInPreviousPartition(t *testing.T) {
 	db, wt := helper_update_WatchActivityTable(t, (&WatchActivityKey{}).SetTestKeys(), (&WatchActivityKey{}).GetTestValue())
 	var keyRes *WatchActivityKey
