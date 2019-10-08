@@ -290,8 +290,8 @@ func (t *KubeWatchResultTable) RangeReadPerPartition(txn badgerwrap.Txn, keyPref
 	for _, currentPartition := range partitionList {
 		var seekStr string
 
-		// when keyPrefix does not have partition info(which implies it may not contain kind,namespace,and etc), we seek from /tableName/currentPartition/
-		if keyPrefix.PartitionId == "" {
+		// when keyPrefix does not have such info as kind,namespace,and etc, we seek from /tableName/currentPartition/
+		if keyPrefix == nil {
 			seekStr = tablePrefix + currentPartition + "/"
 		} else {
 			// update keyPrefix with current partition
@@ -329,6 +329,9 @@ func (t *KubeWatchResultTable) RangeReadPerPartition(txn badgerwrap.Txn, keyPref
 			stats.RowsPassedValuePredicateCount += 1
 			resources[key] = retValue
 		}
+
+		//Close() is safe to call more than once, close at the end of each partition to avoid having old iterators open
+		itr.Close()
 	}
 
 	stats.Elapsed = time.Since(before)
