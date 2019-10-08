@@ -125,6 +125,7 @@ func Test_WatchTable_TestGetMinMaxPartitions(t *testing.T) {
 	assert.True(t, found)
 	assert.Equal(t, somePartition, minPartition)
 	assert.Equal(t, somePartition, maxPartition)
+
 }
 
 func (_ *WatchTableKey) GetTestKey() string {
