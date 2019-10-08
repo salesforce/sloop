@@ -27,7 +27,6 @@ const someMinPartition = "001546398000"
 const someMiddlePartition = "001546401600"
 const someMaxPartition = "001546405200"
 
-
 func Test_WatchTableKey_OutputCorrect(t *testing.T) {
 	untyped.TestHookSetPartitionDuration(time.Hour)
 	partitionId := untyped.GetPartitionId(someTs)
