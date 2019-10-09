@@ -1,6 +1,4 @@
-.PHONY:perf perfasm
-
-export GO111MODULE=on
+.PHONY:all run linux docker generate tidy protobuf cover
 
 all:
 	go get ./pkg/...
