@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app.kubernetes.io/name: {{ .Values.name }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    app.kubernetes.io/instance: "{{ .Release.Name }}"
+    app.kubernetes.io/managed-by: "{{ .Release.Service }}"
+  name: {{ .Values.name }}
+spec:
+  serviceName: {{ .Values.name }}
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Values.name }}
+        app.kubernetes.io/instance: "{{ .Release.Name }}"
+    spec:
+      containers:
+      - args:
+        - --config=/sloopconfig/sloop.json
+        command:
+        - /bin/sloop
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        name: sloop
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+        volumeMounts:
+        - mountPath: /data/
+          name: sloop-data
+        - mountPath: /sloopconfig/
+          name: sloopconfig
+      volumes:
+      - emptyDir:
+          sizeLimit: 12Gi
+        name: sloop-data
+      - configMap:
+          name: sloop
+        name: sloopconfig
+      serviceAccountName: {{ .Values.serviceAccountName }}
+  volumeClaimTemplates:
+  - metadata:
+     name: sloop-data
+    spec:
+     accessModes: [ "ReadWriteOnce" ]
+{{- if .Values.persistentVolume.storageClass }}     
+     storageClassName: "{{ .Values.persistentVolume.storageClass }}"
+{{- end }}     
+     resources:
+       requests:
+         storage: {{ .Values.persistentVolume.size }}
