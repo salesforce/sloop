@@ -23,13 +23,13 @@ Key features:
 
 Sloop can be installed using any of these options:
 
+### Helm Chart
+
+Users can install sloop by using helm chart now, for instructions refer [helm readme](helm/README.md)
+
 ### Precompiled Binaries
 
 _DockerHub images coming soon._
-
-### Helm Chart
-
-_Helm chart coming soon._
 
 ### Build from Source
 
