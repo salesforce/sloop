@@ -27,7 +27,7 @@ spec:
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
         name: sloop
         ports:
-        - containerPort: 8080
+        - containerPort: {{ .Values.service.targetPort }}
           protocol: TCP
         resources:
 {{ toYaml .Values.resources | indent 10 }}
@@ -38,7 +38,7 @@ spec:
           name: sloopconfig
       volumes:
       - emptyDir:
-          sizeLimit: 12Gi
+          sizeLimit: {{ .Values.persistentVolume.sizeLimit }}
         name: sloop-data
       - configMap:
           name: sloop
@@ -48,7 +48,8 @@ spec:
   - metadata:
      name: sloop-data
     spec:
-     accessModes: [ "ReadWriteOnce" ]
+     accessModes:
+       - {{ .Values.persistentVolume.dataAccessMode | quote }}
 {{- if .Values.persistentVolume.storageClass }}     
      storageClassName: "{{ .Values.persistentVolume.storageClass }}"
 {{- end }}     

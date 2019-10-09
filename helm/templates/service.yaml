@@ -10,8 +10,8 @@ metadata:
 spec:
   ports:
   - name: sloop-port
-    port: 80
+    port: {{ .Values.service.port }}
     protocol: TCP
-    targetPort: 8080
+    targetPort: {{ .Values.service.targetPort }}
   selector:
     name: sloop

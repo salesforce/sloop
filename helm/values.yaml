@@ -11,4 +11,10 @@ persistentVolume:
 ## If undefined it will use the cluster default (typically gp2 on AWS, standard on GKE)
 #  storageClass: 
   size: 10Gi
+  dataAccessMode: ReadWriteOnce
+  sizeLimit: 12Gi
 resources: {}
+service:
+  port: 80
+  targetPort: 8080
+
