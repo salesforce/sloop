@@ -103,7 +103,7 @@ func Test_ResourceSummary_RangeRead(t *testing.T) {
 	var retval map[ResourceSummaryKey]*ResourceSummary
 	err = b.View(func(txn badgerwrap.Txn) error {
 		var txerr error
-		retval, _, txerr = wt.RangeRead(txn, func(k string) bool { return true }, func(r *ResourceSummary) bool { return true }, someTs, someTs)
+		retval, _, txerr = wt.RangeRead(txn, nil, func(k string) bool { return true }, func(r *ResourceSummary) bool { return true }, someTs, someTs)
 		if txerr != nil {
 			return txerr
 		}
@@ -146,7 +146,7 @@ func Test_ResourceSummary_RangeReadWithKeyPredicate(t *testing.T) {
 	var retval map[ResourceSummaryKey]*ResourceSummary
 	err = b.View(func(txn badgerwrap.Txn) error {
 		var txerr error
-		retval, _, txerr = wt.RangeRead(txn, func(k string) bool {
+		retval, _, txerr = wt.RangeRead(txn, nil, func(k string) bool {
 			key := &ResourceSummaryKey{}
 			err2 := key.Parse(k)
 			assert.Nil(t, err2)
@@ -256,7 +256,7 @@ func Test_ResourceSummary_RangeReadWithTimeRange(t *testing.T) {
 	err := db.View(func(txn badgerwrap.Txn) error {
 		var txerr error
 		// someTs starts with 4 minutes, subtract 5 minutes to not include partitions above (someTs + 2hours)
-		retval, _, txerr = rst.RangeRead(txn, func(k string) bool { return true }, func(r *ResourceSummary) bool { return true }, someTs.Add(1*time.Hour), someTs.Add(2*time.Hour-5*time.Minute))
+		retval, _, txerr = rst.RangeRead(txn, nil, func(k string) bool { return true }, func(r *ResourceSummary) bool { return true }, someTs.Add(1*time.Hour), someTs.Add(2*time.Hour-5*time.Minute))
 		if txerr != nil {
 			return txerr
 		}

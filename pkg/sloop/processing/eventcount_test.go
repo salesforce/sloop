@@ -173,7 +173,7 @@ func Test_EventCountTable_DupeEventSameResults(t *testing.T) {
 func findEventKeys(tables typed.Tables) ([]string, error) {
 	var foundKeys []string
 	err := tables.Db().View(func(txn badgerwrap.Txn) error {
-		ret, _, err2 := tables.EventCountTable().RangeRead(txn, func(s string) bool { return true }, nil, someEventWatchTs.Add(-1*time.Hour), someEventWatchTs.Add(time.Hour))
+		ret, _, err2 := tables.EventCountTable().RangeRead(txn, nil, func(s string) bool { return true }, nil, someEventWatchTs.Add(-1*time.Hour), someEventWatchTs.Add(time.Hour))
 		if err2 != nil {
 			return err2
 		}

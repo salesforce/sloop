@@ -132,71 +132,6 @@ func (t *KubeWatchResultTable) GetMinMaxPartitions(txn badgerwrap.Txn) (bool, st
 	return true, minKey.PartitionId, maxKey.PartitionId
 }
 
-//TODO: will be replaced by GetPartitionsFromTimeRange in future
-func (t *KubeWatchResultTable) RangeRead(
-	txn badgerwrap.Txn,
-	keyPredicateFn func(string) bool,
-	valPredicateFn func(*KubeWatchResult) bool,
-	startTime time.Time,
-	endTime time.Time) (map[WatchTableKey]*KubeWatchResult, RangeReadStats, error) {
-
-	resources := map[WatchTableKey]*KubeWatchResult{}
-
-	keyPrefix := "/" + t.tableName + "/"
-	iterOpt := badger.DefaultIteratorOptions
-	iterOpt.Prefix = []byte(keyPrefix)
-	itr := txn.NewIterator(iterOpt)
-	defer itr.Close()
-
-	startPartition := untyped.GetPartitionId(startTime)
-	endPartition := untyped.GetPartitionId(endTime)
-	startPartitionPrefix := keyPrefix + startPartition + "/"
-
-	stats := RangeReadStats{}
-	before := time.Now()
-
-	lastPartition := ""
-	for itr.Seek([]byte(startPartitionPrefix)); itr.ValidForPrefix([]byte(keyPrefix)); itr.Next() {
-		stats.RowsVisitedCount += 1
-		if !keyPredicateFn(string(itr.Item().Key())) {
-			continue
-		}
-		stats.RowsPassedKeyPredicateCount += 1
-
-		key := WatchTableKey{}
-		err := key.Parse(string(itr.Item().Key()))
-		if err != nil {
-			return nil, stats, err
-		}
-		if key.PartitionId != lastPartition {
-			stats.PartitionCount += 1
-			lastPartition = key.PartitionId
-		}
-		// partitions are zero padded to 12 digits so we can compare them lexicographically
-		if key.PartitionId > endPartition {
-			// end of range
-			break
-		}
-		valueBytes, err := itr.Item().ValueCopy([]byte{})
-		if err != nil {
-			return nil, stats, err
-		}
-		retValue := &KubeWatchResult{}
-		err = proto.Unmarshal(valueBytes, retValue)
-		if err != nil {
-			return nil, stats, err
-		}
-		if valPredicateFn != nil && !valPredicateFn(retValue) {
-			continue
-		}
-		stats.RowsPassedValuePredicateCount += 1
-		resources[key] = retValue
-	}
-	stats.Elapsed = time.Since(before)
-	stats.TableName = (&WatchTableKey{}).TableName()
-	return resources, stats, nil
-}
-
 //todo: need to add unit test
 func (t *KubeWatchResultTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]string, error) {
 	resources := []string{}
@@ -273,8 +208,8 @@ func (t *KubeWatchResultTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn,
 }
 
 //todo: add unit tests
-func (t *KubeWatchResultTable) RangeReadPerPartition(txn badgerwrap.Txn, keyPrefix *WatchTableKey,
-	valPredicateFn func(*KubeWatchResult) bool, startTime time.Time, endTime time.Time) (map[WatchTableKey]*KubeWatchResult, RangeReadStats, error) {
+func (t *KubeWatchResultTable) RangeRead(txn badgerwrap.Txn, keyPrefix *WatchTableKey,
+	keyPredicateFn func(string) bool, valPredicateFn func(*KubeWatchResult) bool, startTime time.Time, endTime time.Time) (map[WatchTableKey]*KubeWatchResult, RangeReadStats, error) {
 	resources := map[WatchTableKey]*KubeWatchResult{}
 
 	stats := RangeReadStats{}
@@ -306,6 +241,11 @@ func (t *KubeWatchResultTable) RangeReadPerPartition(txn badgerwrap.Txn, keyPref
 		//in most cases, we should only hit one result per partition
 		for itr.Seek([]byte(seekStr)); itr.ValidForPrefix([]byte(seekStr)); itr.Next() {
 			stats.RowsVisitedCount += 1
+			if keyPredicateFn != nil {
+				if !keyPredicateFn(string(itr.Item().Key())) {
+					continue
+				}
+			}
 			key := WatchTableKey{}
 			err := key.Parse(string(itr.Item().Key()))
 			if err != nil {

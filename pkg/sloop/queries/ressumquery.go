@@ -31,7 +31,7 @@ func GetResSummaryData(params url.Values, t typed.Tables, startTime time.Time, e
 	err := t.Db().View(func(txn badgerwrap.Txn) error {
 		var err2 error
 		var stats typed.RangeReadStats
-		resSummaries, stats, err2 = t.ResourceSummaryTable().RangeRead(txn, paramFilterResSumFn(params), isResSummaryValInTimeRange(startTime, endTime), startTime, endTime)
+		resSummaries, stats, err2 = t.ResourceSummaryTable().RangeRead(txn, nil, paramFilterResSumFn(params), isResSummaryValInTimeRange(startTime, endTime), startTime, endTime)
 		if err2 != nil {
 			return err2
 		}
