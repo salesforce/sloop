@@ -14,9 +14,7 @@ linux:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install -ldflags "-s" -installsuffix cgo -v ./pkg/...
 
 docker: linux
-	cp $(GOPATH)/bin/linux_amd64/sloop .
-	docker build -t sloop .
-	rm sloop
+	docker build . -t sloop
 
 generate:
 	go generate ./pkg/...
