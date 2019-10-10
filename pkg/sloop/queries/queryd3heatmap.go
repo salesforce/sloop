@@ -115,19 +115,19 @@ func getRawDataFromStore(params url.Values, t typed.Tables, startTime time.Time,
 	err := t.Db().View(func(txn badgerwrap.Txn) error {
 		var err2 error
 		var stats typed.RangeReadStats
-		ret.Events, stats, err2 = t.EventCountTable().RangeRead(txn, paramEventCountSumFn(params), nil, startTime, endTime)
+		ret.Events, stats, err2 = t.EventCountTable().RangeRead(txn, nil, paramEventCountSumFn(params), nil, startTime, endTime)
 		if err2 != nil {
 			return err2
 		}
 		stats.Log(requestId)
 
-		ret.Resources, stats, err2 = t.ResourceSummaryTable().RangeRead(txn, paramFilterResSumFn(params), nil, startTime, endTime)
+		ret.Resources, stats, err2 = t.ResourceSummaryTable().RangeRead(txn, nil, paramFilterResSumFn(params), nil, startTime, endTime)
 		if err2 != nil {
 			return err2
 		}
 		stats.Log(requestId)
 
-		ret.WatchActivity, stats, err2 = t.WatchActivityTable().RangeRead(txn, paramFilterWatchActivityFn(params), nil, startTime, endTime)
+		ret.WatchActivity, stats, err2 = t.WatchActivityTable().RangeRead(txn, nil, paramFilterWatchActivityFn(params), nil, startTime, endTime)
 		if err2 != nil {
 			return err2
 		}

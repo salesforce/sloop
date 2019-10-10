@@ -25,7 +25,7 @@ func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTi
 	err := t.Db().View(func(txn badgerwrap.Txn) error {
 		var err2 error
 		var stats typed.RangeReadStats
-		watchRes, _, err2 = t.WatchTable().RangeRead(txn, paramResPayloadFn(params), isResPayloadInTimeRange(startTime, endTime), startTime, endTime)
+		watchRes, _, err2 = t.WatchTable().RangeRead(txn, nil, paramResPayloadFn(params), isResPayloadInTimeRange(startTime, endTime), startTime, endTime)
 		if err2 != nil {
 			return err2
 		}

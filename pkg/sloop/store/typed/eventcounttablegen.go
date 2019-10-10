@@ -132,71 +132,6 @@ func (t *ResourceEventCountsTable) GetMinMaxPartitions(txn badgerwrap.Txn) (bool
 	return true, minKey.PartitionId, maxKey.PartitionId
 }
 
-//TODO: will be replaced by GetPartitionsFromTimeRange in future
-func (t *ResourceEventCountsTable) RangeRead(
-	txn badgerwrap.Txn,
-	keyPredicateFn func(string) bool,
-	valPredicateFn func(*ResourceEventCounts) bool,
-	startTime time.Time,
-	endTime time.Time) (map[EventCountKey]*ResourceEventCounts, RangeReadStats, error) {
-
-	resources := map[EventCountKey]*ResourceEventCounts{}
-
-	keyPrefix := "/" + t.tableName + "/"
-	iterOpt := badger.DefaultIteratorOptions
-	iterOpt.Prefix = []byte(keyPrefix)
-	itr := txn.NewIterator(iterOpt)
-	defer itr.Close()
-
-	startPartition := untyped.GetPartitionId(startTime)
-	endPartition := untyped.GetPartitionId(endTime)
-	startPartitionPrefix := keyPrefix + startPartition + "/"
-
-	stats := RangeReadStats{}
-	before := time.Now()
-
-	lastPartition := ""
-	for itr.Seek([]byte(startPartitionPrefix)); itr.ValidForPrefix([]byte(keyPrefix)); itr.Next() {
-		stats.RowsVisitedCount += 1
-		if !keyPredicateFn(string(itr.Item().Key())) {
-			continue
-		}
-		stats.RowsPassedKeyPredicateCount += 1
-
-		key := EventCountKey{}
-		err := key.Parse(string(itr.Item().Key()))
-		if err != nil {
-			return nil, stats, err
-		}
-		if key.PartitionId != lastPartition {
-			stats.PartitionCount += 1
-			lastPartition = key.PartitionId
-		}
-		// partitions are zero padded to 12 digits so we can compare them lexicographically
-		if key.PartitionId > endPartition {
-			// end of range
-			break
-		}
-		valueBytes, err := itr.Item().ValueCopy([]byte{})
-		if err != nil {
-			return nil, stats, err
-		}
-		retValue := &ResourceEventCounts{}
-		err = proto.Unmarshal(valueBytes, retValue)
-		if err != nil {
-			return nil, stats, err
-		}
-		if valPredicateFn != nil && !valPredicateFn(retValue) {
-			continue
-		}
-		stats.RowsPassedValuePredicateCount += 1
-		resources[key] = retValue
-	}
-	stats.Elapsed = time.Since(before)
-	stats.TableName = (&EventCountKey{}).TableName()
-	return resources, stats, nil
-}
-
 //todo: need to add unit test
 func (t *ResourceEventCountsTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]string, error) {
 	resources := []string{}
@@ -273,8 +208,8 @@ func (t *ResourceEventCountsTable) getLastMatchingKeyInPartition(txn badgerwrap.
 }
 
 //todo: add unit tests
-func (t *ResourceEventCountsTable) RangeReadPerPartition(txn badgerwrap.Txn, keyPrefix *EventCountKey,
-	valPredicateFn func(*ResourceEventCounts) bool, startTime time.Time, endTime time.Time) (map[EventCountKey]*ResourceEventCounts, RangeReadStats, error) {
+func (t *ResourceEventCountsTable) RangeRead(txn badgerwrap.Txn, keyPrefix *EventCountKey,
+	keyPredicateFn func(string) bool, valPredicateFn func(*ResourceEventCounts) bool, startTime time.Time, endTime time.Time) (map[EventCountKey]*ResourceEventCounts, RangeReadStats, error) {
 	resources := map[EventCountKey]*ResourceEventCounts{}
 
 	stats := RangeReadStats{}
@@ -306,6 +241,11 @@ func (t *ResourceEventCountsTable) RangeReadPerPartition(txn badgerwrap.Txn, key
 		//in most cases, we should only hit one result per partition
 		for itr.Seek([]byte(seekStr)); itr.ValidForPrefix([]byte(seekStr)); itr.Next() {
 			stats.RowsVisitedCount += 1
+			if keyPredicateFn != nil {
+				if !keyPredicateFn(string(itr.Item().Key())) {
+					continue
+				}
+			}
 			key := EventCountKey{}
 			err := key.Parse(string(itr.Item().Key()))
 			if err != nil {

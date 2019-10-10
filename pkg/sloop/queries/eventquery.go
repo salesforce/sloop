@@ -37,7 +37,7 @@ func GetEventData(params url.Values, t typed.Tables, startTime time.Time, endTim
 		var err2 error
 		var stats typed.RangeReadStats
 		// TODO: In addition to isEventValInTimeRange we need to also crack open the payload and check the involvedObject kind (+namespace, name, uuid)
-		watchEvents, stats, err2 = t.WatchTable().RangeRead(txn, paramEventDataFn(params), isEventValInTimeRange(startTime, endTime), startTime, endTime)
+		watchEvents, stats, err2 = t.WatchTable().RangeRead(txn, nil, paramEventDataFn(params), isEventValInTimeRange(startTime, endTime), startTime, endTime)
 		if err2 != nil {
 			return err2
 		}

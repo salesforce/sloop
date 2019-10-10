@@ -25,7 +25,7 @@ func NamespaceQuery(params url.Values, tables typed.Tables, startTime time.Time,
 	err := tables.Db().View(func(txn badgerwrap.Txn) error {
 		var err2 error
 		var stats typed.RangeReadStats
-		resourcesNs, stats, err2 = tables.ResourceSummaryTable().RangeRead(txn, isNamespace, nil, startTime, endTime)
+		resourcesNs, stats, err2 = tables.ResourceSummaryTable().RangeRead(txn, nil, isNamespace, nil, startTime, endTime)
 		if err2 != nil {
 			return err2
 		}
@@ -48,7 +48,7 @@ func NamespaceQuery(params url.Values, tables typed.Tables, startTime time.Time,
 func KindQuery(params url.Values, tables typed.Tables, startTime time.Time, endTime time.Time, requestId string) ([]byte, error) {
 	kindExists := make(map[string]bool)
 	err := tables.Db().View(func(txn badgerwrap.Txn) error {
-		_, stats, err2 := tables.ResourceSummaryTable().RangeRead(txn, isKind(kindExists), nil, startTime, endTime)
+		_, stats, err2 := tables.ResourceSummaryTable().RangeRead(txn, nil, isKind(kindExists), nil, startTime, endTime)
 		if err2 != nil {
 			return err2
 		}

@@ -13,6 +13,7 @@ package typed
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
 	"time"
@@ -20,7 +21,6 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"github.com/stretchr/testify/assert"
 )
 
 func helper_WatchActivity_ShouldSkip() bool {
