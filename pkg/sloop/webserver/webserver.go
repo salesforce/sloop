@@ -118,6 +118,13 @@ func queryHandler(tables typed.Tables, maxLookBack time.Duration) http.HandlerFu
 	}
 }
 
+func healthHandler() http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		writer.WriteHeader(http.StatusOK)
+		writer.Write([]byte(http.StatusText(http.StatusOK)))
+	}
+}
+
 func Run(config WebConfig, tables typed.Tables) error {
 	webFiles = config.WebFilesPath
 	server := &Server{}
@@ -128,6 +135,7 @@ func Run(config WebConfig, tables typed.Tables) error {
 	server.mux.HandleFunc("/debug/", listKeysHandler(tables))
 	server.mux.HandleFunc("/debug/view/", viewKeyHandler(tables))
 	server.mux.HandleFunc("/debug/config/", configHandler(config.ConfigYaml))
+	server.mux.HandleFunc("/healthz", healthHandler())
 	server.mux.Handle("/metrics", promhttp.Handler())
 	server.mux.HandleFunc("/", indexHandler(config))
 
