@@ -207,7 +207,6 @@ func (t *ResourceSummaryTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn,
 	return false, &ResourceSummaryKey{}, nil
 }
 
-//todo: add unit tests
 func (t *ResourceSummaryTable) RangeRead(txn badgerwrap.Txn, keyPrefix *ResourceSummaryKey,
 	keyPredicateFn func(string) bool, valPredicateFn func(*ResourceSummary) bool, startTime time.Time, endTime time.Time) (map[ResourceSummaryKey]*ResourceSummary, RangeReadStats, error) {
 	resources := map[ResourceSummaryKey]*ResourceSummary{}
@@ -221,13 +220,12 @@ func (t *ResourceSummaryTable) RangeRead(txn badgerwrap.Txn, keyPrefix *Resource
 		return resources, stats, errors.Wrapf(err, "failed to get partitions from table:%v, from startTime:%v, to endTime:%v", t.tableName, startTime, endTime)
 	}
 
-	tablePrefix := "/" + t.tableName + "/"
 	for _, currentPartition := range partitionList {
 		var seekStr string
 
 		// when keyPrefix does not have such info as kind,namespace,and etc, we seek from /tableName/currentPartition/
 		if keyPrefix == nil {
-			seekStr = tablePrefix + currentPartition + "/"
+			seekStr = "/" + t.tableName + "/" + currentPartition + "/"
 		} else {
 			// update keyPrefix with current partition
 			keyPrefix.SetPartitionId(currentPartition)
@@ -296,4 +294,26 @@ func (t *ResourceSummaryTable) GetPartitionsFromTimeRange(txn badgerwrap.Txn, st
 		curPar = untyped.GetPartitionId(parTime)
 	}
 	return resources, nil
+}
+
+func ResourceSummary_ValPredicateFns(valFn ...func(*ResourceSummary) bool) func(*ResourceSummary) bool {
+	return func(result *ResourceSummary) bool {
+		for _, thisFn := range valFn {
+			if !thisFn(result) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+func ResourceSummary_KeyPredicateFns(keyFn ...func(string) bool) func(string) bool {
+	return func(result string) bool {
+		for _, thisFn := range keyFn {
+			if !thisFn(result) {
+				return false
+			}
+		}
+		return true
+	}
 }
