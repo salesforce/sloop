@@ -40,7 +40,8 @@ func GetEventData(params url.Values, t typed.Tables, startTime time.Time, endTim
 		selectedNamespace := params.Get(NamespaceParam)
 		selectedName := params.Get(NameParam)
 		selectedKind := params.Get(KindParam)
-		if selectedKind == kubeextractor.NodeKind || selectedKind == kubeextractor.NamespaceKind {
+
+		if kubeextractor.IsClustersScopedResource(selectedKind) {
 			selectedNamespace = DefaultNamespace
 		}
 
@@ -53,8 +54,10 @@ func GetEventData(params url.Values, t typed.Tables, startTime time.Time, endTim
 			Timestamp:   time.Time{},
 		}
 
-		// TODO: In addition to isEventValInTimeRange we need to also crack open the payload and check the involvedObject kind (+namespace, name, uuid)
-		watchEvents, stats, err2 = t.WatchTable().RangeRead(txn, key, paramEventDataFn(params), isEventValInTimeRange(startTime, endTime), startTime, endTime)
+		// pass a few valPredFn filter: payload in time range and payload kind matched
+		//todo: use this practice for all other tables
+		valPredFn := NewCombinedValPredicate(isEventValInTimeRange(startTime, endTime), matchEventInvolvedObject(params))
+		watchEvents, stats, err2 = t.WatchTable().RangeRead(txn, key, nil, valPredFn, startTime, endTime)
 		if err2 != nil {
 			return err2
 		}

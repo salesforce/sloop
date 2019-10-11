@@ -66,7 +66,7 @@ func Test_GetEventData_False(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_GetEventData_NotInTimeRange(t *testing.T) {
+func Test_GetEventData_KeyNotInTimeRange(t *testing.T) {
 	untyped.TestHookSetPartitionDuration(time.Hour)
 	partitionId := untyped.GetPartitionId(someTs)
 	values := helper_get_params()
@@ -96,15 +96,24 @@ func Test_GetEventData_True(t *testing.T) {
 	keys = append(keys, typed.NewWatchTableKey(partitionId, "Event", "someNamespace", "someName.xx", someTs).String())
 	keys = append(keys, typed.NewWatchTableKey(partitionId, "Event", "someNamespaceb", "someName.xx", someTs).String())
 	someEventPayload := `{
+  "involvedObject": {
+    "kind": "someKinda",
+    "namespace": "user-dmanoharan",
+    "name": "someNamespace",
+    "uid": "someuuid",
+    "apiVersion": "v1",
+    "resourceVersion": "2716553ddd",
+    "fieldPath": "spec.containers{xxx}"
+  },
         "reason":"someReason",
         "firstTimestamp": "2019-01-01T21:24:55Z",
         "lastTimestamp": "2019-01-02T21:27:55Z",
         "count": 10
     }`
+
 	tables := helper_get_k8Watchtable(keys, t, someEventPayload)
 	res, err := GetEventData(values, tables, someTs.Add(-1*time.Hour), someTs.Add(6*time.Hour), someRequestId)
 	assert.Nil(t, err)
-
 	expectedRes := `[
  {
   "partitionId": "001546398000",
@@ -112,9 +121,73 @@ func Test_GetEventData_True(t *testing.T) {
   "name": "someName.xx",
   "watchTimestamp": "2019-01-02T03:04:05.000000006Z",
   "kind": "Event",
-  "payload": "{\n        \"reason\":\"someReason\",\n        \"firstTimestamp\": \"2019-01-01T21:24:55Z\",\n        \"lastTimestamp\": \"2019-01-02T21:27:55Z\",\n        \"count\": 10\n    }",
+  "payload": "{\n  \"involvedObject\": {\n    \"kind\": \"someKinda\",\n    \"namespace\": \"user-dmanoharan\",\n    \"name\": \"someNamespace\",\n    \"uid\": \"someuuid\",\n    \"apiVersion\": \"v1\",\n    \"resourceVersion\": \"2716553ddd\",\n    \"fieldPath\": \"spec.containers{xxx}\"\n  },\n        \"reason\":\"someReason\",\n        \"firstTimestamp\": \"2019-01-01T21:24:55Z\",\n        \"lastTimestamp\": \"2019-01-02T21:27:55Z\",\n        \"count\": 10\n    }",
   "eventKey": "/watch/001546398000/Event/someNamespace/someName.xx/1546398245000000006"
  }
 ]`
 	assertex.JsonEqual(t, expectedRes, string(res))
+}
+
+func Test_GetEventData_ValPayloadNotInTimeRange(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	partitionId := untyped.GetPartitionId(someTs)
+	values := helper_get_params()
+	values[KindParam] = []string{"someKinda"}
+	values[NamespaceParam] = []string{"someNamespace"}
+	values[NameParam] = []string{"someName"}
+	var keys []string
+	keys = append(keys, typed.NewWatchTableKey(partitionId, "Event", "someNamespace", "someName.xx", someTs).String())
+	keys = append(keys, typed.NewWatchTableKey(partitionId, "Event", "someNamespaceb", "someName.xx", someTs).String())
+	someEventPayload := `{
+  "involvedObject": {
+    "kind": "someKinda",
+    "namespace": "user-dmanoharan",
+    "name": "someNamespace",
+    "uid": "someuuid",
+    "apiVersion": "v1",
+    "resourceVersion": "2716553ddd",
+    "fieldPath": "spec.containers{xxx}"
+  },
+        "reason":"someReason",
+        "firstTimestamp": "2001-01-01T21:24:55Z",
+        "lastTimestamp": "2001-01-02T21:27:55Z",
+        "count": 10
+    }`
+
+	tables := helper_get_k8Watchtable(keys, t, someEventPayload)
+	res, err := GetEventData(values, tables, someTs.Add(-1*time.Hour), someTs.Add(6*time.Hour), someRequestId)
+	assert.Nil(t, err)
+	assert.Equal(t, string(res), "")
+}
+
+func Test_GetEventData_ValPayloadKindNotMatch(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	partitionId := untyped.GetPartitionId(someTs)
+	values := helper_get_params()
+	values[KindParam] = []string{"someKinda"}
+	values[NamespaceParam] = []string{"someNamespace"}
+	values[NameParam] = []string{"someName"}
+	var keys []string
+	keys = append(keys, typed.NewWatchTableKey(partitionId, "Event", "someNamespace", "someName.xx", someTs).String())
+	keys = append(keys, typed.NewWatchTableKey(partitionId, "Event", "someNamespaceb", "someName.xx", someTs).String())
+	someEventPayload := `{
+  "involvedObject": {
+    "kind": "testkind",
+    "namespace": "user-dmanoharan",
+    "name": "someNamespace",
+    "uid": "someuuid",
+    "apiVersion": "v1",
+    "resourceVersion": "2716553ddd",
+    "fieldPath": "spec.containers{xxx}"
+  },
+        "reason":"someReason",
+        "firstTimestamp": "2019-01-01T21:24:55Z",
+        "lastTimestamp": "2019-01-02T21:27:55Z",
+        "count": 10
+    }`
+
+	tables := helper_get_k8Watchtable(keys, t, someEventPayload)
+	res, err := GetEventData(values, tables, someTs.Add(-1*time.Hour), someTs.Add(6*time.Hour), someRequestId)
+	assert.Nil(t, err)
+	assert.Equal(t, string(res), "")
 }

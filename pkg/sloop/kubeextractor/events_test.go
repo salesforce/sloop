@@ -87,3 +87,18 @@ func Test_GetInvolvedObjectNameFromEventName_HostName(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "somehost.somedomain.com", key)
 }
+
+func Test_IsClustersScopedResource_True(t *testing.T) {
+	selectedKind := NodeKind
+	res := IsClustersScopedResource(selectedKind)
+	assert.True(t, res)
+
+	res = IsClustersScopedResource(NamespaceKind)
+	assert.True(t, res)
+}
+
+func Test_IsClustersScopedResource_False(t *testing.T) {
+	selectedKind := "someKind"
+	res := IsClustersScopedResource(selectedKind)
+	assert.False(t, res)
+}

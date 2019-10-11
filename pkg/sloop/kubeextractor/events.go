@@ -124,3 +124,10 @@ func GetInvolvedObjectNameFromEventName(eventName string) (string, error) {
 	}
 	return eventName[0:dotIdx], nil
 }
+
+func IsClustersScopedResource(selectedKind string) bool {
+	if selectedKind == NodeKind || selectedKind == NamespaceKind {
+		return true
+	}
+	return false
+}
