@@ -74,43 +74,6 @@ func paramFilterWatchActivityFn(params url.Values) func(string) bool {
 	}
 }
 
-// this function is only used by GetEventData, the function gets key from EventCountKey,
-// while this one gets key from WatchTableKey so they cannot be combined into one
-func paramEventDataFn(params url.Values) func(string) bool {
-	selectedNamespace := params.Get(NamespaceParam)
-	selectedName := params.Get(NameParam)
-	selectedKind := params.Get(KindParam)
-	// Nodes in the watch table are stored under the default namespace
-	// TODO: Figure out if this is correct from k8s or coming from some upstream logic in sloop
-	if selectedKind == kubeextractor.NodeKind {
-		selectedNamespace = DefaultNamespace
-	}
-	return func(key string) bool {
-		k := &typed.WatchTableKey{}
-		err := k.Parse(key)
-		if err != nil {
-			glog.Errorf("Failed to parse key: %v", key)
-			return false
-		}
-
-		if k.Kind != kubeextractor.EventKind {
-			return false
-		}
-		if selectedNamespace != AllNamespaces && k.Namespace != selectedNamespace {
-			return false
-		}
-		involvedObjectName, err := kubeextractor.GetInvolvedObjectNameFromEventName(k.Name)
-		if err != nil {
-			glog.Errorf("Could not get involved object name from event name: " + key)
-			return false
-		}
-		if involvedObjectName != selectedName {
-			return false
-		}
-		return true
-	}
-}
-
 func paramResPayloadFn(params url.Values) func(string) bool {
 	selectedNamespace := params.Get(NamespaceParam)
 	selectedName := params.Get(NameParam)
@@ -213,6 +176,17 @@ func isResSummaryValInTimeRange(startTime time.Time, endTime time.Time) func(*ty
 	}
 }
 
+func NewCombinedValPredicate(valFn ...func(*typed.KubeWatchResult) bool) func(*typed.KubeWatchResult) bool {
+	return func(result *typed.KubeWatchResult) bool {
+		for _, thisFn := range valFn {
+			if !thisFn(result) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
 func isEventValInTimeRange(startTime time.Time, endTime time.Time) func(*typed.KubeWatchResult) bool {
 	return func(retVal *typed.KubeWatchResult) bool {
 		eventInfo, err := kubeextractor.ExtractEventInfo(retVal.Payload)
@@ -222,6 +196,20 @@ func isEventValInTimeRange(startTime time.Time, endTime time.Time) func(*typed.K
 		firstTime := eventInfo.FirstTimestamp
 		lastTime := eventInfo.LastTimestamp
 		if firstTime.After(endTime) || lastTime.Before(startTime) {
+			return false
+		}
+		return true
+	}
+}
+
+func matchEventInvolvedObject(params url.Values) func(*typed.KubeWatchResult) bool {
+	selectedKind := params.Get(KindParam)
+	return func(retVal *typed.KubeWatchResult) bool {
+		involvedObj, err := kubeextractor.ExtractInvolvedObject(retVal.Payload)
+		if err != nil {
+			return false
+		}
+		if involvedObj.Kind != selectedKind {
 			return false
 		}
 		return true

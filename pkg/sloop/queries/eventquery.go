@@ -10,6 +10,7 @@ package queries
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"net/url"
@@ -36,8 +37,27 @@ func GetEventData(params url.Values, t typed.Tables, startTime time.Time, endTim
 	err := t.Db().View(func(txn badgerwrap.Txn) error {
 		var err2 error
 		var stats typed.RangeReadStats
-		// TODO: In addition to isEventValInTimeRange we need to also crack open the payload and check the involvedObject kind (+namespace, name, uuid)
-		watchEvents, stats, err2 = t.WatchTable().RangeRead(txn, nil, paramEventDataFn(params), isEventValInTimeRange(startTime, endTime), startTime, endTime)
+		selectedNamespace := params.Get(NamespaceParam)
+		selectedName := params.Get(NameParam)
+		selectedKind := params.Get(KindParam)
+
+		if kubeextractor.IsClustersScopedResource(selectedKind) {
+			selectedNamespace = DefaultNamespace
+		}
+
+		key := &typed.WatchTableKey{
+			// partition id will be rest, it is ok to leave it as empty string
+			PartitionId: "",
+			Kind:        kubeextractor.EventKind,
+			Namespace:   selectedNamespace,
+			Name:        selectedName,
+			Timestamp:   time.Time{},
+		}
+
+		// pass a few valPredFn filter: payload in time range and payload kind matched
+		//todo: use this practice for all other tables
+		valPredFn := NewCombinedValPredicate(isEventValInTimeRange(startTime, endTime), matchEventInvolvedObject(params))
+		watchEvents, stats, err2 = t.WatchTable().RangeRead(txn, key, nil, valPredFn, startTime, endTime)
 		if err2 != nil {
 			return err2
 		}
