@@ -9,4 +9,4 @@
 8. (Optional) Use port-forward for debugging:  `kc-aws port-forward -n sloop statefulset/sloop 8080 8000`
 9. In your browser, hit `localhost:8080` to see the result, you can use sloop test data to check the view
 
-![SloopTestData](../other/sloop-test.png?raw=true "SloopTestData")
+![SloopTestData](/other/sloop-test.png?raw=true "SloopTestData")
