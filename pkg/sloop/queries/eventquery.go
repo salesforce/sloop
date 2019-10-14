@@ -54,9 +54,8 @@ func GetEventData(params url.Values, t typed.Tables, startTime time.Time, endTim
 			Timestamp:   time.Time{},
 		}
 
-		// pass a few valPredFn filter: payload in time range and payload kind matched
-		//todo: use this practice for all other tables
-		valPredFn := NewCombinedValPredicate(isEventValInTimeRange(startTime, endTime), matchEventInvolvedObject(params))
+		// pass a few valPredFn filters: payload in time range and payload kind matched
+		valPredFn := typed.KubeWatchResult_ValPredicateFns(isEventValInTimeRange(startTime, endTime), matchEventInvolvedObject(params))
 		watchEvents, stats, err2 = t.WatchTable().RangeRead(txn, key, nil, valPredFn, startTime, endTime)
 		if err2 != nil {
 			return err2

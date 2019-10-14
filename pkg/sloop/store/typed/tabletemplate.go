@@ -207,7 +207,6 @@ func (t *ValueTypeTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPa
 	return false, &KeyType{}, nil
 }
 
-//todo: add unit tests
 func (t *ValueTypeTable) RangeRead(txn badgerwrap.Txn, keyPrefix *KeyType,
 	keyPredicateFn func(string) bool, valPredicateFn func(*ValueType) bool, startTime time.Time, endTime time.Time) (map[KeyType]*ValueType, RangeReadStats, error) {
 	resources := map[KeyType]*ValueType{}
@@ -221,13 +220,12 @@ func (t *ValueTypeTable) RangeRead(txn badgerwrap.Txn, keyPrefix *KeyType,
 		return resources, stats, errors.Wrapf(err, "failed to get partitions from table:%v, from startTime:%v, to endTime:%v", t.tableName, startTime, endTime)
 	}
 
-	tablePrefix := "/" + t.tableName + "/"
 	for _, currentPartition := range partitionList {
 		var seekStr string
 
 		// when keyPrefix does not have such info as kind,namespace,and etc, we seek from /tableName/currentPartition/
 		if keyPrefix == nil {
-			seekStr = tablePrefix + currentPartition + "/"
+			seekStr = "/" + t.tableName + "/" + currentPartition + "/"
 		} else {
 			// update keyPrefix with current partition
 			keyPrefix.SetPartitionId(currentPartition)
@@ -296,4 +294,26 @@ func (t *ValueTypeTable) GetPartitionsFromTimeRange(txn badgerwrap.Txn, startTim
 		curPar = untyped.GetPartitionId(parTime)
 	}
 	return resources, nil
+}
+
+func ValueType_ValPredicateFns(valFn ...func(*ValueType) bool) func(*ValueType) bool {
+	return func(result *ValueType) bool {
+		for _, thisFn := range valFn {
+			if !thisFn(result) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+func ValueType_KeyPredicateFns(keyFn ...func(string) bool) func(string) bool {
+	return func(result string) bool {
+		for _, thisFn := range keyFn {
+			if !thisFn(result) {
+				return false
+			}
+		}
+		return true
+	}
 }

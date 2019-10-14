@@ -207,7 +207,6 @@ func (t *WatchActivityTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, c
 	return false, &WatchActivityKey{}, nil
 }
 
-//todo: add unit tests
 func (t *WatchActivityTable) RangeRead(txn badgerwrap.Txn, keyPrefix *WatchActivityKey,
 	keyPredicateFn func(string) bool, valPredicateFn func(*WatchActivity) bool, startTime time.Time, endTime time.Time) (map[WatchActivityKey]*WatchActivity, RangeReadStats, error) {
 	resources := map[WatchActivityKey]*WatchActivity{}
@@ -221,13 +220,12 @@ func (t *WatchActivityTable) RangeRead(txn badgerwrap.Txn, keyPrefix *WatchActiv
 		return resources, stats, errors.Wrapf(err, "failed to get partitions from table:%v, from startTime:%v, to endTime:%v", t.tableName, startTime, endTime)
 	}
 
-	tablePrefix := "/" + t.tableName + "/"
 	for _, currentPartition := range partitionList {
 		var seekStr string
 
 		// when keyPrefix does not have such info as kind,namespace,and etc, we seek from /tableName/currentPartition/
 		if keyPrefix == nil {
-			seekStr = tablePrefix + currentPartition + "/"
+			seekStr = "/" + t.tableName + "/" + currentPartition + "/"
 		} else {
 			// update keyPrefix with current partition
 			keyPrefix.SetPartitionId(currentPartition)
@@ -296,4 +294,26 @@ func (t *WatchActivityTable) GetPartitionsFromTimeRange(txn badgerwrap.Txn, star
 		curPar = untyped.GetPartitionId(parTime)
 	}
 	return resources, nil
+}
+
+func WatchActivity_ValPredicateFns(valFn ...func(*WatchActivity) bool) func(*WatchActivity) bool {
+	return func(result *WatchActivity) bool {
+		for _, thisFn := range valFn {
+			if !thisFn(result) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+func WatchActivity_KeyPredicateFns(keyFn ...func(string) bool) func(string) bool {
+	return func(result string) bool {
+		for _, thisFn := range keyFn {
+			if !thisFn(result) {
+				return false
+			}
+		}
+		return true
+	}
 }

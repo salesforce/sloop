@@ -123,23 +123,6 @@ func Test_isEventValInTimeRange_True(t *testing.T) {
 	assert.True(t, flag)
 }
 
-func Test_paramEventDataFn_False(t *testing.T) {
-	values := helper_get_params()
-	key := "/watch/001562961600/Pod/someNS/someName.xx/1562963507608345756"
-	flag := paramResPayloadFn(values)(key)
-	assert.False(t, flag)
-}
-
-func Test_paramEventDataFn_True(t *testing.T) {
-	values := helper_get_params()
-	values[KindParam] = []string{kubeextractor.PodKind}
-	values[NamespaceParam] = []string{"someNS"}
-	values[NameParam] = []string{"someName"}
-	key := "/watch/001562961600/Pod/someNS/someName/1562963507608345756"
-	flag := paramResPayloadFn(values)(key)
-	assert.True(t, flag)
-}
-
 func Test_isResPayloadInTimeRange_True(t *testing.T) {
 	val := &typed.KubeWatchResult{Kind: "someKind", Timestamp: somePTime}
 	flag := isResPayloadInTimeRange(someTs.Add(-60*time.Minute), someTs.Add(60*time.Minute))(val)

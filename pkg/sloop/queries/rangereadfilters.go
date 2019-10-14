@@ -8,7 +8,6 @@
 package queries
 
 import (
-	"github.com/golang/glog"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
@@ -71,37 +70,6 @@ func paramFilterWatchActivityFn(params url.Values) func(string) bool {
 		name := k.Name
 		uuid := k.Uid
 		return keepRowHelper(name, kind, namespace, selectedKind, selectedNamespace, selectedNameSubstring, selectedNameExactMatch, selectedUuid, uuid)
-	}
-}
-
-func paramResPayloadFn(params url.Values) func(string) bool {
-	selectedNamespace := params.Get(NamespaceParam)
-	selectedName := params.Get(NameParam)
-	selectedKind := params.Get(KindParam)
-	if selectedKind == kubeextractor.NodeKind {
-		selectedNamespace = DefaultNamespace
-	}
-	return func(key string) bool {
-		k := &typed.WatchTableKey{}
-		err := k.Parse(key)
-
-		if err != nil {
-			glog.Errorf("Failed to parse key: %v", key)
-			return false
-		}
-
-		if k.Kind != selectedKind {
-			return false
-		}
-
-		if selectedNamespace != AllNamespaces && k.Namespace != selectedNamespace {
-			return false
-		}
-
-		if k.Name != selectedName {
-			return false
-		}
-		return true
 	}
 }
 
@@ -171,17 +139,6 @@ func isResSummaryValInTimeRange(startTime time.Time, endTime time.Time) func(*ty
 		}
 		if firstSeen.After(endTime) || lastSeen.Before(startTime) {
 			return false
-		}
-		return true
-	}
-}
-
-func NewCombinedValPredicate(valFn ...func(*typed.KubeWatchResult) bool) func(*typed.KubeWatchResult) bool {
-	return func(result *typed.KubeWatchResult) bool {
-		for _, thisFn := range valFn {
-			if !thisFn(result) {
-				return false
-			}
 		}
 		return true
 	}

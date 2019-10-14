@@ -10,6 +10,7 @@ package queries
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"net/url"
@@ -25,7 +26,26 @@ func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTi
 	err := t.Db().View(func(txn badgerwrap.Txn) error {
 		var err2 error
 		var stats typed.RangeReadStats
-		watchRes, _, err2 = t.WatchTable().RangeRead(txn, nil, paramResPayloadFn(params), isResPayloadInTimeRange(startTime, endTime), startTime, endTime)
+
+		selectedNamespace := params.Get(NamespaceParam)
+		selectedName := params.Get(NameParam)
+		selectedKind := params.Get(KindParam)
+
+		if kubeextractor.IsClustersScopedResource(selectedKind) {
+			selectedNamespace = DefaultNamespace
+		}
+
+		key := &typed.WatchTableKey{
+			// partition id will be rest, it is ok to leave it as empty string
+			PartitionId: "",
+			Kind:        selectedKind,
+			Namespace:   selectedNamespace,
+			Name:        selectedName,
+			Timestamp:   time.Time{},
+		}
+
+		valPredFn := typed.KubeWatchResult_ValPredicateFns(isResPayloadInTimeRange(startTime, endTime))
+		watchRes, _, err2 = t.WatchTable().RangeRead(txn, key, nil, valPredFn, startTime, endTime)
 		if err2 != nil {
 			return err2
 		}
