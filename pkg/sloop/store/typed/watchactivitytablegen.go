@@ -153,7 +153,7 @@ func (t *WatchActivityTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]strin
 }
 
 //todo: need to add unit test
-func (t *WatchActivityTable) GetPreviousKey(txn badgerwrap.Txn, key *WatchActivityKey, keyPrefix *WatchActivityKey) (*WatchActivityKey, error) {
+func (t *WatchActivityTable) GetPreviousKey(txn badgerwrap.Txn, key *WatchActivityKey, keyComparator *WatchActivityKey) (*WatchActivityKey, error) {
 	partitionList, err := t.GetUniquePartitionList(txn)
 	if err != nil {
 		return &WatchActivityKey{}, errors.Wrapf(err, "failed to get partition list from table:%v", t.tableName)
@@ -164,7 +164,7 @@ func (t *WatchActivityTable) GetPreviousKey(txn badgerwrap.Txn, key *WatchActivi
 		if prePart > currentPartition {
 			continue
 		} else {
-			prevFound, prevKey, err := t.getLastMatchingKeyInPartition(txn, prePart, key, keyPrefix)
+			prevFound, prevKey, err := t.getLastMatchingKeyInPartition(txn, prePart, key, keyComparator)
 			if err != nil {
 				return &WatchActivityKey{}, errors.Wrapf(err, "Failure getting previous key for %v, for partition id:%v", key.String(), prePart)
 			}
@@ -173,11 +173,11 @@ func (t *WatchActivityTable) GetPreviousKey(txn badgerwrap.Txn, key *WatchActivi
 			}
 		}
 	}
-	return &WatchActivityKey{}, fmt.Errorf("failed to get any previous key in table:%v, for key:%v, keyPrefix:%v", t.tableName, key.String(), keyPrefix)
+	return &WatchActivityKey{}, fmt.Errorf("failed to get any previous key in table:%v, for key:%v, keyComparator:%v", t.tableName, key.String(), keyComparator)
 }
 
 //todo: need to add unit test
-func (t *WatchActivityTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPartition string, curKey *WatchActivityKey, keyPrefix *WatchActivityKey) (bool, *WatchActivityKey, error) {
+func (t *WatchActivityTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPartition string, curKey *WatchActivityKey, keyComparator *WatchActivityKey) (bool, *WatchActivityKey, error) {
 	iterOpt := badger.DefaultIteratorOptions
 	iterOpt.Reverse = true
 	itr := txn.NewIterator(iterOpt)
@@ -187,8 +187,9 @@ func (t *WatchActivityTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, c
 
 	// update partition with current value
 	curKey.SetPartitionId(curPartition)
-	keySeekStr := curKey.String() + string(rune(255))
+	keyComparator.SetPartitionId(curPartition)
 
+	keySeekStr := curKey.String() + string(rune(255))
 	itr.Seek([]byte(keySeekStr))
 
 	// if the result is same as key, we want to check its previous one
@@ -196,7 +197,7 @@ func (t *WatchActivityTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, c
 		itr.Next()
 	}
 
-	if itr.ValidForPrefix([]byte(keyPrefix.String())) {
+	if itr.ValidForPrefix([]byte(keyComparator.String())) {
 		key := &WatchActivityKey{}
 		err := key.Parse(string(itr.Item().Key()))
 		if err != nil {
