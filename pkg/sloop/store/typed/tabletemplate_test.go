@@ -93,6 +93,7 @@ func Test_ValueTypeTable_GetUniquePartitionList_Success(t *testing.T) {
 	assert.Nil(t, err1)
 	assert.Len(t, partList, 3)
 	assert.Contains(t, partList, someMinPartition)
+	assert.Contains(t, partList, someMiddlePartition)
 	assert.Contains(t, partList, someMaxPartition)
 }
 

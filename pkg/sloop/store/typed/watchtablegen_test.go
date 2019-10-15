@@ -93,6 +93,7 @@ func Test_KubeWatchResultTable_GetUniquePartitionList_Success(t *testing.T) {
 	assert.Nil(t, err1)
 	assert.Len(t, partList, 3)
 	assert.Contains(t, partList, someMinPartition)
+	assert.Contains(t, partList, someMiddlePartition)
 	assert.Contains(t, partList, someMaxPartition)
 }
 
@@ -117,13 +118,13 @@ func Test_GetPreviousKey_Success(t *testing.T) {
 	var partRes *WatchTableKey
 	var err1 error
 	curKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs)
-	keyPrefix := NewWatchTableKey(someMiddlePartition, someKind, someNamespace, someName, zeroData)
+	keyComparator := NewWatchTableKeyComparator(someKind, someNamespace, someName, zeroData)
 	err := db.View(func(txn badgerwrap.Txn) error {
-		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
 		return err1
 	})
 	assert.Nil(t, err)
-	expectedKey := NewWatchTableKey(someMiddlePartition, someKind, someNamespace, someName, someTs)
+	expectedKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs.Add(time.Hour*-5))
 	assert.Equal(t, expectedKey, partRes)
 }
 
@@ -132,9 +133,9 @@ func Test_GetPreviousKey_Fail(t *testing.T) {
 	var partRes *WatchTableKey
 	var err1 error
 	curKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs)
-	keyPrefix := NewWatchTableKey(someMiddlePartition, someKind+"c", someNamespace, someName, zeroData)
+	keyComparator := NewWatchTableKeyComparator(someKind+"c", someNamespace, someName, zeroData)
 	err := db.View(func(txn badgerwrap.Txn) error {
-		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
 		return err1
 	})
 	assert.NotNil(t, err)

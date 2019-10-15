@@ -29,6 +29,10 @@ func NewEventCountKey(timestamp time.Time, kind string, namespace string, name s
 	return &EventCountKey{PartitionId: partitionId, Kind: kind, Namespace: namespace, Name: name, Uid: uid}
 }
 
+func NewEventCountKeyComparator(kind string, namespace string, name string, uid string) *EventCountKey {
+	return &EventCountKey{Kind: kind, Namespace: namespace, Name: name, Uid: uid}
+}
+
 func (_ *EventCountKey) TableName() string {
 	return "eventcount"
 }

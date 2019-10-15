@@ -94,6 +94,7 @@ func Test_WatchActivityTable_GetUniquePartitionList_Success(t *testing.T) {
 	assert.Nil(t, err1)
 	assert.Len(t, partList, 3)
 	assert.Contains(t, partList, someMinPartition)
+	assert.Contains(t, partList, someMiddlePartition)
 	assert.Contains(t, partList, someMaxPartition)
 }
 
@@ -117,14 +118,14 @@ func Test_WatchActivity_GetPreviousKey_Success(t *testing.T) {
 	db, wt := helper_update_WatchActivityTable(t, (&WatchActivityKey{}).SetTestKeys(), (&WatchActivityKey{}).GetTestValue())
 	var partRes *WatchActivityKey
 	var err1 error
-	curKey := NewWatchActivityKey(someMaxPartition, someKind, someNamespace, someName, someUid)
-	keyPrefix := NewWatchActivityKey(someMiddlePartition, someKind, someNamespace, someName, someUid)
+	curKey := NewWatchActivityKey(someMaxPartition, someKind, someNamespace, someName, someUid+"c")
+	keyComarator := NewWatchActivityKeyComparator(someKind, someNamespace, someName, someUid)
 	err := db.View(func(txn badgerwrap.Txn) error {
-		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComarator)
 		return err1
 	})
 	assert.Nil(t, err)
-	expectedKey := NewWatchActivityKey(someMiddlePartition, someKind, someNamespace, someName, someUid+"b")
+	expectedKey := NewWatchActivityKey(someMaxPartition, someKind, someNamespace, someName, someUid)
 	assert.Equal(t, expectedKey, partRes)
 }
 
@@ -133,9 +134,9 @@ func Test_WatchActivity_GetPreviousKey_Fail(t *testing.T) {
 	var partRes *WatchActivityKey
 	var err1 error
 	curKey := NewWatchActivityKey(someMaxPartition, someKind, someNamespace, someName, someUid)
-	keyPrefix := NewWatchActivityKey(someMiddlePartition, someKind+"a", someNamespace, someName, someUid)
+	keyComarator := NewWatchActivityKeyComparator(someKind+"a", someNamespace, someName, someUid)
 	err := db.View(func(txn badgerwrap.Txn) error {
-		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComarator)
 		return err1
 	})
 	assert.NotNil(t, err)

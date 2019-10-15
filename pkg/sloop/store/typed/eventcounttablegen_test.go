@@ -93,6 +93,7 @@ func Test_ResourceEventCountsTable_GetUniquePartitionList_Success(t *testing.T) 
 	assert.Nil(t, err1)
 	assert.Len(t, partList, 3)
 	assert.Contains(t, partList, someMinPartition)
+	assert.Contains(t, partList, someMiddlePartition)
 	assert.Contains(t, partList, someMaxPartition)
 }
 
@@ -117,9 +118,9 @@ func Test_EventCount_GetPreviousKey_Success(t *testing.T) {
 	var partRes *EventCountKey
 	var err1 error
 	curKey := NewEventCountKey(someMaxTs, someKind, someNamespace, someName, someUid+"c")
-	keyPrefix := NewEventCountKey(someMiddleTs, someKind, someNamespace, someName, someUid+"b")
+	keyComparator := NewEventCountKeyComparator(someKind, someNamespace, someName, someUid+"b")
 	err := db.View(func(txn badgerwrap.Txn) error {
-		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
 		return err1
 	})
 	assert.Nil(t, err)
@@ -132,9 +133,9 @@ func Test_EventCount_GetPreviousKey_Fail(t *testing.T) {
 	var partRes *EventCountKey
 	var err1 error
 	curKey := NewEventCountKey(someMaxTs, someKind, someNamespace, someName, someUid)
-	keyPrefix := NewEventCountKey(someMiddleTs, someKind+"b", someNamespace, someName, someUid)
+	keyComparator := NewEventCountKeyComparator(someKind+"b", someNamespace, someName, someUid)
 	err := db.View(func(txn badgerwrap.Txn) error {
-		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
 		return err1
 	})
 	assert.NotNil(t, err)

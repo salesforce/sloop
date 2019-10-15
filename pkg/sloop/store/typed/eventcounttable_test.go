@@ -108,9 +108,9 @@ func Test_EventCount_getLastMatchingKeyInPartition_FoundInPreviousPartition(t *t
 	var err1 error
 	var found bool
 	curKey := NewEventCountKey(someMaxTs, someKind, someNamespace, someName, someUid)
-	keyPrefix := NewEventCountKey(someMiddleTs, someKind, someNamespace, someName, someUid)
+	keyComparator := NewEventCountKeyComparator(someKind, someNamespace, someName, someUid)
 	err := db.View(func(txn badgerwrap.Txn) error {
-		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMiddlePartition, curKey, keyPrefix)
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMiddlePartition, curKey, keyComparator)
 		return err1
 	})
 	assert.True(t, found)
@@ -125,9 +125,9 @@ func Test_EventCount_getLastMatchingKeyInPartition_FoundInSamePartition(t *testi
 	var err1 error
 	var found bool
 	curKey := NewEventCountKey(someTs, someKind, someNamespace, someName, someUid)
-	keyPrefix := NewEventCountKey(someTs, someKind, someNamespace, someName, someUid+"a")
+	keyComparator := NewEventCountKeyComparator(someKind, someNamespace, someName, someUid+"a")
 	err := db.View(func(txn badgerwrap.Txn) error {
-		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyPrefix)
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyComparator)
 		return err1
 	})
 
@@ -143,9 +143,9 @@ func Test_EventCount_getLastMatchingKeyInPartition_SameKeySearch(t *testing.T) {
 	var err1 error
 	var found bool
 	curKey := NewEventCountKey(someTs, someKind, someNamespace, someName, someUid+"a")
-	keyPrefix := NewEventCountKey(someTs, someKind, someNamespace, someName, someUid+"a")
+	keyComparator := NewEventCountKeyComparator(someKind, someNamespace, someName, someUid+"a")
 	err := db.View(func(txn badgerwrap.Txn) error {
-		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyPrefix)
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyComparator)
 		return err1
 	})
 
@@ -160,9 +160,9 @@ func Test_EventCount_getLastMatchingKeyInPartition_NotFound(t *testing.T) {
 	var err1 error
 	var found bool
 	curKey := NewEventCountKey(someMaxTs, someKind, someNamespace, someName, someUid)
-	keyPrefix := NewEventCountKey(someTs, someKind, someNamespace, someName, someUid+"dfd")
+	keyComparator := NewEventCountKeyComparator(someKind, someNamespace, someName, someUid+"dfd")
 	err := db.View(func(txn badgerwrap.Txn) error {
-		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyPrefix)
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyComparator)
 		return err1
 	})
 

@@ -278,9 +278,9 @@ func Test_ResourceSummary_getLastMatchingKeyInPartition_FoundInPreviousPartition
 	var err1 error
 	var found bool
 	curKey := NewResourceSummaryKey(someMaxTs, someKind, someNamespace, someName, someUid+"c")
-	keyPrefix := NewResourceSummaryKey(someMiddleTs, someKind, someNamespace, someName, someUid+"b")
+	keyComparator := NewResourceSummaryKeyComparator(someKind, someNamespace, someName, someUid+"b")
 	err := db.View(func(txn badgerwrap.Txn) error {
-		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMiddlePartition, curKey, keyPrefix)
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMiddlePartition, curKey, keyComparator)
 		return err1
 	})
 	assert.True(t, found)
@@ -295,9 +295,9 @@ func Test_ResourceSummary_getLastMatchingKeyInPartition_FoundInSamePartition(t *
 	var err1 error
 	var found bool
 	curKey := NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+"a")
-	keyPrefix := NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid)
+	keyComparator := NewResourceSummaryKeyComparator(someKind, someNamespace, someName, someUid)
 	err := db.View(func(txn badgerwrap.Txn) error {
-		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyPrefix)
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyComparator)
 		return err1
 	})
 
@@ -313,9 +313,9 @@ func Test_ResourceSummary_getLastMatchingKeyInPartition_SameKeySearch(t *testing
 	var err1 error
 	var found bool
 	curKey := NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+"a")
-	keyPrefix := NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+"a")
+	keyComparator := NewResourceSummaryKeyComparator(someKind, someNamespace, someName, someUid+"a")
 	err := db.View(func(txn badgerwrap.Txn) error {
-		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyPrefix)
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyComparator)
 		return err1
 	})
 
@@ -330,9 +330,9 @@ func Test_ResourceSummary_getLastMatchingKeyInPartition_NotFound(t *testing.T) {
 	var err1 error
 	var found bool
 	curKey := NewResourceSummaryKey(someMaxTs, someKind, someNamespace, someName, someUid)
-	keyPrefix := NewResourceSummaryKey(someTs, someKind+"c", someNamespace, someName, someUid)
+	keyComparator := NewResourceSummaryKeyComparator(someKind+"c", someNamespace, someName, someUid)
 	err := db.View(func(txn badgerwrap.Txn) error {
-		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyPrefix)
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyComparator)
 		return err1
 	})
 

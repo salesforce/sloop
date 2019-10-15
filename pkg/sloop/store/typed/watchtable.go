@@ -35,6 +35,10 @@ func NewWatchTableKey(partitionId string, kind string, namespace string, name st
 	return &WatchTableKey{PartitionId: partitionId, Kind: kind, Namespace: namespace, Name: name, Timestamp: timestamp}
 }
 
+func NewWatchTableKeyComparator(kind string, namespace string, name string, timestamp time.Time) *WatchTableKey {
+	return &WatchTableKey{Kind: kind, Namespace: namespace, Name: name, Timestamp: timestamp}
+}
+
 func (_ *WatchTableKey) TableName() string {
 	return "watch"
 }

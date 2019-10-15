@@ -35,6 +35,10 @@ func NewResourceSummaryKey(timestamp time.Time, kind string, namespace string, n
 	return &ResourceSummaryKey{PartitionId: partitionId, Kind: kind, Namespace: namespace, Name: name, Uid: uid}
 }
 
+func NewResourceSummaryKeyComparator(kind string, namespace string, name string, uid string) *ResourceSummaryKey {
+	return &ResourceSummaryKey{Kind: kind, Namespace: namespace, Name: name, Uid: uid}
+}
+
 func (_ *ResourceSummaryKey) TableName() string {
 	return "ressum"
 }

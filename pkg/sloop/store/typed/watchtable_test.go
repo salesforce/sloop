@@ -93,7 +93,6 @@ func Test_WatchTable_TestGetMinMaxPartitions(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, found)
 	assert.Equal(t, someMinPartition, minPartition)
-	assert.Equal(t, someMiddlePartition, minPartition)
 	assert.Equal(t, someMaxPartition, maxPartition)
 }
 
@@ -103,9 +102,10 @@ func Test_getLastMatchingKeyInPartition_FoundInPreviousPartition(t *testing.T) {
 	var err1 error
 	var found bool
 	curKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs)
-	keyPrefix := NewWatchTableKey(someMiddlePartition, someKind, someNamespace, someName, zeroData)
+	keyComparator := NewWatchTableKeyComparator(someKind, someNamespace, someName, zeroData)
+
 	err := db.View(func(txn badgerwrap.Txn) error {
-		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMiddlePartition, curKey, keyPrefix)
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMiddlePartition, curKey, keyComparator)
 		return err1
 	})
 	assert.True(t, found)
@@ -120,9 +120,9 @@ func Test_getLastMatchingKeyInPartition_FoundInSamePartition(t *testing.T) {
 	var err1 error
 	var found bool
 	curKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs)
-	keyPrefix := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, zeroData)
+	keyComparator := NewWatchTableKeyComparator(someKind, someNamespace, someName, zeroData)
 	err := db.View(func(txn badgerwrap.Txn) error {
-		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMaxPartition, curKey, keyPrefix)
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMaxPartition, curKey, keyComparator)
 		return err1
 	})
 
@@ -138,9 +138,9 @@ func Test_getLastMatchingKeyInPartition_SameKeySearch(t *testing.T) {
 	var err1 error
 	var found bool
 	curKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs)
-	keyPrefix := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs)
+	keyComparator := NewWatchTableKeyComparator(someKind, someNamespace, someName, someTs)
 	err := db.View(func(txn badgerwrap.Txn) error {
-		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMaxPartition, curKey, keyPrefix)
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMaxPartition, curKey, keyComparator)
 		return err1
 	})
 
@@ -155,16 +155,15 @@ func Test_getLastMatchingKeyInPartition_NotFound(t *testing.T) {
 	var err1 error
 	var found bool
 	curKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs)
-	keyPrefix := NewWatchTableKey(someMinPartition, someKind+"c", someNamespace, someName, someTs)
+	keyComparator := NewWatchTableKeyComparator(someKind+"c", someNamespace, someName, someTs)
 	err := db.View(func(txn badgerwrap.Txn) error {
-		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyPrefix)
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyComparator)
 		return err1
 	})
 
 	assert.False(t, found)
 	assert.Equal(t, &WatchTableKey{}, keyRes)
 	assert.Nil(t, err)
->>>>>>> use gogen to add unit tests for getPreviousKey together with its supporting function
 }
 
 func (_ *WatchTableKey) GetTestKey() string {

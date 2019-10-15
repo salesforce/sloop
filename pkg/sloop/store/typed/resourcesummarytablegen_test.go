@@ -93,6 +93,7 @@ func Test_ResourceSummaryTable_GetUniquePartitionList_Success(t *testing.T) {
 	assert.Nil(t, err1)
 	assert.Len(t, partList, 3)
 	assert.Contains(t, partList, someMinPartition)
+	assert.Contains(t, partList, someMiddlePartition)
 	assert.Contains(t, partList, someMaxPartition)
 }
 
@@ -117,9 +118,9 @@ func Test_ResourceSummary_GetPreviousKey_Success(t *testing.T) {
 	var partRes *ResourceSummaryKey
 	var err1 error
 	curKey := NewResourceSummaryKey(someMaxTs, someKind, someNamespace, someName, someUid+"c")
-	keyPrefix := NewResourceSummaryKey(someMiddleTs, someKind, someNamespace, someName, someUid+"b")
+	keyComparator := NewResourceSummaryKeyComparator(someKind, someNamespace, someName, someUid+"b")
 	err := db.View(func(txn badgerwrap.Txn) error {
-		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
 		return err1
 	})
 	assert.Nil(t, err)
@@ -132,9 +133,9 @@ func Test_ResourceSummary_GetPreviousKey_Fail(t *testing.T) {
 	var partRes *ResourceSummaryKey
 	var err1 error
 	curKey := NewResourceSummaryKey(someTs.Add(2*time.Hour), someKind, someNamespace, someName, someUid)
-	keyPrefix := NewResourceSummaryKey(someTs.Add(1*time.Hour), someKind+"b", someNamespace, someName, someUid)
+	keyComparator := NewResourceSummaryKeyComparator(someKind+"b", someNamespace, someName, someUid)
 	err := db.View(func(txn badgerwrap.Txn) error {
-		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyPrefix)
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
 		return err1
 	})
 	assert.NotNil(t, err)
