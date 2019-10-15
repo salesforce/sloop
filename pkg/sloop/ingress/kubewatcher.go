@@ -20,8 +20,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
-	"os"
 	"sync"
 	"time"
 
@@ -56,19 +54,15 @@ var (
 	metricIngressKubewatchbytes = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchbytes"}, []string{"kind", "watchtype", "namespace"})
 )
 
-const (
-	KubeConfigEnv = "KUBECONFIG"
-)
-
 // Todo: Add additional parameters for filtering
-func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.KubeWatchResult, resync time.Duration, includeCrds bool) (KubeWatcher, error) {
+func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.KubeWatchResult, resync time.Duration, includeCrds bool, masterURL string, kubeContext string) (KubeWatcher, error) {
 	kw := &kubeWatcherImpl{resync: resync, outchanlock: &sync.Mutex{}}
 	kw.stopChan = make(chan struct{})
 	kw.outchan = outChan
 
-	kw.startWellKnownInformers(kubeClient, true)
+	kw.startWellKnownInformers(kubeClient)
 	if includeCrds {
-		err := kw.startCustomInformers()
+		err := kw.startCustomInformers(masterURL, kubeContext)
 		if err != nil {
 			return nil, err
 		}
@@ -77,7 +71,7 @@ func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.Ku
 	return kw, nil
 }
 
-func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interface, includeEvents bool) {
+func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interface) {
 	i.informerFactory = informers.NewSharedInformerFactory(kubeclient, i.resync)
 
 	i.informerFactory.Apps().V1beta1().Deployments().Informer().AddEventHandler(i.getEventHandlerForResource("Deployment"))
@@ -98,11 +92,9 @@ func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interfac
 	i.informerFactory.Start(i.stopChan)
 }
 
-func (i *kubeWatcherImpl) startCustomInformers() error {
-	kubeCfg, err := rest.InClusterConfig()
-	if kubeConfig := os.Getenv(KubeConfigEnv); kubeConfig != "" {
-		kubeCfg, err = clientcmd.BuildConfigFromFlags("", kubeConfig)
-	}
+func (i *kubeWatcherImpl) startCustomInformers(masterURL string, kubeContext string) error {
+	clientCfg := getConfig(masterURL, kubeContext)
+	kubeCfg, err := clientCfg.ClientConfig()
 	if err != nil {
 		return errors.Wrap(err, "failed to read config while starting custom informers")
 	}
@@ -117,8 +109,8 @@ func (i *kubeWatcherImpl) startCustomInformers() error {
 		return errors.Wrap(err, "failed to instantiate client for custom informers")
 	}
 
+	f := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynamicClient, i.resync, "", nil)
 	for _, crd := range crdList {
-		f := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynamicClient, i.resync, "", nil)
 		resource, _ := schema.ParseResourceArg(crd)
 		informer := f.ForResource(*resource)
 		informer.Informer().AddEventHandler(i.getEventHandlerForResource(resource.Resource))
@@ -144,6 +136,7 @@ func getCrdList(kubeCfg *rest.Config) ([]string, error) {
 		return nil, errors.Wrap(err, "failed to query CRDs")
 	}
 
+	glog.Infof("Found %d CRD definitions", len(crdList.Items))
 	var resources []string
 	for _, crd := range crdList.Items {
 		resourceName := fmt.Sprintf("%s.%s.%s", crd.Spec.Names.Plural, crd.Spec.Version, crd.Spec.Group)
