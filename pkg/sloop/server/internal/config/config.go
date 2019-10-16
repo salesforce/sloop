@@ -69,7 +69,7 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.StringVar(&config.UseKubeContext, "context", "", "Use a specific kubernetes context")
 	fs.StringVar(&config.DisplayContext, "display-context", "", "Use this to override the display context.  When running in k8s the context is empty string.  This lets you override that (mainly useful if you are running many copies of sloop on different clusters) ")
 	fs.StringVar(&config.ApiServerHost, "apiserver-host", "", "Kubernetes API server endpoint")
-	fs.BoolVar(&config.WatchCrds, "watch-crds", false, "Watch for activity for CRDs")
+	fs.BoolVar(&config.WatchCrds, "watch-crds", true, "Watch for activity for CRDs")
 }
 
 // This will first check if a config file is specified on cmd line using a temporary flagSet
