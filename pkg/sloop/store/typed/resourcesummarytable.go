@@ -35,6 +35,10 @@ func NewResourceSummaryKey(timestamp time.Time, kind string, namespace string, n
 	return &ResourceSummaryKey{PartitionId: partitionId, Kind: kind, Namespace: namespace, Name: name, Uid: uid}
 }
 
+func NewResourceSummaryKeyComparator(kind string, namespace string, name string, uid string) *ResourceSummaryKey {
+	return &ResourceSummaryKey{Kind: kind, Namespace: namespace, Name: name, Uid: uid}
+}
+
 func (_ *ResourceSummaryKey) TableName() string {
 	return "ressum"
 }
@@ -60,7 +64,11 @@ func (k *ResourceSummaryKey) Parse(key string) error {
 
 //todo: need to make sure it can work as keyPrefix when some fields are empty
 func (k *ResourceSummaryKey) String() string {
-	return fmt.Sprintf("/%v/%v/%v/%v/%v/%v", k.TableName(), k.PartitionId, k.Kind, k.Namespace, k.Name, k.Uid)
+	if k.Uid == "" {
+		return fmt.Sprintf("/%v/%v/%v/%v/%v", k.TableName(), k.PartitionId, k.Kind, k.Namespace, k.Name)
+	} else {
+		return fmt.Sprintf("/%v/%v/%v/%v/%v/%v", k.TableName(), k.PartitionId, k.Kind, k.Namespace, k.Name, k.Uid)
+	}
 }
 
 func (k *ResourceSummaryKey) SetPartitionId(newPartitionId string) {

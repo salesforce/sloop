@@ -79,8 +79,8 @@ func Test_ResourceSummary_RangeRead(t *testing.T) {
 	createTimeProto, err := ptypes.TimestampProto(someFirstSeenTime)
 	assert.Nil(t, err)
 
-	key1 := NewResourceSummaryKey(someTs, someKind, someNamespace, someName+"a", someUid)
-	key2 := NewResourceSummaryKey(someTs, someKind, someNamespace, someName+"b", someUid)
+	key1 := NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+"a")
+	key2 := NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+"b")
 	val := &ResourceSummary{FirstSeen: createTimeProto}
 
 	b, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
@@ -192,7 +192,7 @@ func Test_ResourceSummary_TestMinAndMaxKeys(t *testing.T) {
 		var keys []string
 		for i := 'a'; i < 'd'; i++ {
 			// add keys in ascending order
-			keys = append(keys, NewResourceSummaryKey(someTs, someKind, someNamespace, someName+string(i), someUid).String())
+			keys = append(keys, NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+string(i)).String())
 		}
 		return keys
 	}
@@ -205,8 +205,8 @@ func Test_ResourceSummary_TestMinAndMaxKeys(t *testing.T) {
 		return nil
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, "/ressum/001546398000/somekind/somenamespace/somenamea/68510937-4ffc-11e9-8e26-1418775557c8", minKey)
-	assert.Equal(t, "/ressum/001546398000/somekind/somenamespace/somenamec/68510937-4ffc-11e9-8e26-1418775557c8", maxKey)
+	assert.Equal(t, "/ressum/001546398000/somekind/somenamespace/somename/68510937-4ffc-11e9-8e26-1418775557c8a", minKey)
+	assert.Equal(t, "/ressum/001546398000/somekind/somenamespace/somename/68510937-4ffc-11e9-8e26-1418775557c8c", maxKey)
 }
 
 func Test_ResourceSummary_TestGetMinMaxParititons(t *testing.T) {
@@ -214,7 +214,7 @@ func Test_ResourceSummary_TestGetMinMaxParititons(t *testing.T) {
 		var keys []string
 		for i := 'a'; i < 'd'; i++ {
 			// add keys in ascending order
-			keys = append(keys, NewResourceSummaryKey(someTs, someKind, someNamespace, someName+string(i), someUid).String())
+			keys = append(keys, NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+string(i)).String())
 		}
 		return keys
 	}
@@ -234,20 +234,19 @@ func Test_ResourceSummary_TestGetMinMaxParititons(t *testing.T) {
 }
 
 func Test_ResourceSummary_RangeReadWithTimeRange(t *testing.T) {
-	var someTs = time.Date(2019, 1, 2, 3, 4, 5, 6, time.UTC)
 	keysFn := func() []string {
 		var keys []string
 		for i := 'a'; i < 'c'; i++ {
 			// add keys in ascending order
-			keys = append(keys, NewResourceSummaryKey(someTs, someKind, someNamespace, someName+string(i), someUid).String())
+			keys = append(keys, NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+string(i)).String())
 		}
 		for i := 'c'; i < 'e'; i++ {
 			// add keys in ascending order
-			keys = append(keys, NewResourceSummaryKey(someTs.Add(1*time.Hour), someKind, someNamespace, someName+string(i), someUid).String())
+			keys = append(keys, NewResourceSummaryKey(someMiddleTs, someKind, someNamespace, someName, someUid+string(i)).String())
 		}
 		for i := 'e'; i < 'g'; i++ {
 			// add keys in ascending order
-			keys = append(keys, NewResourceSummaryKey(someTs.Add(2*time.Hour), someKind, someNamespace, someName+string(i), someUid).String())
+			keys = append(keys, NewResourceSummaryKey(someMaxTs, someKind, someNamespace, someName, someUid+string(i)).String())
 		}
 		return keys
 	}
@@ -265,12 +264,81 @@ func Test_ResourceSummary_RangeReadWithTimeRange(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Len(t, retval, 2)
 	expectedKey := &ResourceSummaryKey{}
-	err = expectedKey.Parse("/ressum/001546401600/somekind/somenamespace/somenamec/68510937-4ffc-11e9-8e26-1418775557c8")
+	err = expectedKey.Parse("/ressum/001546401600/somekind/somenamespace/somename/68510937-4ffc-11e9-8e26-1418775557c8c")
 	assert.Nil(t, err)
 	assert.Contains(t, retval, *expectedKey)
-	err = expectedKey.Parse("/ressum/001546401600/somekind/somenamespace/somenamed/68510937-4ffc-11e9-8e26-1418775557c8")
+	err = expectedKey.Parse("/ressum/001546401600/somekind/somenamespace/somename/68510937-4ffc-11e9-8e26-1418775557c8d")
 	assert.Nil(t, err)
 	assert.Contains(t, retval, *expectedKey)
+}
+
+func Test_ResourceSummary_getLastMatchingKeyInPartition_FoundInPreviousPartition(t *testing.T) {
+	db, wt := helper_update_ResourceSummaryTable(t, (&ResourceSummaryKey{}).SetTestKeys(), (&ResourceSummaryKey{}).SetTestValue())
+	var keyRes *ResourceSummaryKey
+	var err1 error
+	var found bool
+	curKey := NewResourceSummaryKey(someMaxTs, someKind, someNamespace, someName, someUid+"c")
+	keyComparator := NewResourceSummaryKeyComparator(someKind, someNamespace, someName, someUid+"b")
+	err := db.View(func(txn badgerwrap.Txn) error {
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMiddlePartition, curKey, keyComparator)
+		return err1
+	})
+	assert.True(t, found)
+	expectedKey := NewResourceSummaryKey(someMiddleTs, someKind, someNamespace, someName, someUid+"b")
+	assert.Equal(t, expectedKey, keyRes)
+	assert.Nil(t, err)
+}
+
+func Test_ResourceSummary_getLastMatchingKeyInPartition_FoundInSamePartition(t *testing.T) {
+	db, wt := helper_update_ResourceSummaryTable(t, (&ResourceSummaryKey{}).SetTestKeys(), (&ResourceSummaryKey{}).SetTestValue())
+	var keyRes *ResourceSummaryKey
+	var err1 error
+	var found bool
+	curKey := NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+"a")
+	keyComparator := NewResourceSummaryKeyComparator(someKind, someNamespace, someName, someUid)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyComparator)
+		return err1
+	})
+
+	assert.True(t, found)
+	expectedKey := NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid)
+	assert.Equal(t, expectedKey, keyRes)
+	assert.Nil(t, err)
+}
+
+func Test_ResourceSummary_getLastMatchingKeyInPartition_SameKeySearch(t *testing.T) {
+	db, wt := helper_update_ResourceSummaryTable(t, (&ResourceSummaryKey{}).SetTestKeys(), (&ResourceSummaryKey{}).SetTestValue())
+	var keyRes *ResourceSummaryKey
+	var err1 error
+	var found bool
+	curKey := NewResourceSummaryKey(someTs, someKind, someNamespace, someName, someUid+"a")
+	keyComparator := NewResourceSummaryKeyComparator(someKind, someNamespace, someName, someUid+"a")
+	err := db.View(func(txn badgerwrap.Txn) error {
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyComparator)
+		return err1
+	})
+
+	assert.False(t, found)
+	assert.Equal(t, &ResourceSummaryKey{}, keyRes)
+	assert.Nil(t, err)
+}
+
+func Test_ResourceSummary_getLastMatchingKeyInPartition_NotFound(t *testing.T) {
+	db, wt := helper_update_ResourceSummaryTable(t, (&ResourceSummaryKey{}).SetTestKeys(), (&ResourceSummaryKey{}).SetTestValue())
+	var keyRes *ResourceSummaryKey
+	var err1 error
+	var found bool
+	curKey := NewResourceSummaryKey(someMaxTs, someKind, someNamespace, someName, someUid)
+	keyComparator := NewResourceSummaryKeyComparator(someKind+"c", someNamespace, someName, someUid)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		found, keyRes, err1 = wt.getLastMatchingKeyInPartition(txn, someMinPartition, curKey, keyComparator)
+		return err1
+	})
+
+	assert.False(t, found)
+	assert.Equal(t, &ResourceSummaryKey{}, keyRes)
+	assert.Nil(t, err)
 }
 
 func (_ *ResourceSummaryKey) GetTestKey() string {
@@ -280,4 +348,23 @@ func (_ *ResourceSummaryKey) GetTestKey() string {
 
 func (_ *ResourceSummaryKey) GetTestValue() *ResourceSummary {
 	return &ResourceSummary{}
+}
+
+func (_ *ResourceSummaryKey) SetTestKeys() []string {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	var keys []string
+	i := 'a'
+	for curTime := someTs; !curTime.After(someMaxTs); curTime = curTime.Add(untyped.GetPartitionDuration()) {
+		// add keys in ascending order
+		keys = append(keys, NewResourceSummaryKey(curTime, someKind, someNamespace, someName, someUid).String())
+		keys = append(keys, NewResourceSummaryKey(curTime, someKind, someNamespace, someName, someUid+string(i)).String())
+		i++
+	}
+
+	return keys
+}
+
+func (_ *ResourceSummaryKey) SetTestValue() *ResourceSummary {
+	createTimeProto, _ := ptypes.TimestampProto(someFirstSeenTime)
+	return &ResourceSummary{FirstSeen: createTimeProto}
 }

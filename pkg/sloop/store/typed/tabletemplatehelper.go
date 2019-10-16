@@ -48,12 +48,20 @@ func (_ *KeyType) GetTestKey() string {
 	panic("Placeholder key should not be used")
 }
 
+func (_ *KeyType) SetTestKeys() []string {
+	panic("Placeholder key should not be used")
+}
+
 func (_ *KeyType) String() string {
 	panic("Placeholder key should not be used")
 }
 
 func (_ *KeyType) GetTestValue() *ValueType {
 	panic("Placeholder key should not be used")
+}
+
+func (p *KeyType) SetTestValue() *ValueType {
+	return &ValueType{}
 }
 
 func (_ *KeyType) SetPartitionId(newPartitionId string) {

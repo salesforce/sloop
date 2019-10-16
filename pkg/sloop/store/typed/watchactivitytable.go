@@ -33,6 +33,10 @@ func NewWatchActivityKey(partitionId string, kind string, namespace string, name
 	return &WatchActivityKey{PartitionId: partitionId, Kind: kind, Namespace: namespace, Name: name, Uid: uid}
 }
 
+func NewWatchActivityKeyComparator(kind string, namespace string, name string, uid string) *WatchActivityKey {
+	return &WatchActivityKey{Kind: kind, Namespace: namespace, Name: name, Uid: uid}
+}
+
 func (_ *WatchActivityKey) TableName() string {
 	return "watchactivity"
 }

@@ -132,7 +132,6 @@ func (t *WatchActivityTable) GetMinMaxPartitions(txn badgerwrap.Txn) (bool, stri
 	return true, minKey.PartitionId, maxKey.PartitionId
 }
 
-//todo: need to add unit test
 func (t *WatchActivityTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]string, error) {
 	resources := []string{}
 	ok, minPar, maxPar := t.GetMinMaxPartitions(txn)
@@ -152,7 +151,6 @@ func (t *WatchActivityTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]strin
 	return resources, nil
 }
 
-//todo: need to add unit test
 func (t *WatchActivityTable) GetPreviousKey(txn badgerwrap.Txn, key *WatchActivityKey, keyComparator *WatchActivityKey) (*WatchActivityKey, error) {
 	partitionList, err := t.GetUniquePartitionList(txn)
 	if err != nil {
@@ -176,7 +174,6 @@ func (t *WatchActivityTable) GetPreviousKey(txn badgerwrap.Txn, key *WatchActivi
 	return &WatchActivityKey{}, fmt.Errorf("failed to get any previous key in table:%v, for key:%v, keyComparator:%v", t.tableName, key.String(), keyComparator)
 }
 
-//todo: need to add unit test
 func (t *WatchActivityTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPartition string, curKey *WatchActivityKey, keyComparator *WatchActivityKey) (bool, *WatchActivityKey, error) {
 	iterOpt := badger.DefaultIteratorOptions
 	iterOpt.Reverse = true

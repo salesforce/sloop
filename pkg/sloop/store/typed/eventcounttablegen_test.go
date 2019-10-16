@@ -13,6 +13,7 @@ package typed
 
 import (
 	"fmt"
+	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"reflect"
 	"testing"
 	"time"
@@ -48,5 +49,145 @@ func Test_ResourceEventCountsTable_SetWorks(t *testing.T) {
 		return nil
 	})
 	assert.Nil(t, err)
+}
 
+func helper_update_ResourceEventCountsTable(t *testing.T, keys []string, val *ResourceEventCounts) (badgerwrap.DB, *ResourceEventCountsTable) {
+	b, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
+	assert.Nil(t, err)
+	wt := OpenResourceEventCountsTable()
+	err = b.Update(func(txn badgerwrap.Txn) error {
+		var txerr error
+		for _, key := range keys {
+			txerr = wt.Set(txn, key, val)
+			if txerr != nil {
+				return txerr
+			}
+		}
+		// Add some keys outside the range
+		txerr = txn.Set([]byte("/a/123/"), []byte{})
+		if txerr != nil {
+			return txerr
+		}
+		txerr = txn.Set([]byte("/zzz/123/"), []byte{})
+		if txerr != nil {
+			return txerr
+		}
+		return nil
+	})
+	assert.Nil(t, err)
+	return b, wt
+}
+
+func Test_ResourceEventCountsTable_GetUniquePartitionList_Success(t *testing.T) {
+	if helper_ResourceEventCounts_ShouldSkip() {
+		return
+	}
+
+	db, wt := helper_update_ResourceEventCountsTable(t, (&EventCountKey{}).SetTestKeys(), (&EventCountKey{}).SetTestValue())
+	var partList []string
+	var err1 error
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partList, err1 = wt.GetUniquePartitionList(txn)
+		return nil
+	})
+	assert.Nil(t, err)
+	assert.Nil(t, err1)
+	assert.Len(t, partList, 3)
+	assert.Contains(t, partList, someMinPartition)
+	assert.Contains(t, partList, someMiddlePartition)
+	assert.Contains(t, partList, someMaxPartition)
+}
+
+func Test_ResourceEventCountsTable_GetUniquePartitionList_EmptyPartition(t *testing.T) {
+	if helper_ResourceEventCounts_ShouldSkip() {
+		return
+	}
+
+	db, wt := helper_update_ResourceEventCountsTable(t, []string{}, (&EventCountKey{}).GetTestValue())
+	var partList []string
+	var err1 error
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partList, err1 = wt.GetUniquePartitionList(txn)
+		return err1
+	})
+	assert.Nil(t, err)
+	assert.Len(t, partList, 0)
+}
+
+func helper_testKeys() []string {
+	return []string{
+		// someMaxTs partition
+		"/eventcount/001546405200/Pod/user-j/sync-123/sam-partition-testdata",
+		"/eventcount/001546405200/Pod/user-j/sync-123/sam-partition-test",
+
+		"/eventcount/001546405200/somekind/somenamespace/somename/previous-partition-test",
+		"/eventcount/001546405200/user-a/somenamespace/somename/478-aaa",
+		"/eventcount/001546405200/user-b/somenamespace/somename/477-bbb",
+		"/eventcount/001546405200/somekind/somenamespacetest/somename/skipped-partition",
+
+		// someMiddleTs partition
+		"/eventcount/001546401600/somekind/somenamespace/somename/previous-partition-test",
+		"/eventcount/001546401600/somekind/somenamespace/somename/cde-4ffc-11e9-8e26-123",
+
+		// someTs partition
+		"/eventcount/001546398000/somekind/somenamespace/somename/previous-partition-test",
+		"/eventcount/001546398000/somekind123/somenamespace/somename/68510937-4ffc-11e9-8e26-123",
+		"/eventcount/001546398000/somekind/somenamespacetest/somename/skipped-partition",
+
+		"/eventcount/001546398000/somekindaaa/somenamespaceaaa/somenameaaa/aaaa",
+	}
+}
+
+func Test_EventCount_GetPreviousKey_Success(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	db, wt := helper_update_ResourceEventCountsTable(t, helper_testKeys(), (&EventCountKey{}).SetTestValue())
+	var partRes *EventCountKey
+	var err1 error
+
+	// testing in the same partition
+	curKey := NewEventCountKey(someMaxTs, kubeextractor.PodKind, "user-j", "sync-123", "sam-partition-testdata")
+	keyComparator := NewEventCountKeyComparator(kubeextractor.PodKind, "user-j", "sync-123", "")
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
+		return err1
+	})
+	assert.Nil(t, err)
+	expectedKey := NewEventCountKey(someMaxTs, kubeextractor.PodKind, "user-j", "sync-123", "sam-partition-test")
+	assert.Equal(t, expectedKey, partRes)
+
+	// testing in the previous partition
+	curKey = NewEventCountKey(someMaxTs, someKind, someNamespace, someName, "previous-partition-test")
+	keyComparator = NewEventCountKeyComparator(someKind, someNamespace, someName, "previous-partition-test")
+	err = db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
+		return err1
+	})
+	assert.Nil(t, err)
+	expectedKey = NewEventCountKey(someMiddleTs, someKind, someNamespace, someName, "previous-partition-test")
+	assert.Equal(t, expectedKey, partRes)
+
+	// testing in skipped partition
+	curKey = NewEventCountKey(someMaxTs, someKind, "somenamespacetest", someName, "skipped-partition")
+	keyComparator = NewEventCountKeyComparator(someKind, "somenamespacetest", someName, "skipped-partition")
+	err = db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
+		return err1
+	})
+	assert.Nil(t, err)
+	expectedKey = NewEventCountKey(someTs, someKind, "somenamespacetest", someName, "skipped-partition")
+	assert.Equal(t, expectedKey, partRes)
+}
+
+func Test_EventCount_GetPreviousKey_Fail(t *testing.T) {
+	db, wt := helper_update_ResourceEventCountsTable(t, (&EventCountKey{}).SetTestKeys(), (&EventCountKey{}).SetTestValue())
+	var partRes *EventCountKey
+	var err1 error
+	curKey := NewEventCountKey(someMaxTs, someKind, someNamespace, someName, someUid)
+	keyComparator := NewEventCountKeyComparator(someKind+"b", someNamespace, someName, someUid)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
+		return err1
+	})
+	assert.NotNil(t, err)
+	assert.Equal(t, &EventCountKey{}, partRes)
 }

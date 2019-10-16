@@ -132,7 +132,6 @@ func (t *ResourceEventCountsTable) GetMinMaxPartitions(txn badgerwrap.Txn) (bool
 	return true, minKey.PartitionId, maxKey.PartitionId
 }
 
-//todo: need to add unit test
 func (t *ResourceEventCountsTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]string, error) {
 	resources := []string{}
 	ok, minPar, maxPar := t.GetMinMaxPartitions(txn)
@@ -152,7 +151,6 @@ func (t *ResourceEventCountsTable) GetUniquePartitionList(txn badgerwrap.Txn) ([
 	return resources, nil
 }
 
-//todo: need to add unit test
 func (t *ResourceEventCountsTable) GetPreviousKey(txn badgerwrap.Txn, key *EventCountKey, keyComparator *EventCountKey) (*EventCountKey, error) {
 	partitionList, err := t.GetUniquePartitionList(txn)
 	if err != nil {
@@ -176,7 +174,6 @@ func (t *ResourceEventCountsTable) GetPreviousKey(txn badgerwrap.Txn, key *Event
 	return &EventCountKey{}, fmt.Errorf("failed to get any previous key in table:%v, for key:%v, keyComparator:%v", t.tableName, key.String(), keyComparator)
 }
 
-//todo: need to add unit test
 func (t *ResourceEventCountsTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn, curPartition string, curKey *EventCountKey, keyComparator *EventCountKey) (bool, *EventCountKey, error) {
 	iterOpt := badger.DefaultIteratorOptions
 	iterOpt.Reverse = true

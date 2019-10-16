@@ -48,5 +48,96 @@ func Test_KubeWatchResultTable_SetWorks(t *testing.T) {
 		return nil
 	})
 	assert.Nil(t, err)
+}
 
+func helper_update_KubeWatchResultTable(t *testing.T, keys []string, val *KubeWatchResult) (badgerwrap.DB, *KubeWatchResultTable) {
+	b, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
+	assert.Nil(t, err)
+	wt := OpenKubeWatchResultTable()
+	err = b.Update(func(txn badgerwrap.Txn) error {
+		var txerr error
+		for _, key := range keys {
+			txerr = wt.Set(txn, key, val)
+			if txerr != nil {
+				return txerr
+			}
+		}
+		// Add some keys outside the range
+		txerr = txn.Set([]byte("/a/123/"), []byte{})
+		if txerr != nil {
+			return txerr
+		}
+		txerr = txn.Set([]byte("/zzz/123/"), []byte{})
+		if txerr != nil {
+			return txerr
+		}
+		return nil
+	})
+	assert.Nil(t, err)
+	return b, wt
+}
+
+func Test_KubeWatchResultTable_GetUniquePartitionList_Success(t *testing.T) {
+	if helper_KubeWatchResult_ShouldSkip() {
+		return
+	}
+
+	db, wt := helper_update_KubeWatchResultTable(t, (&WatchTableKey{}).SetTestKeys(), (&WatchTableKey{}).SetTestValue())
+	var partList []string
+	var err1 error
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partList, err1 = wt.GetUniquePartitionList(txn)
+		return nil
+	})
+	assert.Nil(t, err)
+	assert.Nil(t, err1)
+	assert.Len(t, partList, 3)
+	assert.Contains(t, partList, someMinPartition)
+	assert.Contains(t, partList, someMiddlePartition)
+	assert.Contains(t, partList, someMaxPartition)
+}
+
+func Test_KubeWatchResultTable_GetUniquePartitionList_EmptyPartition(t *testing.T) {
+	if helper_KubeWatchResult_ShouldSkip() {
+		return
+	}
+
+	db, wt := helper_update_KubeWatchResultTable(t, []string{}, &KubeWatchResult{})
+	var partList []string
+	var err1 error
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partList, err1 = wt.GetUniquePartitionList(txn)
+		return err1
+	})
+	assert.Nil(t, err)
+	assert.Len(t, partList, 0)
+}
+
+func Test_GetPreviousKey_Success(t *testing.T) {
+	db, wt := helper_update_KubeWatchResultTable(t, (&WatchTableKey{}).SetTestKeys(), (&WatchTableKey{}).SetTestValue())
+	var partRes *WatchTableKey
+	var err1 error
+	curKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs)
+	keyComparator := NewWatchTableKeyComparator(someKind, someNamespace, someName, zeroData)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
+		return err1
+	})
+	assert.Nil(t, err)
+	expectedKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs.Add(time.Hour*-5))
+	assert.Equal(t, expectedKey, partRes)
+}
+
+func Test_GetPreviousKey_Fail(t *testing.T) {
+	db, wt := helper_update_KubeWatchResultTable(t, (&WatchTableKey{}).SetTestKeys(), (&WatchTableKey{}).SetTestValue())
+	var partRes *WatchTableKey
+	var err1 error
+	curKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs)
+	keyComparator := NewWatchTableKeyComparator(someKind+"c", someNamespace, someName, zeroData)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
+		return err1
+	})
+	assert.NotNil(t, err)
+	assert.Equal(t, &WatchTableKey{}, partRes)
 }
