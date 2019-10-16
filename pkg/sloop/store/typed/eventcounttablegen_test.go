@@ -13,6 +13,7 @@ package typed
 
 import (
 	"fmt"
+	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"reflect"
 	"testing"
 	"time"
@@ -113,18 +114,67 @@ func Test_ResourceEventCountsTable_GetUniquePartitionList_EmptyPartition(t *test
 	assert.Len(t, partList, 0)
 }
 
+func helper_testKeys() []string {
+	return []string{
+		// someMaxTs partition
+		"/eventcount/001546405200/Pod/user-j/sync-123/9a81eb5f-ef3f-11e9-9f94-1866daaa38bb",
+		"/eventcount/001546405200/Pod/user-j/sync-123/0dd0374f-ef1e-11e9-b830-14187760f413",
+
+		"/eventcount/001546405200/somekind/somenamespace/somename/68510937-4ffc-11e9-8e26-1418775557c8",
+		"/eventcount/001546405200/user-a/somenamespace/somename/478-aaa",
+		"/eventcount/001546405200/user-b/somenamespace/somename/477-bbb",
+		"/eventcount/001546405200/somekind/somenamespacetest/somename/476-cc",
+
+		// someMiddleTs partition
+		"/eventcount/001546401600/somekind/somenamespace/somename/68510937-4ffc-11e9-8e26-1418775557c8",
+		"/eventcount/001546401600/somekind/somenamespace/somename/cde-4ffc-11e9-8e26-123",
+
+		// someTs partition
+		"/eventcount/001546398000/somekind/somenamespace/somename/68510937-4ffc-11e9-8e26-1418775557c8",
+		"/eventcount/001546398000/somekind123/somenamespace/somename/68510937-4ffc-11e9-8e26-123",
+		"/eventcount/001546398000/somekind/somenamespacetest/somename/476-cc",
+
+		"/eventcount/001546398000/somekindaaa/somenamespaceaaa/somenameaaa/aaaa",
+	}
+}
+
 func Test_EventCount_GetPreviousKey_Success(t *testing.T) {
-	db, wt := helper_update_ResourceEventCountsTable(t, (&EventCountKey{}).SetTestKeys(), (&EventCountKey{}).SetTestValue())
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	db, wt := helper_update_ResourceEventCountsTable(t, helper_testKeys(), (&EventCountKey{}).SetTestValue())
 	var partRes *EventCountKey
 	var err1 error
-	curKey := NewEventCountKey(someMaxTs, someKind, someNamespace, someName, someUid+"c")
-	keyComparator := NewEventCountKeyComparator(someKind, someNamespace, someName, someUid+"b")
+
+	// testing in the same partition
+	curKey := NewEventCountKey(someMaxTs, kubeextractor.PodKind, "user-j", "sync-123", "9a81eb5f-ef3f-11e9-9f94-1866daaa38bb")
+	keyComparator := NewEventCountKeyComparator(kubeextractor.PodKind, "user-j", "sync-123", "")
 	err := db.View(func(txn badgerwrap.Txn) error {
 		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
 		return err1
 	})
 	assert.Nil(t, err)
-	expectedKey := NewEventCountKey(someMiddleTs, someKind, someNamespace, someName, someUid+"b")
+	expectedKey := NewEventCountKey(someMaxTs, kubeextractor.PodKind, "user-j", "sync-123", "0dd0374f-ef1e-11e9-b830-14187760f413")
+	assert.Equal(t, expectedKey, partRes)
+
+	// testing in the previous partition
+	curKey = NewEventCountKey(someMaxTs, someKind, someNamespace, someName, "68510937-4ffc-11e9-8e26-1418775557c8")
+	keyComparator = NewEventCountKeyComparator(someKind, someNamespace, someName, "68510937-4ffc-11e9-8e26-1418775557c8")
+	err = db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
+		return err1
+	})
+	assert.Nil(t, err)
+	expectedKey = NewEventCountKey(someMiddleTs, someKind, someNamespace, someName, "68510937-4ffc-11e9-8e26-1418775557c8")
+	assert.Equal(t, expectedKey, partRes)
+
+	// testing in skipped partition
+	curKey = NewEventCountKey(someMaxTs, someKind, "somenamespacetest", someName, "476-cc")
+	keyComparator = NewEventCountKeyComparator(someKind, "somenamespacetest", someName, "476-cc")
+	err = db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
+		return err1
+	})
+	assert.Nil(t, err)
+	expectedKey = NewEventCountKey(someTs, someKind, "somenamespacetest", someName, "476-cc")
 	assert.Equal(t, expectedKey, partRes)
 }
 
