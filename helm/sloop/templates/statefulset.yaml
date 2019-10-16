@@ -23,7 +23,7 @@ spec:
       - args:
         - --config=/sloopconfig/sloop.json
         command:
-        - /bin/sloop
+        - /sloop
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
         name: sloop
         ports:
