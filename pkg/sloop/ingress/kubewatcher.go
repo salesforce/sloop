@@ -113,12 +113,17 @@ func (i *kubeWatcherImpl) startCustomInformers(masterURL string, kubeContext str
 	for _, crd := range crdList {
 		resource, _ := schema.ParseResourceArg(crd)
 		informer := f.ForResource(*resource)
-		informer.Informer().AddEventHandler(i.getEventHandlerForResource(resource.Resource))
+
+		resourceKind := fmt.Sprintf("%s.%s", resource.Resource, resource.Group)
+		if resource.Group == "" {
+			resourceKind = resource.Resource
+		}
+		informer.Informer().AddEventHandler(i.getEventHandlerForResource(resourceKind))
 
 		go func() {
-			glog.V(2).Infof("Starting CRD informer for: %s", resource)
+			glog.V(2).Infof("Starting CRD informer for: %s (%v)", resourceKind, resource)
 			informer.Informer().Run(i.stopChan)
-			glog.V(2).Infof("Exited CRD informer for: %s", resource)
+			glog.V(2).Infof("Exited CRD informer for: %s", resourceKind)
 		}()
 	}
 
@@ -140,7 +145,7 @@ func getCrdList(kubeCfg *rest.Config) ([]string, error) {
 	var resources []string
 	for _, crd := range crdList.Items {
 		resourceName := fmt.Sprintf("%s.%s.%s", crd.Spec.Names.Plural, crd.Spec.Version, crd.Spec.Group)
-		glog.V(2).Infof("CRD: %s, kind: %s, plural:%s, singular:%s, short names:%v", resourceName, crd.Spec.Names.Kind, crd.Spec.Names.Plural, crd.Spec.Names.Singular, crd.Spec.Names.ShortNames)
+		glog.V(5).Infof("CRD: %s, kind: %s, plural:%s, singular:%s, short names:%v", resourceName, crd.Spec.Names.Kind, crd.Spec.Names.Plural, crd.Spec.Names.Singular, crd.Spec.Names.ShortNames)
 		resources = append(resources, resourceName)
 	}
 	return resources, nil
@@ -205,7 +210,7 @@ func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResul
 	metricIngressKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Inc()
 	metricIngressKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Add(float64(len(resourceJson)))
 
-	glog.V(2).Infof("Informer update - Name: %s, Namespace: %s, ResourceVersion: %s", kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion)
+	glog.V(5).Infof("Informer update - Name: %s, Namespace: %s, ResourceVersion: %s", kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion)
 	watchResult.Payload = resourceJson
 	i.writeToOutChan(watchResult)
 }
