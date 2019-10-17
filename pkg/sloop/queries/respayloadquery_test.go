@@ -75,18 +75,18 @@ func Test_GetResPayload_NotInTimeRange(t *testing.T) {
 	values[NamespaceParam] = []string{"someNamespace"}
 	values[NameParam] = []string{"someName"}
 	var keys []string
-	keys = append(keys, typed.NewWatchTableKey(partitionId, "someKind", "someNamespace", "someName", someTs).String())
-	keys = append(keys, typed.NewWatchTableKey(partitionId, "someKind", "someNamespace", "someName", someTs.Add(-10*time.Minute)).String())
+	keys = append(keys, typed.NewWatchTableKey(partitionId, "someKind", "someNamespacea", "someName", someTs).String())
+	keys = append(keys, typed.NewWatchTableKey(partitionId, "someKind", "someNamespaceb", "someName", someTs.Add(-1*time.Hour)).String())
 	for i := 'b'; i < 'd'; i++ {
 		keys = append(keys, typed.NewWatchTableKey(partitionId, "someKind"+string(i), "someNamespace", "someName.xx", someTs).String())
 	}
 	tables := helper_get_resPayload(keys, t, somePTime)
-	res, err := GetResPayload(values, tables, someTs.Add(60*time.Minute), someTs.Add(65*time.Minute), someRequestId)
+	res, err := GetResPayload(values, tables, someTs.Add(2*time.Hour), someTs.Add(5*time.Hour), someRequestId)
 	assert.Nil(t, err)
 	assert.Equal(t, string(res), "")
 }
 
-func Test_GetResPayload_True(t *testing.T) {
+func Test_GetResPayload_True_NoPreviousKeyFound(t *testing.T) {
 	untyped.TestHookSetPartitionDuration(time.Hour)
 	partitionId := untyped.GetPartitionId(someTs)
 	values := helper_get_params()

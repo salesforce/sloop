@@ -27,10 +27,20 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 
 <a href="{{.SelfUrl}}" target="_blank">Open In New Tab</a><br>
 
+
 {{if ne (len .Links) 0 }}
 <h2>Links</h2>
 {{range .Links}}<a href="{{.Url}}" target="_blank">{{.Text}}</a><br>{{end}}
 {{end}}
+
+<div id="resource_payload">
+    <h2>Payload</h2>
+    <table id="resource_payload_table">
+        <tr v-for="resEvent in sortedResEvents">
+            <td><a :href ="resEvent.origValue | get_payload_url" target="_blank">Details</a></td>
+        </tr>
+    </table>
+</div>
 
 <div id="resource_events">
     <h2>Events</h2>

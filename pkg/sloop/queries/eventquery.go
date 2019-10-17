@@ -91,5 +91,6 @@ func GetEventData(params url.Values, t typed.Tables, startTime time.Time, endTim
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal json %v", err)
 	}
+
 	return bytes, nil
 }
