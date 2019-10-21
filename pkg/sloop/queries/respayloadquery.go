@@ -20,7 +20,13 @@ import (
 )
 
 type ResPayLoadData struct {
-	PayLoadMap map[int64]string `json:"payloadMap"`
+	PayloadList []PayloadOuput `json:"payloadList"`
+}
+
+type PayloadOuput struct {
+	PayloadKey  string `json:"payloadKey"`
+	PayLoadTime int64  `json:"payloadTime"`
+	Payload     string `json:"payload,omitempty"`
 }
 
 func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTime time.Time, requestId string) ([]byte, error) {
@@ -71,25 +77,36 @@ func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTi
 	}
 
 	var res ResPayLoadData
-	resPayloadMap := make(map[int64]string)
+	payloadOutputList := []PayloadOuput{}
 	for key, val := range watchRes {
-		resPayloadMap[key.Timestamp.Unix()] = val.Payload
+		output := PayloadOuput{
+			PayLoadTime: key.Timestamp.UnixNano(),
+			Payload:     val.Payload,
+			PayloadKey:  key.String(),
+		}
+		payloadOutputList = append(payloadOutputList, output)
 	}
 
 	// when previousKey is found, add it to the payload map as well
 	if previousKeyFound {
-		resPayloadMap[previousKey.Timestamp.Unix()] = previousVal.Payload
+		output := PayloadOuput{
+			PayLoadTime: previousKey.Timestamp.UnixNano(),
+			Payload:     previousVal.Payload,
+			PayloadKey:  previousKey.String(),
+		}
+		payloadOutputList = append(payloadOutputList, output)
 	}
 
-	glog.V(5).Infof("get the length of the resPayload is:%v", len(resPayloadMap))
-	if len(resPayloadMap) == 0 {
+	glog.V(5).Infof("get the length of the resPayload is:%v", len(payloadOutputList))
+	if len(payloadOutputList) == 0 {
 		return []byte{}, nil
 	}
 
-	res.PayLoadMap = resPayloadMap
-	bytes, err := json.MarshalIndent(res.PayLoadMap, "", " ")
+	res.PayloadList = payloadOutputList
+	bytes, err := json.MarshalIndent(res.PayloadList, "", " ")
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal json %v", err)
+		return nil, fmt.Errorf("failed to marshal json for PayloadList  %v", err)
 	}
+
 	return bytes, nil
 }

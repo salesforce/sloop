@@ -85,12 +85,10 @@ func GetEventData(params url.Values, t typed.Tables, startTime time.Time, endTim
 	if len(eventsList) == 0 {
 		return []byte{}, nil
 	}
-
 	res.EventsList = eventsList
 	bytes, err := json.MarshalIndent(res.EventsList, "", " ")
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal json %v", err)
 	}
-
 	return bytes, nil
 }

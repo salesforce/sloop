@@ -79,7 +79,8 @@ func resourceHandler(resLinks []ResourceLinkTemplate) http.HandlerFunc {
 		dataParams := fmt.Sprintf("?query=%v&namespace=%v&lookback=%v&kind=%v&name=%v", "GetEventData", d.Namespace, "5m", d.Kind, d.Name)
 		d.EventsUrl = "/data" + dataParams
 
-		//d.PayloadUrl = "/data"+ fmt.Sprintf("?query=%v&namespace=%v&lookback=%v&kind=%v&name=%v", "GetResPayload", d.Namespace, "5m", d.Kind, d.Name)
+		dataParams = fmt.Sprintf("?query=%v&namespace=%v&lookback=%v&kind=%v&name=%v", "GetResPayload", d.Namespace, "5m", d.Kind, d.Name)
+		d.PayloadUrl = "/data" + dataParams
 
 		err = t.ExecuteTemplate(writer, resourceTemplateFile, d)
 		if err != nil {

@@ -71,12 +71,17 @@ func Test_GetResPayload_NotInTimeRange(t *testing.T) {
 	untyped.TestHookSetPartitionDuration(time.Hour)
 	partitionId := untyped.GetPartitionId(someTs)
 	values := helper_get_params()
-	values[KindParam] = []string{"someKind"}
-	values[NamespaceParam] = []string{"someNamespace"}
-	values[NameParam] = []string{"someName"}
+
+	expectedKind := "someKind"
+	expectedNS := "someNamespace"
+	expectedName := "someName"
+	values[KindParam] = []string{expectedKind}
+	values[NamespaceParam] = []string{expectedNS}
+	values[NameParam] = []string{expectedName}
+
 	var keys []string
-	keys = append(keys, typed.NewWatchTableKey(partitionId, "someKind", "someNamespacea", "someName", someTs).String())
-	keys = append(keys, typed.NewWatchTableKey(partitionId, "someKind", "someNamespaceb", "someName", someTs.Add(-1*time.Hour)).String())
+	keys = append(keys, typed.NewWatchTableKey(partitionId, "someKind", "someNamespace-a", "someName", someTs).String())
+	keys = append(keys, typed.NewWatchTableKey(partitionId, "someKind", "someNamespace-b", "someName", someTs.Add(-1*time.Hour)).String())
 	for i := 'b'; i < 'd'; i++ {
 		keys = append(keys, typed.NewWatchTableKey(partitionId, "someKind"+string(i), "someNamespace", "someName.xx", someTs).String())
 	}
@@ -90,17 +95,62 @@ func Test_GetResPayload_True_NoPreviousKeyFound(t *testing.T) {
 	untyped.TestHookSetPartitionDuration(time.Hour)
 	partitionId := untyped.GetPartitionId(someTs)
 	values := helper_get_params()
-	values[KindParam] = []string{"someKind"}
-	values[NamespaceParam] = []string{"someNamespace"}
-	values[NameParam] = []string{"someName"}
+	expectedKind := "someKind"
+	expectedNS := "someNamespace"
+	expectedName := "someName"
+	values[KindParam] = []string{expectedKind}
+	values[NamespaceParam] = []string{expectedNS}
+	values[NameParam] = []string{expectedName}
+
 	var keys []string
-	keys = append(keys, typed.NewWatchTableKey(partitionId, "someKind", "someNamespace", "someName", someTs).String())
+	keys = append(keys, typed.NewWatchTableKey(partitionId, expectedKind, expectedNS, expectedName, someTs).String())
 	keys = append(keys, typed.NewWatchTableKey(partitionId, "someKind", "someNamespaceb", "someName", someTs).String())
 	tables := helper_get_resPayload(keys, t, somePTime)
 	res, err := GetResPayload(values, tables, someTs.Add(-1*time.Hour), someTs.Add(6*time.Hour), someRequestId)
 	assert.Nil(t, err)
-	expectedRes := `{
- "1546398245": "{\n  \"metadata\": {\n    \"name\": \"someName\",\n    \"namespace\": \"someNamespace\",\n    \"uid\": \"6c2a9795-a282-11e9-ba2f-14187761de09\",\n    \"creationTimestamp\": \"2019-07-09T19:47:45Z\"\n  }\n}"
-}`
+	expectedRes := `[
+ {
+  "payloadTime": 1546398245000000006,
+  "payload": "{\n  \"metadata\": {\n    \"name\": \"someName\",\n    \"namespace\": \"someNamespace\",\n    \"uid\": \"6c2a9795-a282-11e9-ba2f-14187761de09\",\n    \"creationTimestamp\": \"2019-07-09T19:47:45Z\"\n  }\n}",
+  "payloadKey": "/watch/001546398000/someKind/someNamespace/someName/1546398245000000006"
+ }
+]`
+	assertex.JsonEqual(t, expectedRes, string(res))
+}
+
+func Test_GetResPayload_True_PreviousKeyFound(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	partitionId := untyped.GetPartitionId(someTs)
+	prevPartitionId := untyped.GetPartitionId(someTs.Add(-1 * time.Hour))
+	values := helper_get_params()
+
+	expectedKind := "someKind"
+	expectedNS := "someNamespace"
+	expectedName := "someName"
+	values[KindParam] = []string{expectedKind}
+	values[NamespaceParam] = []string{expectedNS}
+	values[NameParam] = []string{expectedName}
+
+	var keys []string
+	keys = append(keys, typed.NewWatchTableKey(prevPartitionId, expectedKind, expectedNS, expectedName, someTs).String())
+	keys = append(keys, typed.NewWatchTableKey(partitionId, expectedKind, expectedNS, expectedName, someTs).String())
+	keys = append(keys, typed.NewWatchTableKey(partitionId, "someKind-test", "someNamespace-test", "someName-test", someTs).String())
+	tables := helper_get_resPayload(keys, t, somePTime)
+
+	res, err := GetResPayload(values, tables, someTs, someTs.Add(6*time.Hour), someRequestId)
+
+	assert.Nil(t, err)
+	expectedRes := `[
+ {
+  "payloadKey": "/watch/001546398000/someKind/someNamespace/someName/1546398245000000006",
+  "payloadTime": 1546398245000000006,
+  "payload": "{\n  \"metadata\": {\n    \"name\": \"someName\",\n    \"namespace\": \"someNamespace\",\n    \"uid\": \"6c2a9795-a282-11e9-ba2f-14187761de09\",\n    \"creationTimestamp\": \"2019-07-09T19:47:45Z\"\n  }\n}"
+ },
+ {
+  "payloadKey": "/watch/001546398000/someKind/someNamespace/someName/1546398245000000006",
+  "payloadTime": 1546398245000000006,
+  "payload": "{\n  \"metadata\": {\n    \"name\": \"someName\",\n    \"namespace\": \"someNamespace\",\n    \"uid\": \"6c2a9795-a282-11e9-ba2f-14187761de09\",\n    \"creationTimestamp\": \"2019-07-09T19:47:45Z\"\n  }\n}"
+ }
+]`
 	assertex.JsonEqual(t, expectedRes, string(res))
 }
