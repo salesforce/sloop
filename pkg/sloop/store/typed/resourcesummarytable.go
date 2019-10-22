@@ -39,7 +39,7 @@ func NewResourceSummaryKeyComparator(kind string, namespace string, name string,
 	return &ResourceSummaryKey{Kind: kind, Namespace: namespace, Name: name, Uid: uid}
 }
 
-func (_ *ResourceSummaryKey) TableName() string {
+func (*ResourceSummaryKey) TableName() string {
 	return "ressum"
 }
 
@@ -75,7 +75,7 @@ func (k *ResourceSummaryKey) SetPartitionId(newPartitionId string) {
 	k.PartitionId = newPartitionId
 }
 
-func (_ *ResourceSummaryKey) ValidateKey(key string) error {
+func (*ResourceSummaryKey) ValidateKey(key string) error {
 	newKey := ResourceSummaryKey{}
 	return newKey.Parse(key)
 }

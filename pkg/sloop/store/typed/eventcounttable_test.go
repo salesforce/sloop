@@ -171,16 +171,16 @@ func Test_EventCount_getLastMatchingKeyInPartition_NotFound(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func (_ *EventCountKey) GetTestKey() string {
+func (*EventCountKey) GetTestKey() string {
 	k := NewEventCountKey(someTs, "someKind", "someNamespace", "someName", "someUuid")
 	return k.String()
 }
 
-func (_ *EventCountKey) GetTestValue() *ResourceEventCounts {
+func (*EventCountKey) GetTestValue() *ResourceEventCounts {
 	return &ResourceEventCounts{}
 }
 
-func (_ *EventCountKey) SetTestKeys() []string {
+func (*EventCountKey) SetTestKeys() []string {
 	untyped.TestHookSetPartitionDuration(time.Hour)
 	var keys []string
 	i := 'a'
@@ -193,6 +193,6 @@ func (_ *EventCountKey) SetTestKeys() []string {
 	return keys
 }
 
-func (_ *EventCountKey) SetTestValue() *ResourceEventCounts {
+func (*EventCountKey) SetTestValue() *ResourceEventCounts {
 	return &ResourceEventCounts{}
 }

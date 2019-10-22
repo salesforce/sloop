@@ -32,31 +32,31 @@ type KeyType struct {
 	PartitionId string
 }
 
-func (_ *KeyType) ValidateKey(key string) error {
+func (*KeyType) ValidateKey(key string) error {
 	panic("Placeholder key type should never be used")
 }
 
-func (_ *KeyType) TableName() string {
+func (*KeyType) TableName() string {
 	panic("Placeholder key should not be used")
 }
 
-func (_ *KeyType) Parse(key string) error {
+func (*KeyType) Parse(key string) error {
 	panic("Placeholder key should not be used")
 }
 
-func (_ *KeyType) GetTestKey() string {
+func (*KeyType) GetTestKey() string {
 	panic("Placeholder key should not be used")
 }
 
-func (_ *KeyType) SetTestKeys() []string {
+func (*KeyType) SetTestKeys() []string {
 	panic("Placeholder key should not be used")
 }
 
-func (_ *KeyType) String() string {
+func (*KeyType) String() string {
 	panic("Placeholder key should not be used")
 }
 
-func (_ *KeyType) GetTestValue() *ValueType {
+func (*KeyType) GetTestValue() *ValueType {
 	panic("Placeholder key should not be used")
 }
 
@@ -64,7 +64,7 @@ func (p *KeyType) SetTestValue() *ValueType {
 	return &ValueType{}
 }
 
-func (_ *KeyType) SetPartitionId(newPartitionId string) {
+func (*KeyType) SetPartitionId(newPartitionId string) {
 	panic("Placeholder key should not be used")
 }
 

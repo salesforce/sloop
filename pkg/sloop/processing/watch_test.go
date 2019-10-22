@@ -217,6 +217,7 @@ func Test_getLastKubeWatchResult(t *testing.T) {
 	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
 		return updateKubeWatchTable(tables, txn, &watchRec, metadata, true)
 	})
+	assert.Nil(t, err)
 
 	err = tables.Db().View(func(txn badgerwrap.Txn) error {
 		prevWatch, err := getLastKubeWatchResult(tables, txn, ts, kubeextractor.NodeKind, metadata.Namespace, "differentName")

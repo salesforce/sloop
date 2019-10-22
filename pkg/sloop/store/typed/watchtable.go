@@ -39,7 +39,7 @@ func NewWatchTableKeyComparator(kind string, namespace string, name string, time
 	return &WatchTableKey{Kind: kind, Namespace: namespace, Name: name, Timestamp: timestamp}
 }
 
-func (_ *WatchTableKey) TableName() string {
+func (*WatchTableKey) TableName() string {
 	return "watch"
 }
 
@@ -81,7 +81,7 @@ func (k *WatchTableKey) String() string {
 	}
 }
 
-func (_ *WatchTableKey) ValidateKey(key string) error {
+func (*WatchTableKey) ValidateKey(key string) error {
 	newKey := WatchTableKey{}
 	return newKey.Parse(key)
 }
