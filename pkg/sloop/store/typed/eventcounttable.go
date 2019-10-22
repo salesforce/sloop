@@ -33,7 +33,7 @@ func NewEventCountKeyComparator(kind string, namespace string, name string, uid 
 	return &EventCountKey{Kind: kind, Namespace: namespace, Name: name, Uid: uid}
 }
 
-func (_ *EventCountKey) TableName() string {
+func (*EventCountKey) TableName() string {
 	return "eventcount"
 }
 
@@ -65,7 +65,7 @@ func (k *EventCountKey) String() string {
 	}
 }
 
-func (_ *EventCountKey) ValidateKey(key string) error {
+func (*EventCountKey) ValidateKey(key string) error {
 	newKey := EventCountKey{}
 	return newKey.Parse(key)
 }

@@ -184,6 +184,7 @@ func helper_update_resourcesummary_table(t *testing.T, keysFn func() []string) (
 		}
 		return nil
 	})
+	assert.Nil(t, err)
 	return b, rt
 }
 
@@ -341,16 +342,16 @@ func Test_ResourceSummary_getLastMatchingKeyInPartition_NotFound(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func (_ *ResourceSummaryKey) GetTestKey() string {
+func (*ResourceSummaryKey) GetTestKey() string {
 	k := NewResourceSummaryKey(someTs, "someKind", "someNamespace", "someName", "someUuid")
 	return k.String()
 }
 
-func (_ *ResourceSummaryKey) GetTestValue() *ResourceSummary {
+func (*ResourceSummaryKey) GetTestValue() *ResourceSummary {
 	return &ResourceSummary{}
 }
 
-func (_ *ResourceSummaryKey) SetTestKeys() []string {
+func (*ResourceSummaryKey) SetTestKeys() []string {
 	untyped.TestHookSetPartitionDuration(time.Hour)
 	var keys []string
 	i := 'a'
@@ -364,7 +365,7 @@ func (_ *ResourceSummaryKey) SetTestKeys() []string {
 	return keys
 }
 
-func (_ *ResourceSummaryKey) SetTestValue() *ResourceSummary {
+func (*ResourceSummaryKey) SetTestValue() *ResourceSummary {
 	createTimeProto, _ := ptypes.TimestampProto(someFirstSeenTime)
 	return &ResourceSummary{FirstSeen: createTimeProto}
 }

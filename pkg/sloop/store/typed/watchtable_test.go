@@ -166,16 +166,16 @@ func Test_getLastMatchingKeyInPartition_NotFound(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func (_ *WatchTableKey) GetTestKey() string {
+func (*WatchTableKey) GetTestKey() string {
 	k := NewWatchTableKey(someMinPartition, someKind, someNamespace, someName, someTs)
 	return k.String()
 }
 
-func (_ *WatchTableKey) GetTestValue() *KubeWatchResult {
+func (*WatchTableKey) GetTestValue() *KubeWatchResult {
 	return &KubeWatchResult{}
 }
 
-func (_ *WatchTableKey) SetTestKeys() []string {
+func (*WatchTableKey) SetTestKeys() []string {
 	untyped.TestHookSetPartitionDuration(time.Hour)
 	var keys []string
 	var partitionId string
@@ -189,6 +189,6 @@ func (_ *WatchTableKey) SetTestKeys() []string {
 	return keys
 }
 
-func (_ *WatchTableKey) SetTestValue() *KubeWatchResult {
+func (*WatchTableKey) SetTestValue() *KubeWatchResult {
 	return &KubeWatchResult{Kind: someKind}
 }

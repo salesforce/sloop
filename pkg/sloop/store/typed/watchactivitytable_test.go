@@ -155,16 +155,16 @@ func Test_WatchActivity_getLastMatchingKeyInPartition_NotFound(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func (_ *WatchActivityKey) GetTestKey() string {
+func (*WatchActivityKey) GetTestKey() string {
 	k := NewWatchActivityKey(someMinPartition, someKind, someNamespace, someName, someUid)
 	return k.String()
 }
 
-func (_ *WatchActivityKey) GetTestValue() *WatchActivity {
+func (*WatchActivityKey) GetTestValue() *WatchActivity {
 	return &WatchActivity{}
 }
 
-func (_ *WatchActivityKey) SetTestKeys() []string {
+func (*WatchActivityKey) SetTestKeys() []string {
 	untyped.TestHookSetPartitionDuration(time.Hour)
 	var keys []string
 	var partitionId string
@@ -179,6 +179,6 @@ func (_ *WatchActivityKey) SetTestKeys() []string {
 	return keys
 }
 
-func (_ *WatchActivityKey) SetTestValue() *WatchActivity {
+func (*WatchActivityKey) SetTestValue() *WatchActivity {
 	return &WatchActivity{}
 }

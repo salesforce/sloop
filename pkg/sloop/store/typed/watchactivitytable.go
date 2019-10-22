@@ -37,7 +37,7 @@ func NewWatchActivityKeyComparator(kind string, namespace string, name string, u
 	return &WatchActivityKey{Kind: kind, Namespace: namespace, Name: name, Uid: uid}
 }
 
-func (_ *WatchActivityKey) TableName() string {
+func (*WatchActivityKey) TableName() string {
 	return "watchactivity"
 }
 
@@ -65,7 +65,7 @@ func (k *WatchActivityKey) String() string {
 	return fmt.Sprintf("/%v/%v/%v/%v/%v/%v", k.TableName(), k.PartitionId, k.Kind, k.Namespace, k.Name, k.Uid)
 }
 
-func (_ *WatchActivityKey) ValidateKey(key string) error {
+func (*WatchActivityKey) ValidateKey(key string) error {
 	newKey := WatchActivityKey{}
 	return newKey.Parse(key)
 }

@@ -112,12 +112,9 @@ func help_get_db(t *testing.T) badgerwrap.DB {
 			return txerr
 		}
 
-		txerr = ec.Set(txn, "something", nil)
-		if txerr != nil {
-			return txerr
-		}
 		return nil
 	})
+	assert.Nil(t, err)
 	return db
 }
 
