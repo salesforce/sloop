@@ -3,4 +3,4 @@ appVersion: "1.0"
 description: Sloop is a kubernetes history visualization tool.
 name: sloop
 version: 0.1.0
-icon: https://raw.githubusercontent.com/salesforce/sloop/master/other/logo.jpg
+icon: https://raw.githubusercontent.com/salesforce/sloop/master/other/sloop_logo_color.png
