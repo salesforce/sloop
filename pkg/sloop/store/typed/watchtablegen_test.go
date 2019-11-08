@@ -140,5 +140,4 @@ func Test_GetPreviousKey_Fail(t *testing.T) {
 	})
 	assert.NotNil(t, err)
 	assert.Equal(t, &WatchTableKey{}, partRes)
-	fmt.Println(err)
 }

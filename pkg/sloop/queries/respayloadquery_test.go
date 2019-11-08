@@ -122,6 +122,7 @@ func Test_GetResPayload_True_PreviousKeyFound(t *testing.T) {
 	untyped.TestHookSetPartitionDuration(time.Hour)
 	partitionId := untyped.GetPartitionId(someTs)
 	prevPartitionId := untyped.GetPartitionId(someTs.Add(-1 * time.Hour))
+
 	values := helper_get_params()
 
 	expectedKind := "someKind"
@@ -147,7 +148,7 @@ func Test_GetResPayload_True_PreviousKeyFound(t *testing.T) {
   "payload": "{\n  \"metadata\": {\n    \"name\": \"someName\",\n    \"namespace\": \"someNamespace\",\n    \"uid\": \"6c2a9795-a282-11e9-ba2f-14187761de09\",\n    \"creationTimestamp\": \"2019-07-09T19:47:45Z\"\n  }\n}"
  },
  {
-  "payloadKey": "/watch/001546398000/someKind/someNamespace/someName/1546398245000000006",
+  "payloadKey": "/watch/001546394400/someKind/someNamespace/someName/1546398245000000006",
   "payloadTime": 1546398245000000006,
   "payload": "{\n  \"metadata\": {\n    \"name\": \"someName\",\n    \"namespace\": \"someNamespace\",\n    \"uid\": \"6c2a9795-a282-11e9-ba2f-14187761de09\",\n    \"creationTimestamp\": \"2019-07-09T19:47:45Z\"\n  }\n}"
  }
