@@ -24,14 +24,15 @@ type externalLink struct {
 }
 
 type resourceData struct {
-	Namespace string
-	Name      string
-	Kind      string
-	Uuid      string
-	ClickTime time.Time
-	SelfUrl   string
-	Links     []ComputedLink
-	EventsUrl string
+	Namespace  string
+	Name       string
+	Kind       string
+	Uuid       string
+	ClickTime  time.Time
+	SelfUrl    string
+	Links      []ComputedLink
+	EventsUrl  string
+	PayloadUrl string
 }
 
 func runTextTemplate(templateStr string, data interface{}) (string, error) {
@@ -77,6 +78,9 @@ func resourceHandler(resLinks []ResourceLinkTemplate) http.HandlerFunc {
 		}
 		dataParams := fmt.Sprintf("?query=%v&namespace=%v&lookback=%v&kind=%v&name=%v", "GetEventData", d.Namespace, "5m", d.Kind, d.Name)
 		d.EventsUrl = "/data" + dataParams
+
+		dataParams = fmt.Sprintf("?query=%v&namespace=%v&lookback=%v&kind=%v&name=%v", "GetResPayload", d.Namespace, "5m", d.Kind, d.Name)
+		d.PayloadUrl = "/data" + dataParams
 
 		err = t.ExecuteTemplate(writer, resourceTemplateFile, d)
 		if err != nil {

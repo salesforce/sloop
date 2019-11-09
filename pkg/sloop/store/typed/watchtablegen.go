@@ -157,6 +157,7 @@ func (t *KubeWatchResultTable) GetPreviousKey(txn badgerwrap.Txn, key *WatchTabl
 		return &WatchTableKey{}, errors.Wrapf(err, "failed to get partition list from table:%v", t.tableName)
 	}
 	currentPartition := key.PartitionId
+
 	for i := len(partitionList) - 1; i >= 0; i-- {
 		prePart := partitionList[i]
 		if prePart > currentPartition {
@@ -190,7 +191,7 @@ func (t *KubeWatchResultTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn,
 	itr.Seek([]byte(keySeekStr))
 
 	// if the result is same as key, we want to check its previous one
-	if oldKey == string(itr.Item().Key()) {
+	if itr.Valid() && oldKey == string(itr.Item().Key()) {
 		itr.Next()
 	}
 

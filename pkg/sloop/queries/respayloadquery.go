@@ -10,45 +10,64 @@ package queries
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/dgraph-io/badger"
+	"github.com/golang/glog"
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
+	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"net/url"
 	"time"
 )
 
 type ResPayLoadData struct {
-	PayLoadMap map[int64]string `json:"payloadMap"`
+	PayloadList []PayloadOuput `json:"payloadList"`
+}
+
+type PayloadOuput struct {
+	PayloadKey  string `json:"payloadKey"`
+	PayLoadTime int64  `json:"payloadTime"`
+	Payload     string `json:"payload,omitempty"`
 }
 
 func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTime time.Time, requestId string) ([]byte, error) {
 	var watchRes map[typed.WatchTableKey]*typed.KubeWatchResult
+	var previousKey *typed.WatchTableKey
+	var previousVal *typed.KubeWatchResult
+	var previousKeyFound bool
+
 	err := t.Db().View(func(txn badgerwrap.Txn) error {
-		var err2 error
 		var stats typed.RangeReadStats
 
-		selectedNamespace := params.Get(NamespaceParam)
-		selectedName := params.Get(NameParam)
-		selectedKind := params.Get(KindParam)
-
-		if kubeextractor.IsClustersScopedResource(selectedKind) {
-			selectedNamespace = DefaultNamespace
-		}
-
-		key := &typed.WatchTableKey{
-			// partition id will be rest, it is ok to leave it as empty string
-			PartitionId: "",
-			Kind:        selectedKind,
-			Namespace:   selectedNamespace,
-			Name:        selectedName,
-			Timestamp:   time.Time{},
-		}
-
+		keyComparator := getKeyComparator(params)
 		valPredFn := typed.KubeWatchResult_ValPredicateFns(isResPayloadInTimeRange(startTime, endTime))
-		watchRes, _, err2 = t.WatchTable().RangeRead(txn, key, nil, valPredFn, startTime, endTime)
-		if err2 != nil {
-			return err2
+
+		var rangeReadErr error
+		watchRes, _, rangeReadErr = t.WatchTable().RangeRead(txn, keyComparator, nil, valPredFn, startTime, endTime)
+		if rangeReadErr != nil {
+			return rangeReadErr
 		}
+
+		// get the previous key for those who has same payload but just before startTime
+		var getPreviousErr error
+		seekKey := getSeekKey(keyComparator, startTime)
+		previousKey, getPreviousErr = t.WatchTable().GetPreviousKey(txn, seekKey, keyComparator)
+
+		// when getPreviousErr is not nil, we will not return err since it is ok we did not find previous key from startTime,
+		// we can continue using the result from rangeRead to proceed the rest payload
+		if getPreviousErr == nil {
+			var getErr error
+			previousVal, getErr = t.WatchTable().Get(txn, previousKey.String())
+			if getErr == nil {
+				previousKeyFound = true
+			} else {
+				// we need to return error when getErr is not nil and its error is not keyNotFound
+				if getErr != badger.ErrKeyNotFound {
+					return getErr
+				}
+			}
+		}
+
 		stats.Log(requestId)
 		return nil
 	})
@@ -56,19 +75,63 @@ func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTi
 		return []byte{}, err
 	}
 
-	var res ResPayLoadData
-	resPayloadMap := make(map[int64]string)
-	for key, val := range watchRes {
-		resPayloadMap[key.Timestamp.Unix()] = val.Payload
-	}
-	// Todo: in future we might need to think if we want to return a marshalled empty json object, for now we just return []byte{}
-	if len(resPayloadMap) == 0 {
+	payloadOutputList := getPayloadOutputList(watchRes, previousKeyFound, previousKey, previousVal)
+	glog.V(5).Infof("get the length of the resPayload is:%v", len(payloadOutputList))
+	if len(payloadOutputList) == 0 {
 		return []byte{}, nil
 	}
-	res.PayLoadMap = resPayloadMap
-	bytes, err := json.MarshalIndent(res.PayLoadMap, "", " ")
+
+	var res ResPayLoadData
+	res.PayloadList = payloadOutputList
+	bytes, err := json.MarshalIndent(res.PayloadList, "", " ")
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal json %v", err)
+		return nil, fmt.Errorf("failed to marshal json for PayloadList  %v", err)
 	}
+
 	return bytes, nil
+}
+
+//todo: add unit tests
+func getSeekKey(keyComparator *typed.WatchTableKey, startTime time.Time) *typed.WatchTableKey {
+	seekKey := keyComparator
+	seekKey.PartitionId = untyped.GetPartitionId(startTime)
+	seekKey.Timestamp = startTime
+	return seekKey
+}
+
+//todo: add unit tests
+func getKeyComparator(params url.Values) *typed.WatchTableKey {
+	selectedNamespace := params.Get(NamespaceParam)
+	selectedName := params.Get(NameParam)
+	selectedKind := params.Get(KindParam)
+	if kubeextractor.IsClustersScopedResource(selectedKind) {
+		selectedNamespace = DefaultNamespace
+	}
+	return typed.NewWatchTableKeyComparator(selectedKind, selectedNamespace, selectedName, time.Time{})
+}
+
+//todo: add unit tests
+func getPayloadOutputList(watchRes map[typed.WatchTableKey]*typed.KubeWatchResult, previousKeyFound bool,
+	previousKey *typed.WatchTableKey, previousVal *typed.KubeWatchResult) []PayloadOuput {
+
+	payloadOutputList := []PayloadOuput{}
+	for key, val := range watchRes {
+		output := PayloadOuput{
+			PayLoadTime: key.Timestamp.UnixNano(),
+			Payload:     val.Payload,
+			PayloadKey:  key.String(),
+		}
+		payloadOutputList = append(payloadOutputList, output)
+	}
+
+	// when previousKey is found, add it to the payload map as well
+	if previousKeyFound {
+		output := PayloadOuput{
+			PayLoadTime: previousKey.Timestamp.UnixNano(),
+			Payload:     previousVal.Payload,
+			PayloadKey:  previousKey.String(),
+		}
+		payloadOutputList = append(payloadOutputList, output)
+	}
+	return payloadOutputList
 }
