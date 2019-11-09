@@ -9,6 +9,7 @@ package typed
 
 import (
 	"github.com/dgraph-io/badger"
+	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/salesforce/sloop/pkg/sloop/test/assertex"
@@ -195,4 +196,82 @@ func (*EventCountKey) SetTestKeys() []string {
 
 func (*EventCountKey) SetTestValue() *ResourceEventCounts {
 	return &ResourceEventCounts{}
+}
+
+func helper_testKeys() []string {
+	return []string{
+		// someMaxTs partition
+		"/eventcount/001546405200/Pod/user-j/sync-123/sam-partition-testdata",
+		"/eventcount/001546405200/Pod/user-j/sync-123/sam-partition-test",
+
+		"/eventcount/001546405200/somekind/somenamespace/somename/previous-partition-test",
+		"/eventcount/001546405200/user-a/somenamespace/somename/478-aaa",
+		"/eventcount/001546405200/user-b/somenamespace/somename/477-bbb",
+		"/eventcount/001546405200/somekind/somenamespacetest/somename/skipped-partition",
+
+		// someMiddleTs partition
+		"/eventcount/001546401600/somekind/somenamespace/somename/previous-partition-test",
+		"/eventcount/001546401600/somekind/somenamespace/somename/cde-4ffc-11e9-8e26-123",
+
+		// someTs partition
+		"/eventcount/001546398000/somekind/somenamespace/somename/previous-partition-test",
+		"/eventcount/001546398000/somekind123/somenamespace/somename/68510937-4ffc-11e9-8e26-123",
+		"/eventcount/001546398000/somekind/somenamespacetest/somename/skipped-partition",
+
+		"/eventcount/001546398000/somekindaaa/somenamespaceaaa/somenameaaa/aaaa",
+	}
+}
+
+func Test_EventCount_GetPreviousKey_Success(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	db, wt := helper_update_ResourceEventCountsTable(t, helper_testKeys(), (&EventCountKey{}).SetTestValue())
+	var partRes *EventCountKey
+	var err1 error
+
+	// testing in the same partition
+	curKey := NewEventCountKey(someMaxTs, kubeextractor.PodKind, "user-j", "sync-123", "sam-partition-testdata")
+	keyComparator := NewEventCountKeyComparator(kubeextractor.PodKind, "user-j", "sync-123", "")
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
+		return err1
+	})
+	assert.Nil(t, err)
+	expectedKey := NewEventCountKey(someMaxTs, kubeextractor.PodKind, "user-j", "sync-123", "sam-partition-test")
+	assert.Equal(t, expectedKey, partRes)
+
+	// testing in the previous partition
+	curKey = NewEventCountKey(someMaxTs, someKind, someNamespace, someName, "previous-partition-test")
+	keyComparator = NewEventCountKeyComparator(someKind, someNamespace, someName, "previous-partition-test")
+	err = db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
+		return err1
+	})
+	assert.Nil(t, err)
+	expectedKey = NewEventCountKey(someMiddleTs, someKind, someNamespace, someName, "previous-partition-test")
+	assert.Equal(t, expectedKey, partRes)
+
+	// testing in skipped partition
+	curKey = NewEventCountKey(someMaxTs, someKind, "somenamespacetest", someName, "skipped-partition")
+	keyComparator = NewEventCountKeyComparator(someKind, "somenamespacetest", someName, "skipped-partition")
+	err = db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
+		return err1
+	})
+	assert.Nil(t, err)
+	expectedKey = NewEventCountKey(someTs, someKind, "somenamespacetest", someName, "skipped-partition")
+	assert.Equal(t, expectedKey, partRes)
+}
+
+func Test_EventCount_GetPreviousKey_Fail(t *testing.T) {
+	db, wt := helper_update_ResourceEventCountsTable(t, (&EventCountKey{}).SetTestKeys(), (&EventCountKey{}).SetTestValue())
+	var partRes *EventCountKey
+	var err1 error
+	curKey := NewEventCountKey(someMaxTs, someKind, someNamespace, someName, someUid)
+	keyComparator := NewEventCountKeyComparator(someKind+"b", someNamespace, someName, someUid)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
+		return err1
+	})
+	assert.NotNil(t, err)
+	assert.Equal(t, &EventCountKey{}, partRes)
 }
