@@ -9,23 +9,26 @@ package server
 
 import (
 	"flag"
+	"os"
+	"path"
+	"strings"
+	"time"
+
 	"github.com/pkg/errors"
+
 	"github.com/salesforce/sloop/pkg/sloop/ingress"
 	"github.com/salesforce/sloop/pkg/sloop/server/internal/config"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
-	"os"
-	"path"
-	"strings"
 
 	"github.com/golang/glog"
+
+	"github.com/spf13/afero"
 
 	"github.com/salesforce/sloop/pkg/sloop/processing"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/salesforce/sloop/pkg/sloop/storemanager"
 	"github.com/salesforce/sloop/pkg/sloop/webserver"
-	"github.com/spf13/afero"
-	"time"
 )
 
 const alsologtostderr = "alsologtostderr"
@@ -111,7 +114,7 @@ func RealMain() error {
 		LeftBarLinks:     conf.LeftBarLinks,
 		CurrentContext:   displayContext,
 	}
-	err = webserver.Run(webConfig, tables)
+	err = webserver.Run(webConfig, tables, db)
 	if err != nil {
 		return errors.Wrap(err, "failed to run webserver")
 	}

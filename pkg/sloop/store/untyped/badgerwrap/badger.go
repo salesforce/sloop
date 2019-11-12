@@ -8,6 +8,8 @@
 package badgerwrap
 
 import (
+	"io"
+
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
 )
@@ -72,6 +74,10 @@ func (b *BadgerDb) Size() (lsm, vlog int64) {
 
 func (b *BadgerDb) Tables(withKeysCount bool) []badger.TableInfo {
 	return b.db.Tables(withKeysCount)
+}
+
+func (b *BadgerDb) Backup(w io.Writer, since uint64) (uint64, error) {
+	return b.db.Backup(w, since)
 }
 
 // Transaction

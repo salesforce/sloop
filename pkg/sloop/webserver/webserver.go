@@ -8,27 +8,30 @@
 package webserver
 
 import (
-	"github.com/salesforce/sloop/pkg/sloop/queries"
-	"github.com/salesforce/sloop/pkg/sloop/store/typed"
-	"log"
-
-	"github.com/golang/glog"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-
 	"context"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"io/ioutil"
+	"log"
 	"mime"
 	"net/http"
 	"os"
 	"os/signal"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/salesforce/sloop/pkg/sloop/queries"
+	"github.com/salesforce/sloop/pkg/sloop/store/typed"
+	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
+
+	"github.com/golang/glog"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 const (
@@ -100,6 +103,34 @@ func webFileHandler(w http.ResponseWriter, r *http.Request) {
 	glog.V(2).Infof("webFileHandler successfully returned file %v for %v", fixedUrl, r.URL)
 }
 
+func backupHandler(db badgerwrap.DB, currentContext string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		sinceStr := r.URL.Query().Get("since")
+		if sinceStr == "" {
+			sinceStr = "0"
+		}
+		since, err := strconv.ParseUint(sinceStr, 10, 64)
+		if err != nil {
+			logWebError(err, "Error parsing 'since': "+sinceStr, r, w)
+			return
+		}
+
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=sloop-%s-%d.bak", currentContext, since))
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Transfer-Encoding", "chunked")
+
+		_, err = db.Backup(w, since)
+		if err != nil {
+			logWebError(err, "Error writing backup", r, w)
+			return
+		}
+
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+	}
+}
+
 // Returns json to feed into dhtmlgantt
 // Info on data format: https://docs.dhtmlx.com/gantt/desktop__loading.html
 
@@ -125,11 +156,12 @@ func healthHandler() http.HandlerFunc {
 	}
 }
 
-func Run(config WebConfig, tables typed.Tables) error {
+func Run(config WebConfig, tables typed.Tables, db badgerwrap.DB) error {
 	webFiles = config.WebFilesPath
 	server := &Server{}
 	server.mux = http.NewServeMux()
 	server.mux.HandleFunc("/webfiles/", webFileHandler)
+	server.mux.HandleFunc("/data/backup", backupHandler(db, config.CurrentContext))
 	server.mux.HandleFunc("/data", queryHandler(tables, config.MaxLookback))
 	server.mux.HandleFunc("/resource", resourceHandler(config.ResourceLinks))
 	server.mux.HandleFunc("/debug/", listKeysHandler(tables))

@@ -8,6 +8,8 @@
 package badgerwrap
 
 import (
+	"io"
+
 	"github.com/dgraph-io/badger"
 )
 
@@ -25,7 +27,7 @@ type DB interface {
 	DropPrefix(prefix []byte) error
 	Size() (lsm, vlog int64)
 	Tables(withKeysCount bool) []badger.TableInfo
-	//	Backup(w io.Writer, since uint64) (uint64, error)
+	Backup(w io.Writer, since uint64) (uint64, error)
 	//	DropAll() error
 	//	Flatten(workers int) error
 	//	GetMergeOperator(key []byte, f MergeFunc, dur time.Duration) *MergeOperator
