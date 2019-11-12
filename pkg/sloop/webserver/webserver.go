@@ -103,6 +103,9 @@ func webFileHandler(w http.ResponseWriter, r *http.Request) {
 	glog.V(2).Infof("webFileHandler successfully returned file %v for %v", fixedUrl, r.URL)
 }
 
+// backupHandler streams a download of a backup of the database.
+// It is a simple HTTP translation of the Badger DB's built-in online backup function.
+// If the optional `since` query parameter is provided, the backup will only include versions since the version provided.
 func backupHandler(db badgerwrap.DB, currentContext string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sinceStr := r.URL.Query().Get("since")
