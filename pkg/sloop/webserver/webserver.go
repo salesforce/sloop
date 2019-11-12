@@ -114,7 +114,7 @@ func backupHandler(db badgerwrap.DB, currentContext string) http.HandlerFunc {
 		}
 		since, err := strconv.ParseUint(sinceStr, 10, 64)
 		if err != nil {
-			logWebError(err, "Error parsing 'since': "+sinceStr, r, w)
+			logWebError(err, "Error parsing 'since' parameter. Must be expressed as a positive integer.", r, w)
 			return
 		}
 
