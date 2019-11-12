@@ -156,12 +156,12 @@ func healthHandler() http.HandlerFunc {
 	}
 }
 
-func Run(config WebConfig, tables typed.Tables, db badgerwrap.DB) error {
+func Run(config WebConfig, tables typed.Tables) error {
 	webFiles = config.WebFilesPath
 	server := &Server{}
 	server.mux = http.NewServeMux()
 	server.mux.HandleFunc("/webfiles/", webFileHandler)
-	server.mux.HandleFunc("/data/backup", backupHandler(db, config.CurrentContext))
+	server.mux.HandleFunc("/data/backup", backupHandler(tables.Db(), config.CurrentContext))
 	server.mux.HandleFunc("/data", queryHandler(tables, config.MaxLookback))
 	server.mux.HandleFunc("/resource", resourceHandler(config.ResourceLinks))
 	server.mux.HandleFunc("/debug/", listKeysHandler(tables))

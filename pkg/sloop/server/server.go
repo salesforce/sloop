@@ -114,7 +114,7 @@ func RealMain() error {
 		LeftBarLinks:     conf.LeftBarLinks,
 		CurrentContext:   displayContext,
 	}
-	err = webserver.Run(webConfig, tables, db)
+	err = webserver.Run(webConfig, tables)
 	if err != nil {
 		return errors.Wrap(err, "failed to run webserver")
 	}
