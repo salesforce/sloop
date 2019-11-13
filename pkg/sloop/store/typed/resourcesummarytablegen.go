@@ -190,7 +190,7 @@ func (t *ResourceSummaryTable) getLastMatchingKeyInPartition(txn badgerwrap.Txn,
 	itr.Seek([]byte(keySeekStr))
 
 	// if the result is same as key, we want to check its previous one
-	if oldKey == string(itr.Item().Key()) {
+	if itr.Valid() && oldKey == string(itr.Item().Key()) {
 		itr.Next()
 	}
 

@@ -51,7 +51,6 @@ func Test_WatchActivityTable_SetWorks(t *testing.T) {
 }
 
 func helper_update_WatchActivityTable(t *testing.T, keys []string, val *WatchActivity) (badgerwrap.DB, *WatchActivityTable) {
-	untyped.TestHookSetPartitionDuration(time.Hour)
 	b, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
 	assert.Nil(t, err)
 	wt := OpenWatchActivityTable()
@@ -112,33 +111,4 @@ func Test_WatchActivityTable_GetUniquePartitionList_EmptyPartition(t *testing.T)
 	})
 	assert.Nil(t, err)
 	assert.Len(t, partList, 0)
-}
-
-func Test_WatchActivity_GetPreviousKey_Success(t *testing.T) {
-	db, wt := helper_update_WatchActivityTable(t, (&WatchActivityKey{}).SetTestKeys(), (&WatchActivityKey{}).GetTestValue())
-	var partRes *WatchActivityKey
-	var err1 error
-	curKey := NewWatchActivityKey(someMaxPartition, someKind, someNamespace, someName, someUid+"c")
-	keyComarator := NewWatchActivityKeyComparator(someKind, someNamespace, someName, someUid)
-	err := db.View(func(txn badgerwrap.Txn) error {
-		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComarator)
-		return err1
-	})
-	assert.Nil(t, err)
-	expectedKey := NewWatchActivityKey(someMaxPartition, someKind, someNamespace, someName, someUid)
-	assert.Equal(t, expectedKey, partRes)
-}
-
-func Test_WatchActivity_GetPreviousKey_Fail(t *testing.T) {
-	db, wt := helper_update_WatchActivityTable(t, (&WatchActivityKey{}).SetTestKeys(), (&WatchActivityKey{}).GetTestValue())
-	var partRes *WatchActivityKey
-	var err1 error
-	curKey := NewWatchActivityKey(someMaxPartition, someKind, someNamespace, someName, someUid)
-	keyComarator := NewWatchActivityKeyComparator(someKind+"a", someNamespace, someName, someUid)
-	err := db.View(func(txn badgerwrap.Txn) error {
-		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComarator)
-		return err1
-	})
-	assert.NotNil(t, err)
-	assert.Equal(t, &WatchActivityKey{}, partRes)
 }

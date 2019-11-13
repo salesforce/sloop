@@ -166,6 +166,35 @@ func Test_getLastMatchingKeyInPartition_NotFound(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func Test_GetPreviousKey_Success(t *testing.T) {
+	db, wt := helper_update_KubeWatchResultTable(t, (&WatchTableKey{}).SetTestKeys(), (&WatchTableKey{}).SetTestValue())
+	var partRes *WatchTableKey
+	var err1 error
+	curKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs)
+	keyComparator := NewWatchTableKeyComparator(someKind, someNamespace, someName, zeroData)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
+		return err1
+	})
+	assert.Nil(t, err)
+	expectedKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs.Add(time.Hour*-5))
+	assert.Equal(t, expectedKey, partRes)
+}
+
+func Test_GetPreviousKey_Fail(t *testing.T) {
+	db, wt := helper_update_KubeWatchResultTable(t, (&WatchTableKey{}).SetTestKeys(), (&WatchTableKey{}).SetTestValue())
+	var partRes *WatchTableKey
+	var err1 error
+	curKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs)
+	keyComparator := NewWatchTableKeyComparator(someKind+"c", someNamespace, someName, zeroData)
+	err := db.View(func(txn badgerwrap.Txn) error {
+		partRes, err1 = wt.GetPreviousKey(txn, curKey, keyComparator)
+		return err1
+	})
+	assert.NotNil(t, err)
+	assert.Equal(t, &WatchTableKey{}, partRes)
+}
+
 func (*WatchTableKey) GetTestKey() string {
 	k := NewWatchTableKey(someMinPartition, someKind, someNamespace, someName, someTs)
 	return k.String()
