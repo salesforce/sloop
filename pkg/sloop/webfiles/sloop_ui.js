@@ -19,13 +19,23 @@ detailedToolTipIsVisible = false;
 let noSortFn = function () {
     return 0
 };
+
 const compareStartFn = function (a, b) {
+    if (a.kind != b.kind) {
+        return compareKind(a, b)
+    }
     return a.start - b.start;
 };
 const compareMostEventsFn = function (a, b) {
+    if (a.kind != b.kind) {
+        return compareKind(a, b)
+    }
     return b.overlays.length - a.overlays.length;
 };
 const compareNameFn = function (a, b) {
+    if (a.kind != b.kind) {
+        return compareKind(a, b)
+    }
     return ('' + a.text).localeCompare(b.text);
 };
 let cmpFn = noSortFn;
@@ -158,6 +168,10 @@ function processAndSortResources(result) {
         return data
     }
 
+}
+
+function compareKind(a, b) {
+    return ('' + a.kind).localeCompare(b.kind)
 }
 
 function appendAxes(svg) {
