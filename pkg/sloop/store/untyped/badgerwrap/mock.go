@@ -9,10 +9,12 @@ package badgerwrap
 
 import (
 	"fmt"
-	"github.com/dgraph-io/badger"
+	"io"
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/dgraph-io/badger"
 )
 
 // This mock simulates badger using an in-memory store
@@ -106,6 +108,10 @@ func (b *MockDb) Tables(withKeysCount bool) []badger.TableInfo {
 	return []badger.TableInfo{
 		{KeyCount: uint64(keyCount)},
 	}
+}
+
+func (b *MockDb) Backup(w io.Writer, since uint64) (uint64, error) {
+	return 0, nil
 }
 
 // Transaction
