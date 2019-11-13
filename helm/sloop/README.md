@@ -6,7 +6,7 @@
 5. Write to yaml file: `helm template . --namespace sloop> sloop-test.yaml`
 6. Apply the yaml file in cluster: `kubectl -n sloop apply -f sloop-test.yaml`
 7. Check if the service is running: `kubectl -n sloop get pods`
-8. (Optional) Use port-forward for debugging:  `kc-aws port-forward -n sloop statefulset/sloop 8080 8000`
+8. (Optional) Use port-forward for debugging:  `kubectl port-forward -n sloop service/sloop 8080:80`
 9. In your browser, hit `localhost:8080` to see the result, you can use sloop test data to check the view
 
 ![SloopTestData](/other/sloop-test.png?raw=true "SloopTestData")
