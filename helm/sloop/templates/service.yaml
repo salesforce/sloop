@@ -14,4 +14,4 @@ spec:
     protocol: TCP
     targetPort: {{ .Values.service.targetPort }}
   selector:
-    name: sloop
+    app.kubernetes.io/name: {{ .Values.name }}
