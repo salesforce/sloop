@@ -160,12 +160,12 @@ func Test_removeDupePayloads_emptyWorks(t *testing.T) {
 
 func Test_removeDupePayloads_twoUnique_returnsTwo(t *testing.T) {
 	input := []PayloadOuput{
-		{PayLoadTime: somePayloadTs.Add(time.Minute).Unix(), Payload: "abc"},
-		{PayLoadTime: somePayloadTs.Unix(), Payload: "def"},
+		{PayLoadTime: somePayloadTs.Add(time.Minute).UnixNano(), Payload: "abc"},
+		{PayLoadTime: somePayloadTs.UnixNano(), Payload: "def"},
 	}
 	expected := []PayloadOuput{
-		{PayLoadTime: somePayloadTs.Unix(), Payload: "def"},
-		{PayLoadTime: somePayloadTs.Add(time.Minute).Unix(), Payload: "abc"},
+		{PayLoadTime: somePayloadTs.UnixNano(), Payload: "def"},
+		{PayLoadTime: somePayloadTs.Add(time.Minute).UnixNano(), Payload: "abc"},
 	}
 	ret := removeDupePayloads(input)
 	assert.Equal(t, expected, ret)
@@ -173,11 +173,11 @@ func Test_removeDupePayloads_twoUnique_returnsTwo(t *testing.T) {
 
 func Test_removeDupePayloads_twoTheSame_returnsFirstOne(t *testing.T) {
 	input := []PayloadOuput{
-		{PayLoadTime: somePayloadTs.Add(time.Minute).Unix(), Payload: "abc"},
-		{PayLoadTime: somePayloadTs.Unix(), Payload: "abc"},
+		{PayLoadTime: somePayloadTs.Add(time.Minute).UnixNano(), Payload: "abc"},
+		{PayLoadTime: somePayloadTs.UnixNano(), Payload: "abc"},
 	}
 	expected := []PayloadOuput{
-		{PayLoadTime: somePayloadTs.Unix(), Payload: "abc"},
+		{PayLoadTime: somePayloadTs.UnixNano(), Payload: "abc"},
 	}
 	ret := removeDupePayloads(input)
 	assert.Equal(t, expected, ret)
