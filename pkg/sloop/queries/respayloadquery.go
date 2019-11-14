@@ -105,7 +105,7 @@ func getKeyComparator(params url.Values) *typed.WatchTableKey {
 	selectedName := params.Get(NameParam)
 	selectedKind := params.Get(KindParam)
 	if kubeextractor.IsClustersScopedResource(selectedKind) {
-		selectedNamespace = DefaultNamespace
+		selectedNamespace = ""
 	}
 	return typed.NewWatchTableKeyComparator(selectedKind, selectedNamespace, selectedName, time.Time{})
 }
