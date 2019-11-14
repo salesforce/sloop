@@ -6,6 +6,7 @@
  */
 
 const displayMaxX = document.documentElement.clientWidth;
+const displayMaxY = document.documentElement.clientHeight;
 
 let topAxis, bottomAxis, xAxisScale, yAxisBand, data, theTime, axisTop, axisBottom, smallBarOffset;
 
@@ -167,7 +168,6 @@ function processAndSortResources(result) {
         }).sort(cmpFn);
         return data
     }
-
 }
 
 function compareKind(a, b) {
@@ -196,15 +196,12 @@ function appendAxes(svg) {
 }
 
 function renderTooltip() {
-    tooltip = d3.select(
-        document.createElement("div"))
+    tooltip = d3.select("#tooltip_container")
+        .append("div")
         .call(createTooltip);
-
-    document.querySelector("body").appendChild(tooltip.node());
 }
 
 function bindMouseEvents(svg) {
-
     svg.on("mousemove", function () {
         let [x, y] = d3.mouse(this);
 
@@ -216,9 +213,9 @@ function bindMouseEvents(svg) {
             line.attr("transform", `translate(${x} 0)`);
             theTime = xAxisScale.invert(x);
             if (!detailedToolTipIsVisible) {
-                tooltip
-                    .style("left", d3.event.pageX + "px")
-                    .style("top", d3.event.pageY + 20 + "px")
+                let tooltipX = d3.event.pageX;
+                let tooltipY = d3.event.pageY;
+                positionTooltip(tooltipX, tooltipY);
             }
         }
     });
@@ -246,34 +243,7 @@ function bindMouseEvents(svg) {
             ))
         }
     }).on("click", function (d) {
-        if (detailedToolTipIsVisible) {
-            resourceBarHtml = getResourceBarContent(
-                {
-                    title: d.text,
-                    kind: d.kind,
-                    namespace: d.namespace,
-                    time: theTime
-                }
-            );
-            tooltip.html(resourceBarHtml);
-            detailedToolTipIsVisible = false
-        } else {
-            let [x, y] = d3.mouse(this);
-            $.ajax({
-                url: "/resource",
-                data: {
-                    click_time: xAxisScale.invert(x).getTime(),
-                    name: d.text,
-                    namespace: d.namespace,
-                    kind: d.kind,
-                },
-                success: function (result) {
-                    detailedToolTipIsVisible = true;
-                    tooltip.html(result);
-                    evalJSFromHtml(result);
-                }
-            });
-        }
+        showDetailedTooltip(d, d3.event, this);
     });
     // Intuitively 'd' should be the 'heatmap' element - but for whatever reason
     // the event binds correctly but 'd' is the resource element. Not sure why - I think
@@ -312,6 +282,8 @@ function bindMouseEvents(svg) {
             d3.select(this).attr("fill", severityColorGenFunc(thisOverlay.severity));
             tooltip.style("opacity", 0)
         }
+    }).on("click", function (d) {
+        showDetailedTooltip(d, d3.event, this);
     });
 }
 
@@ -351,7 +323,6 @@ function createResourceBar(d) {
     let w = Math.max(xAxisScale(d.end) - xAxisScale(d.start), 10);
     const isLabelRight = (sx > displayMaxX / 2 ? sx + w < displayMaxX : sx - w > 0);
 
-
     el
         .append("rect")
         .attr("x", sx)
@@ -385,6 +356,7 @@ function createResourceBar(d) {
                 .attr("fill", d3.color(severityColorGenFunc(overlay.severity)))
                 .attr("title", text)
                 .attr("transform", `translate(0 ${-smallBarOffset})`)
+                .style("cursor", "pointer")
                 .classed("heatmap", true)
                 .attr("index", n++)
         }
@@ -420,7 +392,8 @@ function createResourceBar(d) {
         .attr("x", isLabelRight ? sx - 5 : sx + w + 5)
         .attr("fill", "black")
         .style("text-anchor", isLabelRight ? "end" : "start")
-        .style("dominant-baseline", "hanging");
+        .style("dominant-baseline", "hanging")
+        .style("font-size", "14");
 }
 
 function evalJSFromHtml(html) {
@@ -432,6 +405,8 @@ function evalJSFromHtml(html) {
     }
 }
 
+// I think the detailed tooltip should probably be moved to
+// a modal dialog - it's getting to be too large and unwieldy
 function createTooltip(el) {
     el
         .style("position", "absolute")
@@ -443,5 +418,75 @@ function createTooltip(el) {
         .style("padding", "10px")
         .style("line-height", "1.3")
         .style("z-index", 1)
-        .style("font", "11px sans-serif")
+        .style("font", "12px sans-serif")
+        .style("max-height", "50%")
+        .style("max-width", "50%")
+        .style("overflow-y", "scroll")
+}
+
+function positionTooltip(x, y) {
+    let tooltipX = x;
+    let tooltipY = y;
+
+    if (x > displayMaxX / 2) {
+        tooltip.style("right", (displayMaxX - tooltipX) + "px");
+        tooltip.style("left", "")
+    } else {
+        tooltip.style("left", tooltipX + "px");
+        tooltip.style("right", "")
+    }
+
+    if (y > displayMaxY / 2) {
+        tooltip.style("bottom", (displayMaxY - tooltipY) + "px");
+        tooltip.style("top", "")
+    } else {
+        // It looks really goofy if you don't. 20px is about the size of the mouse on a 1080 scaled display
+        tooltip.style("top", tooltipY + "px");
+        tooltip.style("bottom", "")
+    }
+
+    if (detailedToolTipIsVisible) {
+        tooltip.style("pointer-events", "auto")
+    } else {
+        tooltip.style("pointer-events", "none")
+    }
+}
+
+function showDetailedTooltip(d, event, parent) {
+    let tooltipX = event.pageX;
+    let tooltipY = event.pageY;
+    if (detailedToolTipIsVisible) {
+        let resourceBarHtml = getResourceBarContent(
+            {
+                title: d.text,
+                kind: d.kind,
+                namespace: d.namespace,
+                time: theTime
+            }
+        );
+        tooltip.html(resourceBarHtml);
+        positionTooltip(tooltipX, tooltipY);
+        detailedToolTipIsVisible = false
+    } else {
+        let [x, y] = d3.mouse(parent);
+
+        let tooltipX = event.pageX;
+        let tooltipY = event.pageY;
+
+        $.ajax({
+            url: "/resource",
+            data: {
+                click_time: xAxisScale.invert(x).getTime(),
+                name: d.text,
+                namespace: d.namespace,
+                kind: d.kind,
+            },
+            success: function (result) {
+                detailedToolTipIsVisible = true;
+                tooltip.html(result);
+                evalJSFromHtml(result);
+                positionTooltip(tooltipX, tooltipY)
+            }
+        });
+    }
 }
