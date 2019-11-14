@@ -24,15 +24,16 @@ type externalLink struct {
 }
 
 type resourceData struct {
-	Namespace  string
-	Name       string
-	Kind       string
-	Uuid       string
-	ClickTime  time.Time
-	SelfUrl    string
-	Links      []ComputedLink
-	EventsUrl  string
-	PayloadUrl string
+	Namespace     string
+	Name          string
+	Kind          string
+	Uuid          string
+	ClickTime     time.Time
+	SelfUrl       string
+	Links         []ComputedLink
+	EventsUrl     string
+	PayloadUrl    string
+	PlusMinusTime time.Duration
 }
 
 func runTextTemplate(templateStr string, data interface{}) (string, error) {
@@ -70,16 +71,23 @@ func resourceHandler(resLinks []ResourceLinkTemplate) http.HandlerFunc {
 			logWebError(err, "Invalid click time", request, writer)
 			return
 		}
+		// TODO: Make this selectable in the UX
+		d.PlusMinusTime = time.Minute * 15
+
 		d.SelfUrl = request.URL.String()
 		d.Links, err = makeResourceLinks(d.Namespace, d.Name, d.Kind, resLinks)
 		if err != nil {
 			logWebError(err, "Error creating external links", request, writer)
 			return
 		}
-		dataParams := fmt.Sprintf("?query=%v&namespace=%v&lookback=%v&kind=%v&name=%v", "GetEventData", d.Namespace, "5m", d.Kind, d.Name)
+
+		queryStart := d.ClickTime.Add(-1 * d.PlusMinusTime).Unix()
+		queryEnd := d.ClickTime.Add(d.PlusMinusTime).Unix()
+
+		dataParams := fmt.Sprintf("?query=%v&namespace=%v&start_time=%v&end_time=%v&kind=%v&name=%v", "GetEventData", d.Namespace, queryStart, queryEnd, d.Kind, d.Name)
 		d.EventsUrl = "/data" + dataParams
 
-		dataParams = fmt.Sprintf("?query=%v&namespace=%v&lookback=%v&kind=%v&name=%v", "GetResPayload", d.Namespace, "5m", d.Kind, d.Name)
+		dataParams = fmt.Sprintf("?query=%v&namespace=%v&start_time=%v&end_time=%v&kind=%v&name=%v", "GetResPayload", d.Namespace, queryStart, queryEnd, d.Kind, d.Name)
 		d.PayloadUrl = "/data" + dataParams
 
 		err = t.ExecuteTemplate(writer, resourceTemplateFile, d)
