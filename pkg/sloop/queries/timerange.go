@@ -35,6 +35,11 @@ const minLookback = 1 * time.Minute
 //
 // TODO: If wall clock is in the middle of the newest partition min-max time we can use it
 func computeTimeRange(params url.Values, tables typed.Tables, maxLookBack time.Duration) (time.Time, time.Time, error) {
+	endOfTime := getEndOfTime(tables)
+	return computeTimeRangeInternal(params, endOfTime, maxLookBack)
+}
+
+func computeTimeRangeInternal(params url.Values, endOfTime time.Time, maxLookBack time.Duration) (time.Time, time.Time, error) {
 	lookBackVal := params.Get(LookbackParam)
 	startTimeVal := params.Get(StartTimeParam)
 	endTimeVal := params.Get(EndTimeParam)
@@ -56,8 +61,6 @@ func computeTimeRange(params url.Values, tables typed.Tables, maxLookBack time.D
 			return time.Time{}, time.Time{}, fmt.Errorf("Either %v and %v both need to be set or neither set", StartTimeParam, EndTimeParam)
 		}
 	}
-
-	endOfTime := getEndOfTime(tables)
 
 	if lookBackVal != "" {
 		computedEnd = endOfTime
@@ -90,6 +93,7 @@ func computeTimeRange(params url.Values, tables typed.Tables, maxLookBack time.D
 	}
 
 	return computedStart, computedEnd, nil
+
 }
 
 // This looks at our store, and if it has data finds the newest partition, then finds the end time of that
