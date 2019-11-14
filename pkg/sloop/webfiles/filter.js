@@ -89,8 +89,6 @@ function setFiltersAndReturnQueryUrl(defaultLookback, defaultKind, defaultNamesp
 
     namematch = setText("namematch", "filternamematch", "")
 
-    // For the "query" query its a bit of a hack to need to pass in a lookback
-    // TODO: In the query library add some metadata per query so queries can indicate they dont need a lookback
     query =           populateDropdownFromQuery("query",     "filterquery",     "EventHeatMap",  "/data?query=Queries&lookback="+lookback);
     ns =              populateDropdownFromQuery("namespace", "filternamespace", defaultNamespace, "/data?query=Namespaces&lookback="+lookback);
     kind =            populateDropdownFromQuery("kind",      "filterkind",      defaultKind,      "/data?query=Kinds&lookback="+lookback);

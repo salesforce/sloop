@@ -27,12 +27,11 @@ const minLookback = 1 * time.Minute
 //   We first find the endTime.  If we are looking at historic data, we use the end of the last partitions.  If
 //   that is in the future, we use now().  We don't want to always use now() as that would prevent users from looking
 //   at old data as it would get clipped by maxLookBack
-//
 //   StartTime is just endTime - lookback
 //
 // Using "start_time" and "end_time"
 //
-//   This is straighforward.  These are UTC Unix times
+//   This is straight forward.  These are UTC Unix times
 //
 // TODO: If wall clock is in the middle of the newest partition min-max time we can use it
 func computeTimeRange(params url.Values, tables typed.Tables, maxLookBack time.Duration) (time.Time, time.Time, error) {
@@ -93,11 +92,9 @@ func computeTimeRange(params url.Values, tables typed.Tables, maxLookBack time.D
 	return computedStart, computedEnd, nil
 }
 
-// This looks at our store, and if it has data finds the newest partitions, then finds the end time of that
+// This looks at our store, and if it has data finds the newest partition, then finds the end time of that
 // But if that is in the future we return now
 // This bit of logic is needed for queries with a lookback to determine a good end time
-// For normal operation we general end up with endTime==now(), but if we are viewing a data store in the past
-// we want endTime to be the end of the data set
 func getEndOfTime(tables typed.Tables) time.Time {
 	now := time.Now()
 
