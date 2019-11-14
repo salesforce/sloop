@@ -15,6 +15,10 @@ html, body {
     width: 100%;
 }
 
+#resource_container {
+    width: 100%;
+}
+
 #resource_event_table td, #resource_event_table th {
     border: 1px solid lightgrey;
     padding: 4px;

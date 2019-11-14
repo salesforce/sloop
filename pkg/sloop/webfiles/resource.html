@@ -20,214 +20,218 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 
 </head>
 <body>
-<h2>Details</h2>
-<b>Name</b>: {{.Name}}<br>
-<b>Namespace</b>: {{.Namespace}}<br>
-<b>Kind</b>: {{.Kind}}<br><br>
+<div id="resource_container">
 
-<a href="{{.SelfUrl}}" target="_blank">Open In New Tab</a><br>
+    <h2>Details</h2>
+    <b>Name</b>: {{.Name}}<br>
+    <b>Namespace</b>: {{.Namespace}}<br>
+    <b>Kind</b>: {{.Kind}}<br><br>
+
+    <a href="{{.SelfUrl}}" target="_blank">Open In New Tab</a><br>
 
 
-{{if ne (len .Links) 0 }}
-<h2>Links</h2>
-{{range .Links}}<a href="{{.Url}}" target="_blank">{{.Text}}</a><br>{{end}}
-{{end}}
+    {{if ne (len .Links) 0 }}
+        <h2>Links</h2>
+        {{range .Links}}<a href="{{.Url}}" target="_blank">{{.Text}}</a><br>{{end}}
+    {{end}}
 
-<div id="resource_payload">
-    <h2>Payloads from ${ getStartTime} to ${getEndTime}</h2>
-    <table id="resource_event_table">
-        <tr>
-            <th>Payload Link</th>
-            <th @click="sort('payloadTime')">PayloadTime &#x21C5</th>
-        </tr>
-        <tr v-for="res in sortedResPayloads">
-            <td><a :href ="res.origValue | get_payload_url" target="_blank">Details</a></td>
-            <td>${ res.payloadTime | get_formatted_time}</td>
-        </tr>
-    </table>
+    <div id="resource_payload">
+        <h2>Payloads from ${ getStartTime} to ${getEndTime}</h2>
+        <table id="resource_event_table">
+            <tr>
+                <th>Payload Link</th>
+                <th @click="sort('payloadTime')">PayloadTime &#x21C5</th>
+            </tr>
+            <tr v-for="res in sortedResPayloads">
+                <td><a :href ="res.origValue | get_payload_url" target="_blank">Details</a></td>
+                <td>${ res.payloadTime | get_formatted_time}</td>
+            </tr>
+        </table>
+    </div>
+
 </div>
 <script>
-    new Vue({
-        el: '#resource_payload',
-        delimiters: ['${', '}'],
-        data: {
-            resPayload: [],
-            currentSortBy: 'payloadTime',
-            currentSortDirection: 'asc',
-            startTime: ''
+new Vue({
+    el: '#resource_payload',
+    delimiters: ['${', '}'],
+    data: {
+        resPayload: [],
+        currentSortBy: 'payloadTime',
+        currentSortDirection: 'asc',
+        startTime: ''
+    },
+    filters: {
+        get_formatted_time(unixnano_time) {
+           return new Date(unixnano_time/1000000).toISOString().split('T').join(' ');
         },
-        filters: {
-            get_formatted_time(unixnano_time) {
-               return new Date(unixnano_time/1000000).toISOString().split('T').join(' ');
-            },
-            get_payload_url(value) {
-                return "/debug/view/?k=" + value.payloadKey;
-            },
+        get_payload_url(value) {
+            return "/debug/view/?k=" + value.payloadKey;
         },
-        mounted() {
-            NProgress.configure({
-                easing: 'ease',
-                minimum: 0.3,
-                parent: '#resource_payload'
-            });
+    },
+    mounted() {
+        NProgress.configure({
+            easing: 'ease',
+            minimum: 0.3,
+            parent: '#resource_payload'
+        });
 
-            axios.interceptors.request.use(config => {
-                NProgress.start();
-                return config;
-            });
+        axios.interceptors.request.use(config => {
+            NProgress.start();
+            return config;
+        });
 
-            axios.interceptors.response.use(response => {
-                NProgress.done();
-                return response;
-            });
+        axios.interceptors.response.use(response => {
+            NProgress.done();
+            return response;
+        });
 
-            axios
-                .get('{{.PayloadUrl}}')
-                .then(response => {
-                    if (response.data) {
-                        this.resPayload = response.data.map(function (val) {
-                            return {
-                                payloadTime: val.payloadTime,
-                                origValue: val
-                            };
-                        });
-                    } else {
-                        console.log("No payloads found for period")
-                    }
-                })
-        },
-        methods: {
-            sort: function (sortBy) {
-                if (sortBy === this.currentSortBy) {
-                    this.currentSortDirection = (this.currentSortDirection === 'asc') ? 'desc' : 'asc';
+        axios
+            .get('{{.PayloadUrl}}')
+            .then(response => {
+                if (response.data) {
+                    this.resPayload = response.data.map(function (val) {
+                        return {
+                            payloadTime: val.payloadTime,
+                            origValue: val
+                        };
+                    });
+                } else {
+                    console.log("No payloads found for period")
                 }
-                this.currentSortBy = sortBy;
-            },
+            })
+    },
+    methods: {
+        sort: function (sortBy) {
+            if (sortBy === this.currentSortBy) {
+                this.currentSortDirection = (this.currentSortDirection === 'asc') ? 'desc' : 'asc';
+            }
+            this.currentSortBy = sortBy;
         },
-        computed: {
-            sortedResPayloads: function () {
-                return this.resPayload.sort((a, b) => {
-                    let direction = (this.currentSortDirection === 'asc') ? 1 : -1;
-                    if (a[this.currentSortBy] < b[this.currentSortBy]) return -1 * direction;
-                    if (a[this.currentSortBy] > b[this.currentSortBy]) return direction;
-                    return 0;
-                });
-            },
-            getStartTime: function () {
-                payloadTimeList = this.resPayload.map(function (val) {
-                    formattedTime = new Date(val.payloadTime/1000000).toISOString().split('T').join(' ');
-                    return  formattedTime;
-                });
-                return payloadTimeList[0];
-            },
-            getEndTime: function () {
-                payloadTimeList = this.resPayload.map(function (val) {
-                    formattedTime = new Date(val.payloadTime/1000000).toISOString().split('T').join(' ');
-                    return  formattedTime;
-                });
-                return payloadTimeList[payloadTimeList.length-1];
-            },
-        }
-    });
+    },
+    computed: {
+        sortedResPayloads: function () {
+            return this.resPayload.sort((a, b) => {
+                let direction = (this.currentSortDirection === 'asc') ? 1 : -1;
+                if (a[this.currentSortBy] < b[this.currentSortBy]) return -1 * direction;
+                if (a[this.currentSortBy] > b[this.currentSortBy]) return direction;
+                return 0;
+            });
+        },
+        getStartTime: function () {
+            payloadTimeList = this.resPayload.map(function (val) {
+                formattedTime = new Date(val.payloadTime/1000000).toISOString().split('T').join(' ');
+                return  formattedTime;
+            });
+            return payloadTimeList[0];
+        },
+        getEndTime: function () {
+            payloadTimeList = this.resPayload.map(function (val) {
+                formattedTime = new Date(val.payloadTime/1000000).toISOString().split('T').join(' ');
+                return  formattedTime;
+            });
+            return payloadTimeList[payloadTimeList.length-1];
+        },
+    }
+});
 </script>
 
 <div id="resource_events">
-    <h2>Events</h2>
-    <table id="resource_event_table">
-        <tr>
-            <th>Payload Link</th>
-            <th @click="sort('message')">Message &#x21C5</th>
-            <th @click="sort('reason')">Reason &#x21C5</th>
-            <th @click="sort('source')">Source &#x21C5</th>
-            <th @click="sort('count')">Count &#x21C5</th>
-            <th @click="sort('firstSeen')">First seen &#x21C5</th>
-            <th @click="sort('lastSeen')">Last seen &#x21C5</th>
-        </tr>
-        <tr v-for="resEvent in sortedResEvents">
-            <td><a :href ="resEvent.origValue | get_payload_url" target="_blank">Details</a></td>
-            <td>${ resEvent.message }</td>
-            <td>${ resEvent.reason }</td>
-            <td>${ resEvent.source }</td>
-            <td>${ resEvent.count }</td>
-            <td>${ resEvent.firstSeen | get_formatted_date }</td>
-            <td>${ resEvent.lastSeen | get_formatted_date }</td>
-        </tr>
-    </table>
+<h2>Events</h2>
+<table id="resource_event_table">
+    <tr>
+        <th>Payload Link</th>
+        <th @click="sort('message')">Message &#x21C5</th>
+        <th @click="sort('reason')">Reason &#x21C5</th>
+        <th @click="sort('source')">Source &#x21C5</th>
+        <th @click="sort('count')">Count &#x21C5</th>
+        <th @click="sort('firstSeen')">First seen &#x21C5</th>
+        <th @click="sort('lastSeen')">Last seen &#x21C5</th>
+    </tr>
+    <tr v-for="resEvent in sortedResEvents">
+        <td><a :href ="resEvent.origValue | get_payload_url" target="_blank">Details</a></td>
+        <td>${ resEvent.message }</td>
+        <td>${ resEvent.reason }</td>
+        <td>${ resEvent.source }</td>
+        <td>${ resEvent.count }</td>
+        <td>${ resEvent.firstSeen | get_formatted_date }</td>
+        <td>${ resEvent.lastSeen | get_formatted_date }</td>
+    </tr>
+</table>
 </div>
 <script>
-    new Vue({
-        el: '#resource_events',
-        delimiters: ['${', '}'],
-        data: {
-            resEvents: [],
-            currentSortBy: 'firstSeen',
-            currentSortDirection: 'asc'
+new Vue({
+    el: '#resource_events',
+    delimiters: ['${', '}'],
+    data: {
+        resEvents: [],
+        currentSortBy: 'firstSeen',
+        currentSortDirection: 'asc'
+    },
+    filters: {
+        get_formatted_date(value) {
+            return value.split('T').join(' ');
         },
-        filters: {
-            get_formatted_date(value) {
-                return value.split('T').join(' ');
-            },
-            get_payload_url(value) {
-                return "/debug/view/?k=" + value.eventKey;
-            }
-        },
-        mounted() {
-            NProgress.configure({
-                easing: 'ease',
-                minimum: 0.3,
-                parent: '#resource_events'
-            });
-
-            axios.interceptors.request.use(config => {
-                NProgress.start();
-                return config;
-            });
-
-            axios.interceptors.response.use(response => {
-                NProgress.done();
-                return response;
-            });
-
-            axios
-                .get('{{.EventsUrl}}')
-                .then(response => {
-                    if (response.data) {
-                        this.resEvents = response.data.map(function (val) {
-                            let parsedVal = JSON.parse(val.payload);
-                            return {
-                                message: parsedVal.message,
-                                source: parsedVal.source.host,
-                                reason: parsedVal.reason,
-                                count: parsedVal.count,
-                                firstSeen: parsedVal.firstTimestamp,
-                                lastSeen: parsedVal.lastTimestamp,
-                                origValue: val
-                            };
-                        });
-                    } else {
-                        console.log("No events found for period")
-                    }
-                })
-        },
-        methods: {
-            sort: function (sortBy) {
-                if (sortBy === this.currentSortBy) {
-                    this.currentSortDirection = (this.currentSortDirection === 'asc') ? 'desc' : 'asc';
-                }
-                this.currentSortBy = sortBy;
-            }
-        },
-        computed: {
-            sortedResEvents: function () {
-                return this.resEvents.sort((a, b) => {
-                    let direction = (this.currentSortDirection === 'asc') ? 1 : -1;
-                    if (a[this.currentSortBy] < b[this.currentSortBy]) return -1 * direction;
-                    if (a[this.currentSortBy] > b[this.currentSortBy]) return direction;
-                    return 0;
-                });
-            }
+        get_payload_url(value) {
+            return "/debug/view/?k=" + value.eventKey;
         }
-    });
+    },
+    mounted() {
+        NProgress.configure({
+            easing: 'ease',
+            minimum: 0.3,
+            parent: '#resource_events'
+        });
+
+        axios.interceptors.request.use(config => {
+            NProgress.start();
+            return config;
+        });
+
+        axios.interceptors.response.use(response => {
+            NProgress.done();
+            return response;
+        });
+
+        axios
+            .get('{{.EventsUrl}}')
+            .then(response => {
+                if (response.data) {
+                    this.resEvents = response.data.map(function (val) {
+                        let parsedVal = JSON.parse(val.payload);
+                        return {
+                            message: parsedVal.message,
+                            source: parsedVal.source.host,
+                            reason: parsedVal.reason,
+                            count: parsedVal.count,
+                            firstSeen: parsedVal.firstTimestamp,
+                            lastSeen: parsedVal.lastTimestamp,
+                            origValue: val
+                        };
+                    });
+                } else {
+                    console.log("No events found for period")
+                }
+            })
+    },
+    methods: {
+        sort: function (sortBy) {
+            if (sortBy === this.currentSortBy) {
+                this.currentSortDirection = (this.currentSortDirection === 'asc') ? 'desc' : 'asc';
+            }
+            this.currentSortBy = sortBy;
+        }
+    },
+    computed: {
+        sortedResEvents: function () {
+            return this.resEvents.sort((a, b) => {
+                let direction = (this.currentSortDirection === 'asc') ? 1 : -1;
+                if (a[this.currentSortBy] < b[this.currentSortBy]) return -1 * direction;
+                if (a[this.currentSortBy] > b[this.currentSortBy]) return direction;
+                return 0;
+            });
+        }
+    }
+});
 </script>
 </body>
 </html>
