@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/salesforce/sloop.svg?branch=master)](https://travis-ci.org/salesforce/sloop)
 [![Go Report Card](https://goreportcard.com/badge/github.com/salesforce/sloop)](https://goreportcard.com/report/github.com/salesforce/sloop)
-# sloop - Kubernetes History Visualization
+# Sloop - Kubernetes History Visualization
 
 Sloop monitors Kubernetes, recording histories of events and resource state changes 
 and providing visualizations to aid in debugging past events.  
