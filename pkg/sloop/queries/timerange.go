@@ -50,21 +50,21 @@ func computeTimeRangeInternal(params url.Values, endOfTime time.Time, maxLookBac
 
 	// Input validations
 	if startTimeVal == "" && endTimeVal == "" && lookBackVal == "" {
-		return time.Time{}, time.Time{}, fmt.Errorf("Time range must be set with either [%v] or both of [%v,%v]", LookbackParam, StartTimeParam, EndTimeParam)
+		return time.Time{}, time.Time{}, fmt.Errorf("Time range must be set with either [%v] or both of [%v,%v] but all 3 were empty", LookbackParam, StartTimeParam, EndTimeParam)
 	}
 	if lookBackVal != "" {
 		if startTimeVal != "" || endTimeVal != "" {
-			return time.Time{}, time.Time{}, fmt.Errorf("When [%v] is set, you can not set either of [%v,%v]", LookbackParam, StartTimeParam, EndTimeParam)
+			return time.Time{}, time.Time{}, fmt.Errorf("When [%v] is set, you can not set either of [%v,%v].  Got (%v,%v,%v) respectively", LookbackParam, StartTimeParam, EndTimeParam, lookBackVal, startTimeVal, endTimeVal)
 		}
 	} else {
-		if (startTimeVal == "") != (endTimeVal == "") {
-			return time.Time{}, time.Time{}, fmt.Errorf("Either %v and %v both need to be set or neither set", StartTimeParam, EndTimeParam)
+		if (startTimeVal == "") || (endTimeVal == "") {
+			return time.Time{}, time.Time{}, fmt.Errorf("Either %v and %v both need to be set or neither set.  Got (%v,%v) respectively", StartTimeParam, EndTimeParam, startTimeVal, endTimeVal)
 		}
 	}
 
 	if lookBackVal != "" {
 		computedEnd = endOfTime
-		lookbackRange, err := getTimeRangeFromLookback(lookBackVal)
+		lookbackRange, err := getDurationFromLookback(lookBackVal)
 		if err != nil {
 			return time.Time{}, time.Time{}, err
 		}
@@ -124,7 +124,7 @@ func getEndOfTime(tables typed.Tables) time.Time {
 	}
 }
 
-func getTimeRangeFromLookback(lookbackVal string) (time.Duration, error) {
+func getDurationFromLookback(lookbackVal string) (time.Duration, error) {
 	queryDuration, err := time.ParseDuration(lookbackVal)
 	if err != nil {
 		glog.Errorf("Invalid lookback param: %v.  err: %v", lookbackVal, err)
