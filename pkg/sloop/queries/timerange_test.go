@@ -8,6 +8,7 @@
 package queries
 
 import (
+	"fmt"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/stretchr/testify/assert"
@@ -20,6 +21,57 @@ var someQueryEndTs = someQueryStartTs.Add(time.Hour)
 var rightBeforeStartTs = someQueryStartTs.Add(-1 * time.Minute)
 var rightAfterStartTs = someQueryStartTs.Add(time.Minute)
 var rigthAfterEndTs = someQueryEndTs.Add(time.Minute)
+var someMaxLookBack = time.Duration(24) * time.Hour
+
+func Test_timeRangeTable(t *testing.T) {
+	var rangeTests = []struct {
+		lookbackStr   string
+		startStr      string
+		endStr        string
+		shouldFail    bool
+		expectedStart time.Time
+		expectedEnd   time.Time
+	}{
+		// Valid Cases
+		{"1h", "", "", false, someQueryEndTs.Add(-1 * time.Hour), someQueryEndTs},
+		{"", fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*-45).UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*-15).UTC().Unix()), false, someQueryEndTs.Add(time.Minute * -45), someQueryEndTs.Add(time.Minute * -15)},
+
+		// Too short, gets adjusted
+		{"0h", "", "", false, someQueryEndTs.Add(-1 * minLookback), someQueryEndTs},
+		{"", fmt.Sprintf("%v", someQueryEndTs.UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.UTC().Unix()), false, someQueryEndTs.Add(-1 * minLookback), someQueryEndTs},
+		// Too long, gets adjusted
+		{"1000h", "", "", false, someQueryEndTs.Add(-1 * someMaxLookBack), someQueryEndTs},
+		{"", fmt.Sprintf("%v", someQueryEndTs.Add(-1000*time.Hour).UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.UTC().Unix()), false, someQueryEndTs.Add(-1 * someMaxLookBack), someQueryEndTs},
+		// Ends in the future
+		{"", fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*-15).UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*15).UTC().Unix()), false, someQueryEndTs.Add(time.Minute * -30), someQueryEndTs},
+
+		// Missing or too many inputs
+		{"", "", "", true, time.Time{}, time.Time{}},
+		{"", "123", "", true, time.Time{}, time.Time{}},
+		{"", "", "123", true, time.Time{}, time.Time{}},
+		{"1h", "123", "123", true, time.Time{}, time.Time{}},
+		// Invalid times
+		{"abc", "", "", true, time.Time{}, time.Time{}},
+		{"", "abc", "123", true, time.Time{}, time.Time{}},
+		{"", "123", "abc", true, time.Time{}, time.Time{}},
+	}
+	for _, thisRange := range rangeTests {
+		t.Run(fmt.Sprintf("%+v", thisRange), func(t *testing.T) {
+			paramMap := make(map[string][]string)
+			paramMap[LookbackParam] = []string{thisRange.lookbackStr}
+			paramMap[StartTimeParam] = []string{thisRange.startStr}
+			paramMap[EndTimeParam] = []string{thisRange.endStr}
+			actStart, actEnd, err := computeTimeRangeInternal(paramMap, someQueryEndTs, someMaxLookBack)
+			if thisRange.shouldFail {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, thisRange.expectedStart, actStart)
+				assert.Equal(t, thisRange.expectedEnd, actEnd)
+			}
+		})
+	}
+}
 
 func Test_timeFilterResSumValue_OutsideRangeDrop(t *testing.T) {
 	resVal := typed.ResourceSummary{}

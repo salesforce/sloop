@@ -37,7 +37,12 @@ func GetNamesOfQueries() []string {
 }
 
 func RunQuery(queryName string, params url.Values, tables typed.Tables, maxLookBack time.Duration, requestId string) ([]byte, error) {
-	startTime, endTime := computeTimeRange(params, tables, maxLookBack)
+	startTime, endTime, err := computeTimeRange(params, tables, maxLookBack)
+	if err != nil {
+		glog.Errorf("computeTimeRange failed with error: %v", err)
+		return []byte{}, err
+	}
+
 	fn, ok := funcMap[queryName]
 	if !ok {
 		return []byte{}, fmt.Errorf("Query not found: " + queryName)

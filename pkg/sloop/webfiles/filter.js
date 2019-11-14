@@ -89,9 +89,9 @@ function setFiltersAndReturnQueryUrl(defaultLookback, defaultKind, defaultNamesp
 
     namematch = setText("namematch", "filternamematch", "")
 
-    query =           populateDropdownFromQuery("query",     "filterquery",     "EventHeatMap",  "/data?query=Queries");
-    ns =              populateDropdownFromQuery("namespace", "filternamespace", defaultNamespace, "/data?query=Namespaces");
-    kind =            populateDropdownFromQuery("kind",      "filterkind",      defaultKind,      "/data?query=Kinds");
+    query =           populateDropdownFromQuery("query",     "filterquery",     "EventHeatMap",  "/data?query=Queries&lookback="+lookback);
+    ns =              populateDropdownFromQuery("namespace", "filternamespace", defaultNamespace, "/data?query=Namespaces&lookback="+lookback);
+    kind =            populateDropdownFromQuery("kind",      "filterkind",      defaultKind,      "/data?query=Kinds&lookback="+lookback);
 
     dataQuery = "/data?query="+query+"&namespace="+ns+"&lookback="+lookback+"&kind="+kind+"&sort="+sort+"&namematch="+namematch
     return dataQuery

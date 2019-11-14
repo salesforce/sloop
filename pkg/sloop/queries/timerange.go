@@ -8,60 +8,152 @@
 package queries
 
 import (
+	"fmt"
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"net/url"
+	"strconv"
 	"time"
 )
 
-// This computes a start and end time for a given query.  If user specifies a time duration we use it, otherwise
-// we use maxLookBack from config.  For the end time if not specified we want to use newest data in the store.
-// That way we can look at old data sets without clipping.  We know the min and max time of the newest partition
-// but we dont really know the newest record within that range.  For now just use end of newest partiton, but
-// we will improve that later.
-// TODO: Add unit tests
-// TODO: If wall clock is in the middle of the newest partition min-max time we can use it
-func computeTimeRange(params url.Values, tables typed.Tables, maxLookBack time.Duration) (time.Time, time.Time) {
-	now := time.Now()
+const minLookback = 1 * time.Minute
 
-	// If web request specifies a valid lookback use that, else use the config for the store
-	queryDuration := maxLookBack
-	queryLookBack := params.Get(LookbackParam)
-	if queryLookBack != "" {
-		var err error
-		queryDuration, err = time.ParseDuration(queryLookBack)
-		if err != nil {
-			glog.Errorf("Invalid lookback param: %v.  err: %v", queryLookBack, err)
+// This computes a start and end time for a given query.  There are 2 ways this can be specified:
+//
+// Using "lookback":
+//
+//   We first find the endTime.  If we are looking at historic data, we use the end of the last partitions.  If
+//   that is in the future, we use now().  We don't want to always use now() as that would prevent users from looking
+//   at old data as it would get clipped by maxLookBack
+//   StartTime is just endTime - lookback
+//
+// Using "start_time" and "end_time"
+//
+//   This is straight forward.  These are UTC Unix times
+//
+// TODO: If wall clock is in the middle of the newest partition min-max time we can use it
+func computeTimeRange(params url.Values, tables typed.Tables, maxLookBack time.Duration) (time.Time, time.Time, error) {
+	endOfTime := getEndOfTime(tables)
+	return computeTimeRangeInternal(params, endOfTime, maxLookBack)
+}
+
+func computeTimeRangeInternal(params url.Values, endOfTime time.Time, maxLookBack time.Duration) (time.Time, time.Time, error) {
+	lookBackVal := params.Get(LookbackParam)
+	startTimeVal := params.Get(StartTimeParam)
+	endTimeVal := params.Get(EndTimeParam)
+
+	var computedStart time.Time
+	var computedEnd time.Time
+	var err error
+
+	// Input validations
+	if startTimeVal == "" && endTimeVal == "" && lookBackVal == "" {
+		return time.Time{}, time.Time{}, fmt.Errorf("Time range must be set with either [%v] or both of [%v,%v] but all 3 were empty", LookbackParam, StartTimeParam, EndTimeParam)
+	}
+	if lookBackVal != "" {
+		if startTimeVal != "" || endTimeVal != "" {
+			return time.Time{}, time.Time{}, fmt.Errorf("When [%v] is set, you can not set either of [%v,%v].  Got (%v,%v,%v) respectively", LookbackParam, StartTimeParam, EndTimeParam, lookBackVal, startTimeVal, endTimeVal)
+		}
+	} else {
+		if (startTimeVal == "") || (endTimeVal == "") {
+			return time.Time{}, time.Time{}, fmt.Errorf("Either %v and %v both need to be set or neither set.  Got (%v,%v) respectively", StartTimeParam, EndTimeParam, startTimeVal, endTimeVal)
 		}
 	}
-	if queryDuration < 10*time.Minute || queryDuration > maxLookBack {
-		queryDuration = maxLookBack
+
+	if lookBackVal != "" {
+		computedEnd = endOfTime
+		lookbackRange, err := getDurationFromLookback(lookBackVal)
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+		computedStart = computedEnd.Add(-1 * lookbackRange)
+	} else {
+		computedStart, computedEnd, err = getTimeRangeFromStartEnd(startTimeVal, endTimeVal)
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
 	}
 
-	// Find the end of the newest store partition and use that as endTime
+	// If the time range ends beyond endOfTime shift it back
+	if computedEnd.After(endOfTime) {
+		shiftBy := computedEnd.Sub(endOfTime)
+		computedStart = computedStart.Add(-1 * shiftBy)
+		computedEnd = computedEnd.Add(-1 * shiftBy)
+	}
+
+	// If the time range is too small, increase it
+	if computedEnd.Sub(computedStart) < minLookback {
+		computedStart = computedEnd.Add(-1 * minLookback)
+	}
+
+	if computedEnd.Sub(computedStart) > maxLookBack {
+		computedStart = computedEnd.Add(-1 * maxLookBack)
+	}
+
+	return computedStart, computedEnd, nil
+
+}
+
+// This looks at our store, and if it has data finds the newest partition, then finds the end time of that
+// But if that is in the future we return now
+// This bit of logic is needed for queries with a lookback to determine a good end time
+func getEndOfTime(tables typed.Tables) time.Time {
+	now := time.Now()
+
 	ok, _, maxPartition, err := tables.GetMinAndMaxPartition()
 	if err != nil || !ok {
 		if err != nil {
 			glog.Errorf("Error getting MinAndMaxPartition: %v", err)
 		}
-		// Store is broken or has no data.  Best we can do is now - queryDuration
-		return now.Add(-1 * queryDuration), now
+		return now
 	}
 
 	_, endTimeOfNewestPartition, err := untyped.GetTimeRangeForPartition(maxPartition)
 	if err != nil {
 		glog.Errorf("Error getting MinAndMaxPartition: %v", err)
-		return now.Add(-1 * queryDuration), now
+		return now
 	}
 
 	// The newest partition ends in the future, so use now instead
 	if endTimeOfNewestPartition.After(now) {
-		return now.Add(-1 * queryDuration), now
+		return now
+	} else {
+		return endTimeOfNewestPartition
+	}
+}
+
+func getDurationFromLookback(lookbackVal string) (time.Duration, error) {
+	queryDuration, err := time.ParseDuration(lookbackVal)
+	if err != nil {
+		glog.Errorf("Invalid lookback param: %v.  err: %v", lookbackVal, err)
+		return 0, err
 	}
 
-	return endTimeOfNewestPartition.Add(-1 * queryDuration), endTimeOfNewestPartition
+	return queryDuration, nil
+}
+
+func getTimeRangeFromStartEnd(startTimeStr string, endTimeStr string) (time.Time, time.Time, error) {
+	var start, end time.Time
+	var err error
+	start, err = parseUnixTimeString(startTimeStr)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	end, err = parseUnixTimeString(endTimeStr)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	return start, end, nil
+}
+
+func parseUnixTimeString(unixStr string) (time.Time, error) {
+	unixNum, err := strconv.ParseInt(unixStr, 10, 64)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.Unix(unixNum, 0).UTC(), nil
 }
 
 // This extracts time info from the ResourceSummary value and checks if it overlaps with the query time range.

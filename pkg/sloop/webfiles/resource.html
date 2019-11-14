@@ -29,14 +29,13 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 
     <a href="{{.SelfUrl}}" target="_blank">Open In New Tab</a><br>
 
-
     {{if ne (len .Links) 0 }}
         <h2>Links</h2>
         {{range .Links}}<a href="{{.Url}}" target="_blank">{{.Text}}</a><br>{{end}}
     {{end}}
 
     <div id="resource_payload">
-        <h2>Payloads from ${ getStartTime} to ${getEndTime}</h2>
+        <h2>Viewing range {{.ClickTime}} +/- {{.PlusMinusTime}}</h2>
         <table id="resource_event_table">
             <tr>
                 <th>Payload Link</th>
@@ -116,20 +115,6 @@ new Vue({
                 if (a[this.currentSortBy] > b[this.currentSortBy]) return direction;
                 return 0;
             });
-        },
-        getStartTime: function () {
-            payloadTimeList = this.resPayload.map(function (val) {
-                formattedTime = new Date(val.payloadTime/1000000).toISOString().split('T').join(' ');
-                return  formattedTime;
-            });
-            return payloadTimeList[0];
-        },
-        getEndTime: function () {
-            payloadTimeList = this.resPayload.map(function (val) {
-                formattedTime = new Date(val.payloadTime/1000000).toISOString().split('T').join(' ');
-                return  formattedTime;
-            });
-            return payloadTimeList[payloadTimeList.length-1];
         },
     }
 });
