@@ -46,6 +46,14 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
                 <td>${ res.payloadTime | get_formatted_time}</td>
             </tr>
         </table>
+
+        <table>
+            <tr>
+                <td v-for="item in selectedPayloads" style="vertical-align: top;">
+                    <pre>${ item | pretty }</pre>
+                </td>
+            </tr>
+        </table>
     </div>
 
 </div>
@@ -57,7 +65,8 @@ new Vue({
         resPayload: [],
         currentSortBy: 'payloadTime',
         currentSortDirection: 'asc',
-        startTime: ''
+        startTime: '',
+        selectedPayloads:[]
     },
     filters: {
         get_formatted_time(unixnano_time) {
@@ -66,6 +75,9 @@ new Vue({
         get_payload_url(value) {
             return "/debug/view/?k=" + value.payloadKey;
         },
+        pretty: function(value) {
+            return JSON.stringify(JSON.parse(value), null, 2);
+        }
     },
     mounted() {
         NProgress.configure({
@@ -106,6 +118,12 @@ new Vue({
             }
             this.currentSortBy = sortBy;
         },
+        check: function(e) {
+            if (e.target.checked) {
+                console.log(e.target.id)
+                console.log(e.target.value)
+            }
+        }
     },
     computed: {
         sortedResPayloads: function () {
