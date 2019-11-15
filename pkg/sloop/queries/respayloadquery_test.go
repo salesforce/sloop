@@ -63,7 +63,7 @@ func Test_GetResPayload_False(t *testing.T) {
 	endTime := someTs.Add(60 * time.Minute)
 	tables := helper_get_resPayload(keys, t, somePTime)
 	res, err := GetResPayload(values, tables, starTime, endTime, someRequestId)
-	assert.Equal(t, string(res), "")
+	assert.Equal(t, "[]", string(res))
 	assert.Nil(t, err)
 }
 
@@ -88,7 +88,7 @@ func Test_GetResPayload_NotInTimeRange(t *testing.T) {
 	tables := helper_get_resPayload(keys, t, somePTime)
 	res, err := GetResPayload(values, tables, someTs.Add(2*time.Hour), someTs.Add(5*time.Hour), someRequestId)
 	assert.Nil(t, err)
-	assert.Equal(t, string(res), "")
+	assert.Equal(t, "[]", string(res))
 }
 
 func Test_GetResPayload_True_NoPreviousKeyFound(t *testing.T) {
@@ -146,12 +146,39 @@ func Test_GetResPayload_True_PreviousKeyFound(t *testing.T) {
   "payloadKey": "/watch/001546398000/someKind/someNamespace/someName/1546398245000000006",
   "payloadTime": 1546398245000000006,
   "payload": "{\n  \"metadata\": {\n    \"name\": \"someName\",\n    \"namespace\": \"someNamespace\",\n    \"uid\": \"6c2a9795-a282-11e9-ba2f-14187761de09\",\n    \"creationTimestamp\": \"2019-07-09T19:47:45Z\"\n  }\n}"
- },
- {
-  "payloadKey": "/watch/001546394400/someKind/someNamespace/someName/1546398245000000006",
-  "payloadTime": 1546398245000000006,
-  "payload": "{\n  \"metadata\": {\n    \"name\": \"someName\",\n    \"namespace\": \"someNamespace\",\n    \"uid\": \"6c2a9795-a282-11e9-ba2f-14187761de09\",\n    \"creationTimestamp\": \"2019-07-09T19:47:45Z\"\n  }\n}"
  }
 ]`
 	assertex.JsonEqual(t, expectedRes, string(res))
+}
+
+var somePayloadTs = time.Date(2019, 3, 1, 3, 4, 0, 0, time.UTC)
+
+func Test_removeDupePayloads_emptyWorks(t *testing.T) {
+	ret := removeDupePayloads([]PayloadOuput{})
+	assert.Equal(t, []PayloadOuput{}, ret)
+}
+
+func Test_removeDupePayloads_twoUnique_returnsTwo(t *testing.T) {
+	input := []PayloadOuput{
+		{PayLoadTime: somePayloadTs.Add(time.Minute).UnixNano(), Payload: "abc"},
+		{PayLoadTime: somePayloadTs.UnixNano(), Payload: "def"},
+	}
+	expected := []PayloadOuput{
+		{PayLoadTime: somePayloadTs.UnixNano(), Payload: "def"},
+		{PayLoadTime: somePayloadTs.Add(time.Minute).UnixNano(), Payload: "abc"},
+	}
+	ret := removeDupePayloads(input)
+	assert.Equal(t, expected, ret)
+}
+
+func Test_removeDupePayloads_twoTheSame_returnsFirstOne(t *testing.T) {
+	input := []PayloadOuput{
+		{PayLoadTime: somePayloadTs.Add(time.Minute).UnixNano(), Payload: "abc"},
+		{PayLoadTime: somePayloadTs.UnixNano(), Payload: "abc"},
+	}
+	expected := []PayloadOuput{
+		{PayLoadTime: somePayloadTs.UnixNano(), Payload: "abc"},
+	}
+	ret := removeDupePayloads(input)
+	assert.Equal(t, expected, ret)
 }

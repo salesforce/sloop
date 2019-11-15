@@ -17,6 +17,7 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"net/url"
+	"sort"
 	"time"
 )
 
@@ -34,7 +35,6 @@ func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTi
 	var watchRes map[typed.WatchTableKey]*typed.KubeWatchResult
 	var previousKey *typed.WatchTableKey
 	var previousVal *typed.KubeWatchResult
-	var previousKeyFound bool
 
 	err := t.Db().View(func(txn badgerwrap.Txn) error {
 		var stats typed.RangeReadStats
@@ -59,7 +59,7 @@ func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTi
 			var getErr error
 			previousVal, getErr = t.WatchTable().Get(txn, previousKey.String())
 			if getErr == nil {
-				previousKeyFound = true
+				watchRes[*previousKey] = previousVal
 			} else {
 				// we need to return error when getErr is not nil and its error is not keyNotFound
 				if getErr != badger.ErrKeyNotFound {
@@ -75,11 +75,11 @@ func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTi
 		return []byte{}, err
 	}
 
-	payloadOutputList := getPayloadOutputList(watchRes, previousKeyFound, previousKey, previousVal)
+	payloadOutputList := getPayloadOutputList(watchRes)
 	glog.V(5).Infof("get the length of the resPayload is:%v", len(payloadOutputList))
-	if len(payloadOutputList) == 0 {
-		return []byte{}, nil
-	}
+
+	// Sort by time and remove entries with no payload change
+	payloadOutputList = removeDupePayloads(payloadOutputList)
 
 	var res ResPayLoadData
 	res.PayloadList = payloadOutputList
@@ -105,14 +105,13 @@ func getKeyComparator(params url.Values) *typed.WatchTableKey {
 	selectedName := params.Get(NameParam)
 	selectedKind := params.Get(KindParam)
 	if kubeextractor.IsClustersScopedResource(selectedKind) {
-		selectedNamespace = DefaultNamespace
+		selectedNamespace = ""
 	}
 	return typed.NewWatchTableKeyComparator(selectedKind, selectedNamespace, selectedName, time.Time{})
 }
 
 //todo: add unit tests
-func getPayloadOutputList(watchRes map[typed.WatchTableKey]*typed.KubeWatchResult, previousKeyFound bool,
-	previousKey *typed.WatchTableKey, previousVal *typed.KubeWatchResult) []PayloadOuput {
+func getPayloadOutputList(watchRes map[typed.WatchTableKey]*typed.KubeWatchResult) []PayloadOuput {
 
 	payloadOutputList := []PayloadOuput{}
 	for key, val := range watchRes {
@@ -124,14 +123,23 @@ func getPayloadOutputList(watchRes map[typed.WatchTableKey]*typed.KubeWatchResul
 		payloadOutputList = append(payloadOutputList, output)
 	}
 
-	// when previousKey is found, add it to the payload map as well
-	if previousKeyFound {
-		output := PayloadOuput{
-			PayLoadTime: previousKey.Timestamp.UnixNano(),
-			Payload:     previousVal.Payload,
-			PayloadKey:  previousKey.String(),
-		}
-		payloadOutputList = append(payloadOutputList, output)
-	}
 	return payloadOutputList
+}
+
+func removeDupePayloads(payloads []PayloadOuput) []PayloadOuput {
+	sort.Slice(payloads, func(i, j int) bool {
+		return payloads[i].PayLoadTime < payloads[j].PayLoadTime
+	})
+
+	ret := []PayloadOuput{}
+
+	lastPayload := ""
+	for _, val := range payloads {
+		if val.Payload != lastPayload {
+			ret = append(ret, val)
+		}
+		lastPayload = val.Payload
+	}
+
+	return ret
 }
