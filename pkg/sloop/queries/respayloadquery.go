@@ -133,12 +133,12 @@ func removeDupePayloads(payloads []PayloadOuput) []PayloadOuput {
 
 	ret := []PayloadOuput{}
 
-	lastVal := ""
+	lastPayload := ""
 	for _, val := range payloads {
-		if val.Payload != lastVal {
+		if val.Payload != lastPayload {
 			ret = append(ret, val)
 		}
-		lastVal = val.Payload
+		lastPayload = val.Payload
 	}
 
 	return ret
