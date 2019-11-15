@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	"github.com/salesforce/sloop/pkg/sloop/webserver"
 	"io/ioutil"
 	"os"
@@ -66,6 +67,9 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.DurationVar(&config.CleanupFrequency, "cleanup-frequency", time.Minute,
 		"OPTIONAL: Frequency between subsequent runs for the database cleanup")
 	fs.BoolVar(&config.KeepMinorNodeUpdates, "keep-minor-node-updates", false, "Keep all node updates even if change is only condition timestamps")
+	fs.StringVar(&config.DefaultLookback, "default-lookback", "1h", "Default UX filter lookback")
+	fs.StringVar(&config.DefaultKind, "default-kind", "_all", "Default UX filter kind")
+	fs.StringVar(&config.DefaultNamespace, "default-namespace", "default", "Default UX filter namespace")
 	fs.StringVar(&config.UseKubeContext, "context", "", "Use a specific kubernetes context")
 	fs.StringVar(&config.DisplayContext, "display-context", "", "Use this to override the display context.  When running in k8s the context is empty string.  This lets you override that (mainly useful if you are running many copies of sloop on different clusters) ")
 	fs.StringVar(&config.ApiServerHost, "apiserver-host", "", "Kubernetes API server endpoint")
@@ -109,6 +113,13 @@ func (c *SloopConfig) ToYaml() string {
 func (c *SloopConfig) Validate() error {
 	if c.MaxLookback <= 0 {
 		return fmt.Errorf("SloopConfig value MaxLookback can not be <= 0")
+	}
+	if c.DefaultLookback == "" {
+		return fmt.Errorf("DefaultLookback can not be empty string")
+	}
+	_, err := time.ParseDuration(c.DefaultLookback)
+	if err != nil {
+		return errors.Wrapf(err, "DefaultLookback is an invalid duration: %v", c.DefaultLookback)
 	}
 	return nil
 }
