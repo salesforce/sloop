@@ -56,6 +56,14 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
         </table>
     </div>
 
+    <table>
+        <tr>
+          <td v-for="item in selectedPayloads" style="vertical-align: top;">
+            <pre>${ item | pretty }</pre>
+          </td>
+        </tr>
+    </table>
+
 </div>
 <script>
 new Vue({
