@@ -2,3 +2,18 @@ language: go
 
 go:
   - 1.13.x
+
+services:
+  - docker
+
+script:
+  - make
+
+before_deploy:
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+deploy:
+  provider: script
+  script:  make docker-push
+  on:
+    branch: master

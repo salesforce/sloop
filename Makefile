@@ -1,4 +1,4 @@
-.PHONY:all run linux docker generate tidy protobuf cover
+.PHONY:all run linux docker generate tidy protobuf cover docker-push
 
 all:
 	go get ./pkg/...
@@ -15,6 +15,10 @@ linux:
 
 docker:
 	docker build . -t sloop
+
+docker-push: docker
+	docker tag sloop:latest sloopimage/sloop:latest
+	docker push sloopimage/sloop:latest
 
 generate:
 	go generate ./pkg/...
