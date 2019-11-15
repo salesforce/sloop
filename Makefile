@@ -17,8 +17,8 @@ docker:
 	docker build . -t sloop
 
 docker-push: docker
-    docker tag sloop:latest sloopimage/sloop:latest
-    docker push sloopimage/sloop:latest
+	docker tag sloop:latest sloopimage/sloop:latest
+	docker push sloopimage/sloop:latest
 
 generate:
 	go generate ./pkg/...
