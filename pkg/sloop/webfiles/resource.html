@@ -38,10 +38,12 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
         <h2>Viewing range {{.ClickTime}} +/- {{.PlusMinusTime}}</h2>
         <table id="resource_event_table">
             <tr>
+                <th>Payload Key</th>
                 <th>Payload Link</th>
                 <th @click="sort('payloadTime')">PayloadTime &#x21C5</th>
             </tr>
             <tr v-for="res in sortedResPayloads">
+                <td><input type="checkbox" :value="res.payload" :id="res.payloadKey" v-model="selectedPayloads" @click="check($event)"/>${res.payloadKey}</td>
                 <td><a :href ="res.origValue | get_payload_url" target="_blank">Details</a></td>
                 <td>${ res.payloadTime | get_formatted_time}</td>
             </tr>
@@ -56,14 +58,6 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
         </table>
     </div>
 
-    <table>
-        <tr>
-          <td v-for="item in selectedPayloads" style="vertical-align: top;">
-            <pre>${ item | pretty }</pre>
-          </td>
-        </tr>
-    </table>
-
 </div>
 <script>
 new Vue({
@@ -74,7 +68,8 @@ new Vue({
         currentSortBy: 'payloadTime',
         currentSortDirection: 'asc',
         startTime: '',
-        selectedPayloads:[]
+        selectedPayloads:[],
+        events: []
     },
     filters: {
         get_formatted_time(unixnano_time) {
@@ -111,7 +106,9 @@ new Vue({
                     this.resPayload = response.data.map(function (val) {
                         return {
                             payloadTime: val.payloadTime,
-                            origValue: val
+                            payloadKey: val.payloadKey,
+                            payload : val.payload,
+                            origValue: val,
                         };
                     });
                 } else {
