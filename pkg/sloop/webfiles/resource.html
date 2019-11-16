@@ -12,14 +12,19 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
     <link rel="stylesheet" type="text/css" href="/webfiles/sloop.css">
     <link rel="stylesheet" type="text/css" href="/webfiles/resource.css">
     <link href="https://unpkg.com/nprogress@0.2.0/nprogress.css" rel="stylesheet" />
+    <link rel="stylesheet" type="text/css" href="http://cemerick.github.io/jsdifflib/diffview.css"/>
+
     <title>Resource {{.Kind}}/{{.Namespace}}/{{.Name}}</title>
 
     <script src="https://unpkg.com/axios/dist/axios.min.js" type="text/javascript"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js" type="text/javascript"></script>
     <script src="https://unpkg.com/nprogress@0.2.0/nprogress.js" type="text/javascript"></script>
+    <script type="text/javascript" src="http://cemerick.github.io/jsdifflib/diffview.js"></script>
+    <script type="text/javascript" src="http://cemerick.github.io/jsdifflib/difflib.js"></script>
 
 </head>
 <body>
+
 <div id="resource_container" style="padding:10px">
 
     <h2>Details</h2>
@@ -38,28 +43,54 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
         <h2>Viewing range {{.ClickTime}} +/- {{.PlusMinusTime}}</h2>
         <table id="resource_event_table">
             <tr>
-                <th>Choose Payload</th>
+                <th>Left Payload</th>
+                <th>Right Payload</th>
                 <th>Payload Link</th>
                 <th @click="sort('payloadTime')">PayloadTime &#x21C5</th>
             </tr>
             <tr v-for="res in sortedResPayloads">
-                <td><input type="checkbox" :value="res.payload" :id="res.payloadKey" v-model="selectedPayloads" @click="check($event)"/></td>
+                <td><input type="radio" :value="res.payload" :id="res.payloadKey" v-model="leftPayload" v-on:change="check();"/></td>
+                <td><input type="radio" :value="res.payload" :id="res.payloadKey" v-model="rightPayload" v-on:change="check();"/></td>
                 <td><a :href ="res.origValue | get_payload_url" target="_blank">Details</a></td>
                 <td>${ res.payloadTime | get_formatted_time}</td>
             </tr>
         </table>
+        <div id="diffoutput"> </div>
 
-        <table>
-            <tr>
-                <td v-for="item in selectedPayloads.slice(0,2)" style="vertical-align: top;">
-                    <pre>${ item | pretty }</pre>
-                </td>
-            </tr>
-        </table>
     </div>
 
 </div>
+
+<script type="text/javascript">
+
+    function diffUsingJS(leftText, rightText, viewType) {
+        "use strict";
+        var byId = function (id) { return document.getElementById(id); },
+            base = difflib.stringAsLines(leftText),
+            newtxt = difflib.stringAsLines(rightText),
+            sm = new difflib.SequenceMatcher(base, newtxt),
+            opcodes = sm.get_opcodes(),
+            diffoutputdiv = byId("diffoutput"),
+            contextSize = "";
+
+        diffoutputdiv.innerHTML = "";
+        contextSize = contextSize || null;
+
+        diffoutputdiv.appendChild(diffview.buildView({
+            baseTextLines: base,
+            newTextLines: newtxt,
+            opcodes: opcodes,
+            baseTextName: "Left Payload",
+            newTextName: "Right Payload",
+            contextSize: contextSize,
+            viewType: viewType
+        }));
+    }
+
+</script>
+
 <script>
+
 new Vue({
     el: '#resource_payload',
     delimiters: ['${', '}'],
@@ -68,7 +99,9 @@ new Vue({
         currentSortBy: 'payloadTime',
         currentSortDirection: 'asc',
         startTime: '',
-        selectedPayloads:[]
+        leftPayload:undefined,
+        rightPayload:undefined,
+        count: 0
     },
     filters: {
         get_formatted_time(unixnano_time) {
@@ -76,9 +109,6 @@ new Vue({
         },
         get_payload_url(value) {
             return "/debug/view/?k=" + value.payloadKey;
-        },
-        pretty: function(value) {
-            return JSON.stringify(JSON.parse(value), null, 2);
         }
     },
     mounted() {
@@ -122,10 +152,12 @@ new Vue({
             }
             this.currentSortBy = sortBy;
         },
-        check: function(e) {
-            if (e.target.checked) {
-                console.log(e.target.id)
-                console.log(e.target.value)
+        pretty: function(value) {
+            return JSON.stringify(JSON.parse(value), null, 2);
+        },
+        check: function() {
+            if (this.leftPayload != undefined && this.rightPayload != undefined){
+                diffUsingJS(this.pretty(this.leftPayload), this.pretty(this.rightPayload), 1);
             }
         }
     },
@@ -137,7 +169,7 @@ new Vue({
                 if (a[this.currentSortBy] > b[this.currentSortBy]) return direction;
                 return 0;
             });
-        },
+        }
     }
 });
 </script>
