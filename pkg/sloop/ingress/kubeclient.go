@@ -54,7 +54,7 @@ func MakeKubernetesClient(masterURL string, kubeContext string) (kubernetes.Inte
 		return nil, err
 	}
 
-	glog.Infof("Created k8sclient with context=%v, masterURL=%v, configFile=%v.", config.Host, clientConfig.ConfigAccess().GetLoadingPrecedence())
+	glog.Infof("Created k8sclient with context=%v, masterURL=%v, configFile=%v.", kubeContext, config.Host, clientConfig.ConfigAccess().GetLoadingPrecedence())
 	return clientset, nil
 }
 
