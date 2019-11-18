@@ -1,7 +1,12 @@
+# Sloop - Kubernetes History Visualization
+
 [![Build Status](https://travis-ci.org/salesforce/sloop.svg?branch=master)](https://travis-ci.org/salesforce/sloop)
 [![Go Report Card](https://goreportcard.com/badge/github.com/salesforce/sloop)](https://goreportcard.com/report/github.com/salesforce/sloop)
 ![Docker Pulls](https://img.shields.io/docker/pulls/sloopimage/sloop)
-# Sloop - Kubernetes History Visualization
+
+<img src="https://github.com/salesforce/sloop/raw/master/other/sloop_logo_color_small_notext.png">
+
+----
 
 Sloop monitors Kubernetes, recording histories of events and resource state changes 
 and providing visualizations to aid in debugging past events.  
@@ -13,6 +18,8 @@ Key features:
 1. Helps debug transient and intermittent errors.
 1. Allows you to see changes over time in a Kubernetes application.
 1. Is a self-contained service with no dependencies on distributed storage.
+
+----
 
 ## Screenshots
 
