@@ -2,9 +2,7 @@ serviceAccountName: sloop
 name: sloop
 replicas: 1
 image:
-  # for now, user needs to set their own imag tag,for example:test-20191009
   tag: latest
-  # for now, user needs to set their own image
   repository: sloopimage/sloop
 persistentVolume:
 ## If defined it will specify the storageClass for the statefulSet

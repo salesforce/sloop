@@ -32,7 +32,7 @@ Users can install sloop by using helm chart now, for instructions refer [helm re
 
 ### Precompiled Binaries
 
-_DockerHub images coming soon._
+- Docker: [`sloopimage/sloop`](https://hub.docker.com/r/sloopimage/sloop)
 
 ### Build from Source
 
