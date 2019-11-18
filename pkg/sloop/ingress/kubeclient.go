@@ -15,36 +15,47 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-// Returns kubeClient, currentContext, error
-func MakeKubernetesClient(masterURL string, kubeContext string) (kubernetes.Interface, string, error) {
-	glog.Infof("Creating k8sclient with user-defined config masterURL=%v, kubeContext=%v.", masterURL, kubeContext)
+// GetKubernetesContext takes optional user preferences and returns the Kubernetes context in use
+func GetKubernetesContext(masterURL string, kubeContextPreference string) (string, error) {
+	glog.Infof("Getting k8s context with user-defined config masterURL=%v, kubeContextPreference=%v.", masterURL, kubeContextPreference)
 
-	clientConfig := getConfig(masterURL, kubeContext)
+	clientConfig := getConfig(masterURL, kubeContextPreference)
 
 	// This tells us the currentContext defined in the kubeConfig which gets used if we dont have an override
 	rawConfig, err := clientConfig.RawConfig()
 	if err != nil {
-		return nil, "", err
+		return "", err
 	}
+
 	contextInUse := rawConfig.CurrentContext
-	if kubeContext != "" {
-		contextInUse = kubeContext
+	if kubeContextPreference != "" {
+		contextInUse = kubeContextPreference
 	}
+
+	glog.Infof("Get k8s context with context=%v", contextInUse)
+	return contextInUse, nil
+}
+
+// MakeKubernetesClient takes masterURL and kubeContext (user preference should have already been resolved before calling this)
+// and returns a K8s client
+func MakeKubernetesClient(masterURL string, kubeContext string) (kubernetes.Interface, error) {
+	glog.Infof("Creating k8sclient with user-defined config masterURL=%v, kubeContext=%v.", masterURL, kubeContext)
+
+	clientConfig := getConfig(masterURL, kubeContext)
 
 	config, err := clientConfig.ClientConfig()
-
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		glog.Errorf("Cannot Initialize Kubernetes Client API: %v", err)
-		return nil, "", err
+		return nil, err
 	}
 
-	glog.Infof("Created k8sclient with context=%v, masterURL=%v, configFile=%v.", contextInUse, config.Host, clientConfig.ConfigAccess().GetLoadingPrecedence())
-	return clientset, contextInUse, nil
+	glog.Infof("Created k8sclient with context=%v, masterURL=%v, configFile=%v.", config.Host, clientConfig.ConfigAccess().GetLoadingPrecedence())
+	return clientset, nil
 }
 
 func getConfig(masterURL string, kubeContext string) clientcmd.ClientConfig {
