@@ -63,6 +63,15 @@ func RealMain() error {
 	}
 	defer untyped.CloseStore(db)
 
+	if conf.RestoreDatabaseFile != "" {
+		glog.Infof("Restoring from backup file %q into context %q", conf.RestoreDatabaseFile, kubeContext)
+		err := ingress.DatabaseRestore(db, conf.RestoreDatabaseFile)
+		if err != nil {
+			return errors.Wrap(err, "failed to restore database")
+		}
+		glog.Infof("Restored from backup file %q into context %q", conf.RestoreDatabaseFile, kubeContext)
+	}
+
 	tables := typed.NewTableList(db)
 	processor := processing.NewProcessing(kubeWatchChan, tables, conf.KeepMinorNodeUpdates, conf.MaxLookback)
 	processor.Start()
