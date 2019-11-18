@@ -306,10 +306,12 @@ function getHeatmapContent(d) {
 }
 
 function getResourceBarContent(d) {
-    return `Name: <b>${d.title}</b><br/>` +
+    return '<div style="padding:10px">' +
+        `Name: <b>${d.title}</b><br/>` +
         `Kind: <b>${d.kind}</b><br/>` +
         `Namespace: <b>${d.namespace}</b><br/>` +
-        `<br/>${formatDateTime(d.time)}`;
+        `<br/>${formatDateTime(d.time)}` +
+        '</div>';
 }
 
 function formatDateTime(d) {
