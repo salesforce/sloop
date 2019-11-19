@@ -10,13 +10,15 @@ package config
 import (
 	"flag"
 	"fmt"
-	"github.com/ghodss/yaml"
-	"github.com/golang/glog"
-	"github.com/pkg/errors"
-	"github.com/salesforce/sloop/pkg/sloop/webserver"
 	"io/ioutil"
 	"os"
 	"time"
+
+	"github.com/ghodss/yaml"
+	"github.com/golang/glog"
+	"github.com/pkg/errors"
+
+	"github.com/salesforce/sloop/pkg/sloop/webserver"
 )
 
 const sloopConfigEnvVar = "SLOOP_CONFIG"
@@ -48,6 +50,7 @@ type SloopConfig struct {
 	DisplayContext          string        `json:"displayContext"`
 	ApiServerHost           string        `json:"apiServerHost"`
 	WatchCrds               bool          `json:"watchCrds"`
+	RestoreDatabaseFile     string        `json:"restoreDatabaseFile"`
 }
 
 func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
@@ -74,6 +77,7 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.StringVar(&config.DisplayContext, "display-context", "", "Use this to override the display context.  When running in k8s the context is empty string.  This lets you override that (mainly useful if you are running many copies of sloop on different clusters) ")
 	fs.StringVar(&config.ApiServerHost, "apiserver-host", "", "Kubernetes API server endpoint")
 	fs.BoolVar(&config.WatchCrds, "watch-crds", true, "Watch for activity for CRDs")
+	fs.StringVar(&config.RestoreDatabaseFile, "restore-database-file", "", "Restore database from backup file into current context.")
 }
 
 // This will first check if a config file is specified on cmd line using a temporary flagSet

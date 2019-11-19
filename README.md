@@ -77,6 +77,14 @@ docker run --rm -it -p 8080:8080 -v ~/.kube/:/kube/ -e KUBECONFIG=/kube/config s
 
 In this mode, data is written to a memory-backed volume and is discarded after each run. To preserve the data, you can host-mount /data with something like `-v /data/:/some_path_on_host/`
 
+## Backup & Restore
+
+> This is an advanced feature. Use with caution.
+
+To download a backup of the database, navigate to http://localhost:8080/data/backup
+
+To restore from a backup, start `sloop` with the `-restore-database-file` flag set to the backup file downloaded in the previous step. When restoring, you may also wish to set the `-disable-kube-watch=true` flag to stop new writes from occurring and/or the `-context` flag to restore the database into a different context.
+
 ## Contributing
 
 Refer to [CONTRIBUTING.md](CONTRIBUTING.md)<br>

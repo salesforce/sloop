@@ -114,6 +114,10 @@ func (b *MockDb) Backup(w io.Writer, since uint64) (uint64, error) {
 	return 0, nil
 }
 
+func (b *MockDb) Load(r io.Reader, maxPendingWrites int) error {
+	return nil
+}
+
 // Transaction
 
 func (t *MockTxn) Get(key []byte) (Item, error) {

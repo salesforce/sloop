@@ -33,7 +33,7 @@ type DB interface {
 	//	GetMergeOperator(key []byte, f MergeFunc, dur time.Duration) *MergeOperator
 	//	GetSequence(key []byte, bandwidth uint64) (*Sequence, error)
 	//	KeySplits(prefix []byte) []string
-	//	Load(r io.Reader, maxPendingWrites int) error
+	Load(r io.Reader, maxPendingWrites int) error
 	//	MaxBatchCount() int64
 	//	MaxBatchSize() int64
 	//	NewKVLoader(maxPendingWrites int) *KVLoader
