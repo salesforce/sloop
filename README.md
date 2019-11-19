@@ -77,7 +77,7 @@ This is very similar to above but abstracts running docker with AWS credentials 
 ```shell script
 make docker
 export AWS_ACCESS_KEY_ID=<access_key_id> AWS_SECRET_ACCESS_KEY=<secret_access_key> AWS_SESSION_TOKEN=<session_token>
-./sloop_to_eks.sh <cluster name>
+./providers/aws/sloop_to_eks.sh <cluster name>
 ```
 
 Data retention policy stated above still applies in this case.
