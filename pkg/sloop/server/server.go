@@ -45,9 +45,9 @@ func RealMain() error {
 		return errors.Wrap(err, "config validation failed")
 	}
 
-	kubeClient, kubeContext, err := ingress.MakeKubernetesClient(conf.ApiServerHost, conf.UseKubeContext)
+	kubeContext, err := ingress.GetKubernetesContext(conf.ApiServerHost, conf.UseKubeContext)
 	if err != nil {
-		return errors.Wrap(err, "failed to create kubernetes client")
+		return errors.Wrap(err, "failed to get kubernetes context")
 	}
 
 	// Channel used for updates from ingress to store
@@ -63,6 +63,15 @@ func RealMain() error {
 	}
 	defer untyped.CloseStore(db)
 
+	if conf.RestoreDatabaseFile != "" {
+		glog.Infof("Restoring from backup file %q into context %q", conf.RestoreDatabaseFile, kubeContext)
+		err := ingress.DatabaseRestore(db, conf.RestoreDatabaseFile)
+		if err != nil {
+			return errors.Wrap(err, "failed to restore database")
+		}
+		glog.Infof("Restored from backup file %q into context %q", conf.RestoreDatabaseFile, kubeContext)
+	}
+
 	tables := typed.NewTableList(db)
 	processor := processing.NewProcessing(kubeWatchChan, tables, conf.KeepMinorNodeUpdates, conf.MaxLookback)
 	processor.Start()
@@ -70,7 +79,12 @@ func RealMain() error {
 	// Real kubernetes watcher
 	var kubeWatcherSource ingress.KubeWatcher
 	if !conf.DisableKubeWatcher {
-		kubeWatcherSource, err = ingress.NewKubeWatcherSource(kubeClient, kubeWatchChan, conf.KubeWatchResyncInterval, conf.WatchCrds, conf.ApiServerHost, conf.UseKubeContext)
+		kubeClient, err := ingress.MakeKubernetesClient(conf.ApiServerHost, kubeContext)
+		if err != nil {
+			return errors.Wrap(err, "failed to create kubernetes client")
+		}
+
+		kubeWatcherSource, err = ingress.NewKubeWatcherSource(kubeClient, kubeWatchChan, conf.KubeWatchResyncInterval, conf.WatchCrds, conf.ApiServerHost, kubeContext)
 		if err != nil {
 			return errors.Wrap(err, "failed to initialize kubeWatcher")
 		}

@@ -134,7 +134,7 @@ func Test_GetResPayload_True_PreviousKeyFound(t *testing.T) {
 
 	var keys []string
 	keys = append(keys, typed.NewWatchTableKey(prevPartitionId, expectedKind, expectedNS, expectedName, someTs).String())
-	keys = append(keys, typed.NewWatchTableKey(partitionId, expectedKind, expectedNS, expectedName, someTs).String())
+	keys = append(keys, typed.NewWatchTableKey(partitionId, expectedKind, expectedNS, expectedName, someTs.Add(time.Second)).String())
 	keys = append(keys, typed.NewWatchTableKey(partitionId, "someKind-test", "someNamespace-test", "someName-test", someTs).String())
 	tables := helper_get_resPayload(keys, t, somePTime)
 
@@ -143,7 +143,7 @@ func Test_GetResPayload_True_PreviousKeyFound(t *testing.T) {
 	assert.Nil(t, err)
 	expectedRes := `[
  {
-  "payloadKey": "/watch/001546398000/someKind/someNamespace/someName/1546398245000000006",
+  "payloadKey": "/watch/001546394400/someKind/someNamespace/someName/1546398245000000006",
   "payloadTime": 1546398245000000006,
   "payload": "{\n  \"metadata\": {\n    \"name\": \"someName\",\n    \"namespace\": \"someNamespace\",\n    \"uid\": \"6c2a9795-a282-11e9-ba2f-14187761de09\",\n    \"creationTimestamp\": \"2019-07-09T19:47:45Z\"\n  }\n}"
  }

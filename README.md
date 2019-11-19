@@ -1,7 +1,12 @@
+# Sloop - Kubernetes History Visualization
+
 [![Build Status](https://travis-ci.org/salesforce/sloop.svg?branch=master)](https://travis-ci.org/salesforce/sloop)
 [![Go Report Card](https://goreportcard.com/badge/github.com/salesforce/sloop)](https://goreportcard.com/report/github.com/salesforce/sloop)
 ![Docker Pulls](https://img.shields.io/docker/pulls/sloopimage/sloop)
-# Sloop - Kubernetes History Visualization
+
+<img src="https://github.com/salesforce/sloop/raw/master/other/sloop_logo_color_small_notext.png">
+
+----
 
 Sloop monitors Kubernetes, recording histories of events and resource state changes 
 and providing visualizations to aid in debugging past events.  
@@ -13,6 +18,8 @@ Key features:
 1. Helps debug transient and intermittent errors.
 1. Allows you to see changes over time in a Kubernetes application.
 1. Is a self-contained service with no dependencies on distributed storage.
+
+----
 
 ## Screenshots
 
@@ -32,7 +39,7 @@ Users can install sloop by using helm chart now, for instructions refer [helm re
 
 ### Precompiled Binaries
 
-_DockerHub images coming soon._
+- Docker: [`sloopimage/sloop`](https://hub.docker.com/r/sloopimage/sloop)
 
 ### Build from Source
 
@@ -81,6 +88,14 @@ export AWS_ACCESS_KEY_ID=<access_key_id> AWS_SECRET_ACCESS_KEY=<secret_access_ke
 ```
 
 Data retention policy stated above still applies in this case.
+
+## Backup & Restore
+
+> This is an advanced feature. Use with caution.
+
+To download a backup of the database, navigate to http://localhost:8080/data/backup
+
+To restore from a backup, start `sloop` with the `-restore-database-file` flag set to the backup file downloaded in the previous step. When restoring, you may also wish to set the `-disable-kube-watch=true` flag to stop new writes from occurring and/or the `-context` flag to restore the database into a different context.
 
 ## Contributing
 

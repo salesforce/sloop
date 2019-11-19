@@ -306,10 +306,12 @@ function getHeatmapContent(d) {
 }
 
 function getResourceBarContent(d) {
-    return `Name: <b>${d.title}</b><br/>` +
+    return '<div style="padding:10px">' +
+        `Name: <b>${d.title}</b><br/>` +
         `Kind: <b>${d.kind}</b><br/>` +
         `Namespace: <b>${d.namespace}</b><br/>` +
-        `<br/>${formatDateTime(d.time)}`;
+        `<br/>${formatDateTime(d.time)}` +
+        '</div>';
 }
 
 function formatDateTime(d) {
@@ -415,7 +417,6 @@ function createTooltip(el) {
         .style("background", "white")
         .style("border-radius", "5px")
         .style("box-shadow", "0 0 10px rgba(0,0,0,.25)")
-        .style("padding", "10px")
         .style("line-height", "1.3")
         .style("z-index", 1)
         .style("font", "12px sans-serif")
