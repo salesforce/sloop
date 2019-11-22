@@ -77,6 +77,18 @@ docker run --rm -it -p 8080:8080 -v ~/.kube/:/kube/ -e KUBECONFIG=/kube/config s
 
 In this mode, data is written to a memory-backed volume and is discarded after each run. To preserve the data, you can host-mount /data with something like `-v /data/:/some_path_on_host/`
 
+### Local Docker Run and connecting to EKS
+
+This is very similar to above but abstracts running docker with AWS credentials for connecting to EKS
+
+```shell script
+make docker
+export AWS_ACCESS_KEY_ID=<access_key_id> AWS_SECRET_ACCESS_KEY=<secret_access_key> AWS_SESSION_TOKEN=<session_token>
+./providers/aws/sloop_to_eks.sh <cluster name>
+```
+
+Data retention policy stated above still applies in this case.
+
 ## Backup & Restore
 
 > This is an advanced feature. Use with caution.
