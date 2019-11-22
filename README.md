@@ -88,7 +88,7 @@ To restore from a backup, start `sloop` with the `-restore-database-file` flag s
 ## Contributing
 
 Refer to [CONTRIBUTING.md](CONTRIBUTING.md)<br>
-[Join our Slack](https://join.slack.com/t/sfdc-sloop/shared_invite/enQtNzgzOTcxOTUzMjM4LTgzMWJhZGU5ZTRjM2ZmNGE5ZDI1OTg4MTc2NDI4ZjAxMTZhMzE1MTc3NTI0M2M0MTcwY2JjOTQ0ZTIzMWU5OWQ)
+[Join our Slack](https://sfdc-sloop.slack.com/join/shared_invite/enQtODQ2OTg1MjY2MDM4LWIxMjA1ZGQ5YTgxNGYxNzQ3ODQ1Y2Y4YmY0NDg3ZDRjYzIyYTRjZmEyYzdhNGRhOWIzMjllZjY5YzFiYWZiNzM)
 
 ## License
 
