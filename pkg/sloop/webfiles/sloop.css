@@ -5,20 +5,110 @@
  * For full license text, see LICENSE.txt file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 
+body {
+	font-family: sans-serif;
+}
+
+.svg-container {
+	height: 100%;
+	width: 100%;
+	overflow: scroll;
+	background-color: whitesmoke;
+}
+
+svg {
+	z-index: -1;
+}
+
+.tick text {
+	font-size: 14px;
+}
+
 html, body {
 	height: 100%;
-	padding: 0px;
-	margin: 0px;
+	padding: 0;
+	margin: 0;
 	overflow: hidden;
+	font-family: sans-serif;
+}
+
+.tick {
+	color: #E5E9F0;
+}
+
+.ignore-pointer-events {
+	pointer-events: none;
+}
+
+.resource-bar-label {
+	dominant-baseline: hanging;
+    font-size: 14px;
+}
+
+.heatmap {
+	cursor: pointer;
+}
+
+.resource {
+	cursor: pointer;
+}
+
+.tooltip {
+	position: fixed;
+	opacity: 0;
+	background: whitesmoke;
+	color: #3B4252;
+	border-radius: 5px;
+	box-shadow: 0 0 10px rgba(0,0,0,.5);
+	line-height: 1;
+	z-index: 1;
+	font: 12px sans-serif;
+	max-height: 50%;
+	max-width: 50%;
+	overflow-y: scroll;
+}
+
+#tiny-tooltip {
+	padding: 10px;
+}
+
+div#resource_container {
+	padding: 0;
+}
+
+#sloopleftnav {
+	height: 100%;
+	width: 250px;
+	padding-right: 20px;
+}
+
+#currentContext {
+	width:100%;
+}
+
+select {
+	width: 100%;
+}
+
+.svg-container {
+    padding-top: 10px;
+	border-left: 2px solid black;
+	height: 100%;
+	overflow: scroll;
+	background-color: #2E3440;
+	color: #D8DEE9;
+}
+
+svg {
+	z-index: -1;
 }
 
 .sloopleftnav {
-	background-color: DimGrey;
+	background-color: #3B4252;
 	padding-left: 10px;
 	padding-top: 10px;
-	font-family: Arial;
 	font-size: 13px;
-	color: white;
+	color: #E5E9F0;
 }
 
 #sloopleftnav a:link { color: lightgray }
@@ -33,11 +123,8 @@ html, body {
 	height: 100%;
 }
 
-.gantt_task_line .gantt_task_content {
-    padding: 0 0px;
-}
-
 a[target="_blank"]:after {
 	content: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAQElEQVR42qXKwQkAIAxDUUdxtO6/RBQkQZvSi8I/pL4BoGw/XPkh4XigPmsUgh0626AjRsgxHTkUThsG2T/sIlzdTsp52kSS1wAAAABJRU5ErkJggg==);
 	margin: 0 3px 0 5px;
 }
+

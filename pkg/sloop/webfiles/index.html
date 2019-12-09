@@ -7,19 +7,6 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 <!DOCTYPE html>
 <!--suppress HtmlUnknownTarget, JSUnresolvedVariable -->
 <style type="text/css">
-    body {
-        font-family: sans-serif;
-        font-size: 10px;
-    }
-    .svg-container {
-        border:2px solid #000;
-        height: 100%;
-        overflow: scroll;
-        background-color: whitesmoke;
-    }
-    svg {
-        z-index: -1;
-    }
 </style>
 <head>
     <meta http-equiv="Content-type" content="text/html; charset=utf-8">
@@ -30,12 +17,12 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 
 <body>
 <div style="display: flex; width:100%; height:100%">
-    <div id="sloopleftnav" class="sloopleftnav" style="height: 100%; width: 250px; padding-right: 20px">
+    <div id="sloopleftnav" class="sloopleftnav">
         <span style="font-size:20px">Sloop v0.2</span><br>
         <span style="font-size:12px">Kubernetes History Visualization</span><br><br>
 {{if (ne .CurrentContext "")}}
         <label for="currentContext">Kubernetes Context:</label><br/>
-        <input type="text" id="currentContext" value="{{.CurrentContext}}" disabled="true" style="width:100%"><br><br>
+        <input type="text" id="currentContext" value="{{.CurrentContext}}" disabled="true"><br><br>
 {{end}}
         <form action="/" method="get">
             <!-- Not showing the query drop down as we only have one query at the moment -->
@@ -44,7 +31,7 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
             <!-- <br><br> -->
 
             <label for="filterlookback">Time Range:</label><br/>
-            <select name="lookback" id="filterlookback" style="width:100%">
+            <select name="lookback" id="filterlookback">
                 <option value="1h">1 Hour</option>
                 <option value="3h">3 Hours</option>
                 <option value="6h">6 Hours</option>
@@ -55,23 +42,23 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
             </select><br><br>
 
             <label for="filternamespace">Filter Namespace:</label><br/>
-            <select name="namespace" id="filternamespace" style="width:100%">
+            <select name="namespace" id="filternamespace">
             </select>
             <br><br>
 
             <label for="filterkind">Filter Kind: </label><br/>
-            <select id="filterkind" name="kind" style="width:100%">
+            <select id="filterkind" name="kind">
             </select><br><br>
 
             <label for="filtersort">Sort:</label><br>
-            <select name="sort" id="filtersort" style="width:100%">
+            <select name="sort" id="filtersort">
                 <option value="starttime">Start Time</option>
                 <option value="mostevents">Most Events</option>
                 <option value="name">Name</option>
             </select><br><br>
 
             <label for="filternamematch">Name Filter:</label><br>
-            <input type="text" name="namematch" id="filternamematch" style="width:100%"><br><br>
+            <input type="text" name="namematch" id="filternamematch"><br><br>
 
             <input type="submit">
         </form>
@@ -90,9 +77,6 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
     </div>
     <div id="d3_here" class="svg-container" style='width: 100%; height:100%;'>
 
-        <div id="tooltip_container">
-
-        </div>
     </div>
     <script src="https://d3js.org/d3.v5.js"></script>
     <script
