@@ -222,14 +222,14 @@ function appendAxes(svg) {
         .append("g")
         .attr("transform", () => `translate(0 ${yAxisBand.range()[0]})`)
         .call(topAxisDrawFunc)
-        .attr("stroke", "#E5E9F0")
+        .attr("stroke", palette.baseLight[1])
         .classed("topAxis", true);
 
     bottomAxis = svg
         .append("g")
         .attr("transform", () => `translate(0 ${yAxisBand.range()[1]})`)
         .call(bottomAxisDrawFunc)
-        .attr("stroke", "#E5E9F0")
+        .attr("stroke", palette.baseLight[1])
         .classed("bottomAxis", true);
 
 }
@@ -329,10 +329,13 @@ function bindMouseEvents(svg) {
 function getHeatmapContent(d) {
     let allReasons = d.text.split(" ").reduce((r, l, i, a) => {
         let splitText = l.split(":");
+        let severityText = splitText[1];
+        let severityCode = severity.get(splitText[1]);
+        let severityColor = palette.severity[severityCode];
         return `<tr>
                  <td> <b> ${splitText[0]} </b> </td>
                  <td> <b> ${splitText[2]} </b> </td> 
-                 <td> <b style="color:${severity.get(splitText[1])}">${splitText[1]}</b> </td>
+                 <td> <b style="color:${severityColor}">${severityText}</b> </td>
                  </tr>` + r
     }, "");
 
