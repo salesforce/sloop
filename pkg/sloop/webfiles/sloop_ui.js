@@ -17,10 +17,32 @@ const palette = {
 
 
 // Globals Live Here
-let topAxis, bottomAxis, xAxisScale, yAxisBand, data, theTime, axisTop, axisBottom, smallBarOffset, displayMaxX, displayMaxY;
+let topAxis, bottomAxis;
 
-const yAxisOffset = 50;
-const yAxisPadding = 0.2;
+// These funcs get called whenever the propertes of either axis are changed
+let topAxisDrawFunc, bottomAxisDrawFunc;
+
+// These are d3 structs
+let xAxisScale, yAxisBand;
+
+// Array containing data retreived from sloop server
+let data;
+
+// The time displayed on certain mouseover and mousemove events
+let theTime;
+
+// These define the maximum drawing space on the window. I don't think
+// this is the correct way of using these vars - it doesn't really respect window resizing
+// and weird minimums and display scaling could potentially cause problems.
+let displayMaxX, displayMaxY;
+
+// Vertical spacing between bars
+const resourceBarVerticalSpacing = 0.2;
+
+// Since we're drawing bars on bars within the same yAxisBandwidth -
+// This margin defines the space between the resource bar - and it's containing
+// band within in the yAxisBand
+let smallBarMargin;
 
 let margin = {
     top: 20,
@@ -75,17 +97,11 @@ function render(result) {
 
 
     if (!data) {
-        xAxisScale = d3.scaleUtc()
-            .range([margin.left, displayMaxX - margin.left]);
+        xAxisScale = d3.scaleUtc().range([margin.left, displayMaxX - margin.left]);
+        yAxisBand = d3.scaleBand().padding(resourceBarVerticalSpacing);
 
-
-        yAxisBand = d3.scaleBand()
-            .range([margin.top, (yAxisOffset) - margin.top])
-            .padding(yAxisPadding);
-
-
-        axisTop = d3.axisTop(xAxisScale)
-        axisBottom = d3.axisBottom(xAxisScale);
+        topAxisDrawFunc = d3.axisTop(xAxisScale);
+        bottomAxisDrawFunc = d3.axisBottom(xAxisScale);
         filteredData = []
     } else {
         dataByKind = d3.nest().key(d => d.kind).entries(data);
@@ -101,17 +117,17 @@ function render(result) {
         yAxisBand = d3.scaleBand()
             .domain(d3.range(data.length))
             .range([margin.top, (data.length * (30)) - margin.top])
-            .padding(yAxisPadding);
+            .padding(resourceBarVerticalSpacing);
 
-        smallBarOffset = 0.1 * yAxisBand.bandwidth();
+        smallBarMargin = 0.1 * yAxisBand.bandwidth();
 
 
         filteredData = [].concat.apply([], dataByKind.map(d => d.values));
         filteredData.forEach(d => d.color = d3.color(barColorGenFunc(d.kind)));
     }
 
-    axisTop = d3.axisTop(xAxisScale);
-    axisBottom = d3.axisBottom(xAxisScale);
+    topAxisDrawFunc = d3.axisTop(xAxisScale);
+    bottomAxisDrawFunc = d3.axisBottom(xAxisScale);
 
     let svgWidth = xAxisScale.range()[1] + (2 * margin.left);
     let svgHeight = yAxisBand.range()[1] + (2 * margin.top);
@@ -130,7 +146,7 @@ function render(result) {
         .data(filteredData)
         .enter()
         .append("g")
-        .attr("transform", (d, i) => `translate(0 ${yAxisBand(i) + smallBarOffset})`)
+        .attr("transform", (d, i) => `translate(0 ${yAxisBand(i) + smallBarMargin})`)
         .each(createResourceBar);
 
     document.querySelector("body").groups = groups;
@@ -205,14 +221,14 @@ function appendAxes(svg) {
     topAxis = svg
         .append("g")
         .attr("transform", () => `translate(0 ${yAxisBand.range()[0]})`)
-        .call(axisTop)
+        .call(topAxisDrawFunc)
         .attr("stroke", "#E5E9F0")
         .classed("topAxis", true);
 
     bottomAxis = svg
         .append("g")
         .attr("transform", () => `translate(0 ${yAxisBand.range()[1]})`)
-        .call(axisBottom)
+        .call(bottomAxisDrawFunc)
         .attr("stroke", "#E5E9F0")
         .classed("bottomAxis", true);
 
@@ -312,9 +328,9 @@ function bindMouseEvents(svg) {
 
 function getHeatmapContent(d) {
     let allReasons = d.text.split(" ").reduce((r, l, i, a) => {
-        let splitText = l.split(":")
+        let splitText = l.split(":");
         return `<tr>
-                 <td> <b style=${splitText[0]}></b> </td>
+                 <td> <b> ${splitText[0]} </b> </td>
                  <td> <b> ${splitText[2]} </b> </td> 
                  <td> <b style="color:${severity.get(splitText[1])}">${splitText[1]}</b> </td>
                  </tr>` + r
@@ -349,7 +365,7 @@ function createResourceBar(d) {
     el
         .append("rect")
         .attr("x", sx)
-        .attr("height", yAxisBand.bandwidth() - (2 * smallBarOffset))
+        .attr("height", yAxisBand.bandwidth() - (2 * smallBarMargin))
         .attr("width", w)
         .attr("fill", barColorGenFunc(d.kind))
         .classed("resource", true);
@@ -382,7 +398,7 @@ function createResourceBar(d) {
                 .attr("stroke", palette.baseDark[3])
                 .attr("stroke-width", "1px")
                 .attr("title", text)
-                .attr("transform", `translate(0 ${-smallBarOffset})`)
+                .attr("transform", `translate(0 ${-smallBarMargin})`)
                 .attr("index", n++)
                 .classed("heatmap", true)
         }
