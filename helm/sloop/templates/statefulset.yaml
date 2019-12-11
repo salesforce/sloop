@@ -63,7 +63,7 @@ spec:
           sizeLimit: {{ .Values.persistentVolume.sizeLimit }}
         name: sloop-data
       - configMap:
-          name: sloop
+          name: {{ .Values.name }}
         name: sloopconfig
       serviceAccountName: {{ .Values.serviceAccountName }}
   volumeClaimTemplates:
