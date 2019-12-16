@@ -14,7 +14,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger/v2"
 )
 
 // This mock simulates badger using an in-memory store

@@ -9,7 +9,7 @@ package badgerwrap
 
 import (
 	"fmt"
-	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger/v2"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"testing"

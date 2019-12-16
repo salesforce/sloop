@@ -10,7 +10,7 @@ package badgerwrap
 import (
 	"io"
 
-	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger/v2"
 )
 
 // Need a factory we can pass into untyped store so it can open and close databases

@@ -10,7 +10,7 @@ package badgerwrap
 import (
 	"io"
 
-	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger/v2"
 	"github.com/pkg/errors"
 )
 

@@ -136,6 +136,9 @@ func doCleanup(tables typed.Tables, storeRoot string, timeLimit time.Duration, s
 		}
 
 	}
+
+
+
 	return anyCleanupPerformed, nil
 }
 
