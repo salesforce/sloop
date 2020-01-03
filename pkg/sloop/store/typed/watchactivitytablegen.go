@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dgraph-io/badger"
+	badger "github.com/dgraph-io/badger/v2"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"

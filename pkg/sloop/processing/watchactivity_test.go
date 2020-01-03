@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"

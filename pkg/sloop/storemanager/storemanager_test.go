@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger/v2"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"

@@ -9,7 +9,7 @@ package typed
 
 import (
 	"fmt"
-	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
