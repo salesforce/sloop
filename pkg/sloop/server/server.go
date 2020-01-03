@@ -57,7 +57,7 @@ func RealMain() error {
 	factory := &badgerwrap.BadgerFactory{}
 
 	storeRootWithKubeContext := path.Join(conf.StoreRoot, kubeContext)
-	db, err := untyped.OpenStore(factory, storeRootWithKubeContext, time.Duration(1)*time.Hour)
+	db, err := untyped.OpenStore(factory, storeRootWithKubeContext, time.Duration(1)*time.Hour, conf.BadgerMaxTableSize, conf.BadgerKeepL0InMemory, conf.BadgerVLogFileSize, conf.BadgerVLogMaxEntries, conf.BadgerUseLSMOnlyOptions)
 	if err != nil {
 		return errors.Wrap(err, "failed to init untyped store")
 	}
@@ -107,7 +107,16 @@ func RealMain() error {
 	var storemgr *storemanager.StoreManager
 	if !conf.DisableStoreManager {
 		fs := &afero.Afero{Fs: afero.NewOsFs()}
-		storemgr = storemanager.NewStoreManager(tables, conf.StoreRoot, conf.CleanupFrequency, conf.MaxLookback, conf.MaxDiskMb, fs)
+		storeCfg := &storemanager.Config{
+			StoreRoot:          conf.StoreRoot,
+			Freq:               conf.CleanupFrequency,
+			TimeLimit:          conf.MaxLookback,
+			SizeLimitMb:        conf.MaxDiskMb,
+			BadgerDiscardRatio: conf.BadgerDiscardRatio,
+			BadgerVLogGCFreq:   conf.BadgerVLogGCFreq,
+			BadgerVLogGCLoop:   conf.BadgerVLogGCLoop,
+		}
+		storemgr = storemanager.NewStoreManager(tables, storeCfg, fs)
 		storemgr.Start()
 	}
 

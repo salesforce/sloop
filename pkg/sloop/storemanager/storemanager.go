@@ -32,32 +32,36 @@ var (
 	metricBadgerVlogsizemb        = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_vlogsizemb"})
 )
 
-type StoreManager struct {
-	tables      typed.Tables
-	storeRoot   string
-	freq        time.Duration
-	timeLimit   time.Duration
-	sizeLimitMb int
-	fs          *afero.Afero
-	testMode    bool
-	sleeper     *SleepWithCancel
-	wg          *sync.WaitGroup
-	done        bool
-	donelock    *sync.Mutex
+type Config struct {
+	StoreRoot          string
+	Freq               time.Duration
+	TimeLimit          time.Duration
+	SizeLimitMb        int
+	BadgerDiscardRatio float64
+	BadgerVLogGCFreq   time.Duration
+	BadgerVLogGCLoop   bool
 }
 
-func NewStoreManager(tables typed.Tables, storeRoot string, freq time.Duration, timeLimit time.Duration, sizeLimitMb int, fs *afero.Afero) *StoreManager {
+type StoreManager struct {
+	tables   typed.Tables
+	fs       *afero.Afero
+	testMode bool
+	sleeper  *SleepWithCancel
+	wg       *sync.WaitGroup
+	done     bool
+	donelock *sync.Mutex
+	config   *Config
+}
+
+func NewStoreManager(tables typed.Tables, config *Config, fs *afero.Afero) *StoreManager {
 	return &StoreManager{
-		tables:      tables,
-		storeRoot:   storeRoot,
-		freq:        freq,
-		timeLimit:   timeLimit,
-		sizeLimitMb: sizeLimitMb,
-		fs:          fs,
-		sleeper:     NewSleepWithCancel(),
-		wg:          &sync.WaitGroup{},
-		done:        false,
-		donelock:    &sync.Mutex{},
+		tables:   tables,
+		fs:       fs,
+		sleeper:  NewSleepWithCancel(),
+		wg:       &sync.WaitGroup{},
+		done:     false,
+		donelock: &sync.Mutex{},
+		config:   config,
 	}
 }
 
@@ -76,21 +80,46 @@ func (sm *StoreManager) Start() {
 				glog.Infof("Store manager main loop exiting")
 				return
 			}
-			temporaryEmitMetrics(sm.storeRoot, sm.tables.Db(), sm.fs)
+			temporaryEmitMetrics(sm.config.StoreRoot, sm.tables.Db(), sm.fs)
 			metricGcRunCount.Inc()
-			cleanupPerformed, err := doCleanup(sm.tables, sm.storeRoot, sm.timeLimit, sm.sizeLimitMb*1024*1024, sm.fs)
+			cleanupPerformed, err := doCleanup(sm.tables, sm.config.StoreRoot, sm.config.TimeLimit, sm.config.SizeLimitMb*1024*1024, sm.fs)
 			if err != nil {
-				glog.Errorf("GC failed with err:%v, will sleep: %v and retry later ...", err, sm.freq)
-				sm.sleeper.Sleep(sm.freq)
+				glog.Errorf("GC failed with err:%v, will sleep: %v and retry later ...", err, sm.config.Freq)
 			} else if !cleanupPerformed {
-				glog.V(2).Infof("GC did not need to clean anything, will sleep: %v", sm.freq)
-				sm.sleeper.Sleep(sm.freq)
+				glog.V(2).Infof("GC did not need to clean anything, will sleep: %v", sm.config.Freq)
 			} else {
 				// We did some cleanup and there were no errors.  Because we may be in a low space situation lets skip
 				// the sleep and repeat the loop
-				glog.Infof("GC cleanup performed")
+				glog.Infof("GC cleanup performed without errors, next run: %v", sm.config.Freq)
 				metricGcCleanupPerformedCount.Inc()
 			}
+			sm.sleeper.Sleep(sm.config.Freq)
+		}
+	}()
+
+	// Its up to us to trigger the Badger value log GC.
+	// See https://github.com/dgraph-io/badger#garbage-collection
+	go func() {
+		if sm.config.BadgerVLogGCFreq == 0 {
+			return
+		}
+		sm.wg.Add(1)
+		defer sm.wg.Done()
+		for {
+			if sm.isDone() {
+				glog.Infof("ValueLogGC loop exiting")
+				return
+			}
+
+			for {
+				before := time.Now()
+				err := sm.tables.Db().RunValueLogGC(sm.config.BadgerDiscardRatio)
+				glog.Infof("RunValueLogGC(%v) run took %v and returned %q.  Next run in %v", sm.config.BadgerDiscardRatio, time.Since(before), err, sm.config.BadgerVLogGCFreq)
+				if sm.config.BadgerVLogGCLoop == false || err != nil {
+					break
+				}
+			}
+			sm.sleeper.Sleep(sm.config.BadgerVLogGCFreq)
 		}
 	}()
 }
@@ -121,6 +150,7 @@ func doCleanup(tables typed.Tables, storeRoot string, timeLimit time.Duration, s
 			start := time.Now()
 			err = tables.Db().DropPrefix([]byte(prefix))
 			elapsed := time.Since(start)
+			glog.Infof("Call to DropPrefix(%v) took %v and returned %v", prefix, elapsed, err)
 			if err != nil {
 				errMsgs = append(errMsgs, fmt.Sprintf("failed to cleanup with min key: %s, elapsed: %v,err: %v,", prefix, elapsed, err))
 			}
@@ -136,8 +166,6 @@ func doCleanup(tables typed.Tables, storeRoot string, timeLimit time.Duration, s
 		}
 
 	}
-
-
 
 	return anyCleanupPerformed, nil
 }

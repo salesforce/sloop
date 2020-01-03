@@ -53,8 +53,13 @@ type SloopConfig struct {
 	RestoreDatabaseFile     string        `json:"restoreDatabaseFile"`
 	// https://godoc.org/github.com/dgraph-io/badger#DB.RunValueLogGC
 	BadgerDiscardRatio      float64       `json:"badgerDiscardRatio"`
-	BadgerValueLogGC        time.Duration `json:"badgerValueLogGC"`
-
+	BadgerVLogGCFreq        time.Duration `json:"badgerVLogGCFreq"`
+	BadgerVLogGCLoop        bool          `json:"badgerVLogGCLoop"`
+	BadgerMaxTableSize      int64         `json:"badgerMaxTableSize"`
+	BadgerKeepL0InMemory    bool          `json:"badgerKeepL0InMemory"`
+	BadgerVLogFileSize      int64         `json:"badgerVLogFileSize"`
+	BadgerVLogMaxEntries    uint          `json:"badgerVLogMaxEntries"`
+	BadgerUseLSMOnlyOptions bool          `json:"badgerUseLSMOnlyOptions"`
 }
 
 func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
@@ -83,7 +88,14 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.BoolVar(&config.WatchCrds, "watch-crds", true, "Watch for activity for CRDs")
 	fs.StringVar(&config.RestoreDatabaseFile, "restore-database-file", "", "Restore database from backup file into current context.")
 	fs.Float64Var(&config.BadgerDiscardRatio, "badger-discard-ratio", 0.01, "Badger value log GC uses this value to decide if it wants to compact a vlog file.  Smaller values free more disk space but use more computing resources")
-	fs.DurationVar(&config.BadgerValueLogGC, "badger-value-log-gc", time.Minute*5, "Frequency of running badger's ValueLogGC")
+	fs.DurationVar(&config.BadgerVLogGCFreq, "badger-vlog-gc-freq", time.Minute*5, "Frequency of running badger's ValueLogGC")
+	fs.BoolVar(&config.BadgerVLogGCLoop, "badger-vlog-gc-loop", true, "If set, rung badger ValueLogGC in a loop until it finds no data to free")
+	fs.Int64Var(&config.BadgerMaxTableSize, "badger-max-table-size", 0, "Max LSM table size in bytes")
+	fs.BoolVar(&config.BadgerKeepL0InMemory, "badger-keep-l0-in-memory", true, "Keeps all level 0 tables in memory for faster writes and compactions")
+	fs.Int64Var(&config.BadgerVLogFileSize, "badger-vlog-file-size", 0, "Max size in bytes per value log file")
+	fs.UintVar(&config.BadgerVLogMaxEntries, "badger-vlog-max-entries", 0, "Max number of entries per value log files")
+	fs.BoolVar(&config.BadgerUseLSMOnlyOptions, "badger-use-lsm-only-options", true, "Sets a higher valueThreshold so values would be collocated with LSM tree reducing disk usage")
+
 }
 
 // This will first check if a config file is specified on cmd line using a temporary flagSet
