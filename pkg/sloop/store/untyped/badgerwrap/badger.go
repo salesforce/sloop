@@ -84,6 +84,10 @@ func (b *BadgerDb) Load(r io.Reader, maxPendingWrites int) error {
 	return b.db.Load(r, maxPendingWrites)
 }
 
+func (b *BadgerDb) RunValueLogGC(discardRatio float64) error {
+	return b.db.RunValueLogGC(discardRatio)
+}
+
 // Transaction
 
 func (t *BadgerTxn) Get(key []byte) (Item, error) {

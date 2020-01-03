@@ -51,6 +51,10 @@ type SloopConfig struct {
 	ApiServerHost           string        `json:"apiServerHost"`
 	WatchCrds               bool          `json:"watchCrds"`
 	RestoreDatabaseFile     string        `json:"restoreDatabaseFile"`
+	// https://godoc.org/github.com/dgraph-io/badger#DB.RunValueLogGC
+	BadgerDiscardRatio      float64       `json:"badgerDiscardRatio"`
+	BadgerValueLogGC        time.Duration `json:"badgerValueLogGC"`
+
 }
 
 func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
@@ -78,6 +82,8 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.StringVar(&config.ApiServerHost, "apiserver-host", "", "Kubernetes API server endpoint")
 	fs.BoolVar(&config.WatchCrds, "watch-crds", true, "Watch for activity for CRDs")
 	fs.StringVar(&config.RestoreDatabaseFile, "restore-database-file", "", "Restore database from backup file into current context.")
+	fs.Float64Var(&config.BadgerDiscardRatio, "badger-discard-ratio", 0.01, "Badger value log GC uses this value to decide if it wants to compact a vlog file.  Smaller values free more disk space but use more computing resources")
+	fs.DurationVar(&config.BadgerValueLogGC, "badger-value-log-gc", time.Minute*5, "Frequency of running badger's ValueLogGC")
 }
 
 // This will first check if a config file is specified on cmd line using a temporary flagSet

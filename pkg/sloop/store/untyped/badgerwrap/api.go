@@ -44,7 +44,7 @@ type DB interface {
 	//	NewTransactionAt(readTs uint64, update bool) *Txn
 	//	NewWriteBatch() *WriteBatch
 	//	PrintHistogram(keyPrefix []byte)
-	//	RunValueLogGC(discardRatio float64) error
+	RunValueLogGC(discardRatio float64) error
 	//	SetDiscardTs(ts uint64)
 	//	Subscribe(ctx context.Context, cb func(kv *KVList), prefixes ...[]byte) error
 	//	VerifyChecksum() error
