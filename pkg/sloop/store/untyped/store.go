@@ -16,32 +16,42 @@ import (
 	"time"
 )
 
-func OpenStore(factory badgerwrap.Factory, rootPath string, configPartitionDuration time.Duration, badgerMaxTableSize int64, badgerKeepL0InMemory bool, badgerVLogFileSize int64, badgerVLogMaxEntries uint, badgerUseLSMOnlyOptions bool) (badgerwrap.DB, error) {
-	if configPartitionDuration != time.Hour && configPartitionDuration != 24*time.Hour {
+type Config struct {
+	RootPath                string
+	ConfigPartitionDuration time.Duration
+	BadgerMaxTableSize      int64
+	BadgerKeepL0InMemory    bool
+	BadgerVLogFileSize      int64
+	BadgerVLogMaxEntries    uint
+	BadgerUseLSMOnlyOptions bool
+}
+
+func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error) {
+	if config.ConfigPartitionDuration != time.Hour && config.ConfigPartitionDuration != 24*time.Hour {
 		return nil, fmt.Errorf("Only hour and day partitionDurations are supported")
 	}
 
-	err := os.MkdirAll(rootPath, 0755)
+	err := os.MkdirAll(config.RootPath, 0755)
 	if err != nil {
 		glog.Infof("mkdir failed with %v", err)
 	}
 	// For now using a temp name because this all need to be replaced when we add real table/partition support
 	var opts badger.Options
-	if badgerUseLSMOnlyOptions {
-		opts = badger.LSMOnlyOptions(rootPath)
+	if config.BadgerUseLSMOnlyOptions {
+		opts = badger.LSMOnlyOptions(config.RootPath)
 	} else {
-		opts = badger.DefaultOptions(rootPath)
+		opts = badger.DefaultOptions(config.RootPath)
 	}
 
-	if badgerMaxTableSize != 0 {
-		opts = opts.WithMaxTableSize(badgerMaxTableSize)
+	if config.BadgerMaxTableSize != 0 {
+		opts = opts.WithMaxTableSize(config.BadgerMaxTableSize)
 	}
-	opts.KeepL0InMemory = badgerKeepL0InMemory
-	if badgerVLogFileSize != 0 {
-		opts = opts.WithValueLogFileSize(badgerVLogFileSize)
+	opts.KeepL0InMemory = config.BadgerKeepL0InMemory
+	if config.BadgerVLogFileSize != 0 {
+		opts = opts.WithValueLogFileSize(config.BadgerVLogFileSize)
 	}
-	if badgerVLogMaxEntries != 0 {
-		opts = opts.WithValueLogMaxEntries(uint32(badgerVLogMaxEntries))
+	if config.BadgerVLogMaxEntries != 0 {
+		opts = opts.WithValueLogMaxEntries(uint32(config.BadgerVLogMaxEntries))
 	}
 
 	db, err := factory.Open(opts)
@@ -50,14 +60,8 @@ func OpenStore(factory badgerwrap.Factory, rootPath string, configPartitionDurat
 	}
 
 	glog.Infof("BadgerDB Options: %+v", opts)
-	lsm, vlog := db.Size()
-	glog.Infof("BadgerDB Size lsm=%v, vlog=%v", lsm, vlog)
-	tables := db.Tables(true)
-	for _, table := range tables {
-		glog.Infof("BadgerDB TABLE id=%v keycount=%v level=%v left=%v right=%v", table.ID, table.KeyCount, table.Level, string(table.Left), string(table.Right))
-	}
 
-	partitionDuration = configPartitionDuration
+	partitionDuration = config.ConfigPartitionDuration
 	return db, nil
 }
 

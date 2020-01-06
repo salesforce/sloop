@@ -16,7 +16,6 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"github.com/spf13/afero"
 )
 
 var (
@@ -33,31 +32,21 @@ var (
 	someUid       = "123232"
 )
 
-func Test_GetDirSizeRecursive(t *testing.T) {
-	fs := afero.Afero{Fs: afero.NewMemMapFs()}
-	fs.MkdirAll(someDir, 0700)
-	fs.WriteFile(somePath, []byte("abcdfdfdfd"), 0700)
-
-	fileSize, err := getDirSizeRecursive(someDir, &fs)
-	assert.Nil(t, err)
-	assert.NotZero(t, fileSize)
-}
-
 func Test_cleanUpFileSizeCondition_True(t *testing.T) {
-	fs := afero.Afero{Fs: afero.NewMemMapFs()}
-	fs.MkdirAll(someDir, 0700)
-	fs.WriteFile(somePath, []byte("abcdfdfdfd"), 0700)
+	stats := &storeStats{
+		DiskSizeBytes: 10,
+	}
 
-	flag := cleanUpFileSizeCondition(someDir, 3, &fs)
+	flag := cleanUpFileSizeCondition(stats, 3)
 	assert.True(t, flag)
 }
 
 func Test_cleanUpFileSizeCondition_False(t *testing.T) {
-	fs := afero.Afero{Fs: afero.NewMemMapFs()}
-	fs.MkdirAll(someDir, 0700)
-	fs.WriteFile(somePath, []byte("abcdfdfdfd"), 0700)
+	stats := &storeStats{
+		DiskSizeBytes: 10,
+	}
 
-	flag := cleanUpFileSizeCondition(someDir, 100, &fs)
+	flag := cleanUpFileSizeCondition(stats, 100)
 	assert.False(t, flag)
 }
 
@@ -122,11 +111,11 @@ func Test_doCleanup_true(t *testing.T) {
 	db := help_get_db(t)
 	tables := typed.NewTableList(db)
 
-	fs := afero.Afero{Fs: afero.NewMemMapFs()}
-	fs.MkdirAll(someDir, 0700)
-	fs.WriteFile(somePath, []byte("abcdfdfdfd"), 0700)
+	stats := &storeStats{
+		DiskSizeBytes: 10,
+	}
 
-	flag, err := doCleanup(tables, someDir, time.Hour, 2, &fs)
+	flag, err := doCleanup(tables, time.Hour, 2, stats)
 	assert.True(t, flag)
 	assert.Nil(t, err)
 }
@@ -135,11 +124,11 @@ func Test_doCleanup_false(t *testing.T) {
 	db := help_get_db(t)
 	tables := typed.NewTableList(db)
 
-	fs := afero.Afero{Fs: afero.NewMemMapFs()}
-	fs.MkdirAll(someDir, 0700)
-	fs.WriteFile(somePath, []byte("abcdfdfdfd"), 0700)
+	stats := &storeStats{
+		DiskSizeBytes: 10,
+	}
 
-	flag, err := doCleanup(tables, someDir, time.Hour, 1000, &fs)
+	flag, err := doCleanup(tables, time.Hour, 1000, stats)
 	assert.False(t, flag)
 	assert.Nil(t, err)
 }

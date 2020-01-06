@@ -14,32 +14,27 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
-	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/spf13/afero"
-	"os"
 	"sync"
 	"time"
 )
 
 var (
-	metricGcRunCount              = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_run_count"})
-	metricGcCleanupPerformedCount = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_cleanup_performed_count"})
-	metricGcFailedCount           = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_failed_gc_count"})
-	metricStoreSizeondiskmb       = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_store_sizeondiskmb"})
-	metricBadgerKeys              = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_keys"})
-	metricBadgerTables            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_tables"})
-	metricBadgerLsmsizemb         = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_lsmsizemb"})
-	metricBadgerVlogsizemb        = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_vlogsizemb"})
+	metricGcRunCount         = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_run_count"})
+	metricGcSuccessCount     = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_success_count"})
+	metricGcFailedCount      = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_failed_count"})
+	metricGcLatency          = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_latency_sec"})
+	metricValueLogGcRunCount = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_valueloggc_run_count"})
+	metricValueLogGcLatency  = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_valueloggc_latency_sec"})
 )
 
 type Config struct {
 	StoreRoot          string
 	Freq               time.Duration
 	TimeLimit          time.Duration
-	SizeLimitMb        int
+	SizeLimitBytes     int
 	BadgerDiscardRatio float64
 	BadgerVLogGCFreq   time.Duration
-	BadgerVLogGCLoop   bool
 }
 
 type StoreManager struct {
@@ -51,6 +46,7 @@ type StoreManager struct {
 	done     bool
 	donelock *sync.Mutex
 	config   *Config
+	stats    *storeStats
 }
 
 func NewStoreManager(tables typed.Tables, config *Config, fs *afero.Afero) *StoreManager {
@@ -80,19 +76,17 @@ func (sm *StoreManager) Start() {
 				glog.Infof("Store manager main loop exiting")
 				return
 			}
-			temporaryEmitMetrics(sm.config.StoreRoot, sm.tables.Db(), sm.fs)
+			sm.refreshStats()
 			metricGcRunCount.Inc()
-			cleanupPerformed, err := doCleanup(sm.tables, sm.config.StoreRoot, sm.config.TimeLimit, sm.config.SizeLimitMb*1024*1024, sm.fs)
-			if err != nil {
-				glog.Errorf("GC failed with err:%v, will sleep: %v and retry later ...", err, sm.config.Freq)
-			} else if !cleanupPerformed {
-				glog.V(2).Infof("GC did not need to clean anything, will sleep: %v", sm.config.Freq)
+			before := time.Now()
+			_, err := doCleanup(sm.tables, sm.config.TimeLimit, sm.config.SizeLimitBytes, sm.stats)
+			if err == nil {
+				metricGcSuccessCount.Inc()
 			} else {
-				// We did some cleanup and there were no errors.  Because we may be in a low space situation lets skip
-				// the sleep and repeat the loop
-				glog.Infof("GC cleanup performed without errors, next run: %v", sm.config.Freq)
-				metricGcCleanupPerformedCount.Inc()
+				metricGcFailedCount.Inc()
 			}
+			metricGcLatency.Add(time.Since(before).Seconds())
+			glog.Infof("GC finished in %v with return %q.  Next run in %v", time.Since(before), err, sm.config.Freq)
 			sm.sleeper.Sleep(sm.config.Freq)
 		}
 	}()
@@ -110,12 +104,15 @@ func (sm *StoreManager) Start() {
 				glog.Infof("ValueLogGC loop exiting")
 				return
 			}
-
+			sm.refreshStats()
 			for {
 				before := time.Now()
 				err := sm.tables.Db().RunValueLogGC(sm.config.BadgerDiscardRatio)
-				glog.Infof("RunValueLogGC(%v) run took %v and returned %q.  Next run in %v", sm.config.BadgerDiscardRatio, time.Since(before), err, sm.config.BadgerVLogGCFreq)
-				if sm.config.BadgerVLogGCLoop == false || err != nil {
+				metricValueLogGcRunCount.Add(1)
+				metricValueLogGcLatency.Add(time.Since(before).Seconds())
+				glog.Infof("RunValueLogGC(%v) run took %v and returned %q", sm.config.BadgerDiscardRatio, time.Since(before), err)
+				metricValueLogGcRunCount.Add(1)
+				if err != nil {
 					break
 				}
 			}
@@ -133,7 +130,17 @@ func (sm *StoreManager) Shutdown() {
 	sm.wg.Wait()
 }
 
-func doCleanup(tables typed.Tables, storeRoot string, timeLimit time.Duration, sizeLimitBytes int, fs *afero.Afero) (bool, error) {
+func (sm *StoreManager) refreshStats() {
+	// On startup we have 2 routines trying to do this at the same time
+	// If we have fresh results its good enough
+	if sm.stats != nil && time.Since(sm.stats.Timestamp) < time.Second {
+		return
+	}
+	sm.stats = generateStats(sm.config.StoreRoot, sm.tables.Db(), sm.fs)
+	emitMetrics(sm.stats)
+}
+
+func doCleanup(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int, stats *storeStats) (bool, error) {
 	ok, minPartition, maxPartiton, err := tables.GetMinAndMaxPartition()
 	if err != nil {
 		return false, fmt.Errorf("failed to get min partition : %s, max partition: %s, err:%v", minPartition, maxPartiton, err)
@@ -143,7 +150,9 @@ func doCleanup(tables typed.Tables, storeRoot string, timeLimit time.Duration, s
 	}
 
 	anyCleanupPerformed := false
-	if cleanUpTimeCondition(minPartition, maxPartiton, timeLimit) || cleanUpFileSizeCondition(storeRoot, sizeLimitBytes, fs) {
+	if cleanUpTimeCondition(minPartition, maxPartiton, timeLimit) || cleanUpFileSizeCondition(stats, sizeLimitBytes) {
+		partStart, partEnd, err := untyped.GetTimeRangeForPartition(minPartition)
+		glog.Infof("GC removing partition %q with data from %v to %v (err %v)", minPartition, partStart, partEnd, err)
 		var errMsgs []string
 		for _, tableName := range tables.GetTableNames() {
 			prefix := fmt.Sprintf("/%s/%s", tableName, minPartition)
@@ -164,7 +173,6 @@ func doCleanup(tables typed.Tables, storeRoot string, timeLimit time.Duration, s
 			}
 			return false, fmt.Errorf(errMsg)
 		}
-
 	}
 
 	return anyCleanupPerformed, nil
@@ -192,54 +200,12 @@ func cleanUpTimeCondition(minPartition string, maxPartition string, timeLimit ti
 	return false
 }
 
-func cleanUpFileSizeCondition(storeRoot string, sizeLimitBytes int, fs *afero.Afero) bool {
-	size, err := getDirSizeRecursive(storeRoot, fs)
-	if err != nil {
-		return false
-	}
+func cleanUpFileSizeCondition(stats *storeStats, sizeLimitBytes int) bool {
 
-	if size > uint64(sizeLimitBytes) {
-		glog.Infof("Start cleaning up because current file size: %v exceeds file size: %v", size, sizeLimitBytes)
+	if stats.DiskSizeBytes > uint64(sizeLimitBytes) {
+		glog.Infof("Start cleaning up because current file size: %v exceeds file size: %v", stats.DiskSizeBytes, sizeLimitBytes)
 		return true
 	}
-	glog.V(2).Infof("Can not clean up, disk size: %v is not exceeding size limit: %v yet", size, uint64(sizeLimitBytes))
+	glog.V(2).Infof("Can not clean up, disk size: %v is not exceeding size limit: %v yet", stats.DiskSizeBytes, uint64(sizeLimitBytes))
 	return false
-}
-
-func getDirSizeRecursive(root string, fs *afero.Afero) (uint64, error) {
-	var totalSize uint64
-
-	err := fs.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			totalSize += uint64(info.Size())
-		}
-		return nil
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	return totalSize, nil
-}
-
-// TODO: Properly integrate this with the next refactor
-func temporaryEmitMetrics(storeRoot string, db badgerwrap.DB, fs *afero.Afero) {
-	totalSizeBytes, err := getDirSizeRecursive(storeRoot, fs)
-	if err != nil {
-		glog.Errorf("Failed to check storage size on disk")
-	} else {
-		metricStoreSizeondiskmb.Set(float64(totalSizeBytes) / 1024.0 / 1024.0)
-	}
-
-	lsmSize, vlogSize := db.Size()
-	metricBadgerLsmsizemb.Set(float64(lsmSize) / 1024.0 / 1024.0)
-	metricBadgerVlogsizemb.Set(float64(vlogSize) / 1024.0 / 1024.0)
-
-	var totalKeys uint64
-	tables := db.Tables(true)
-	for _, table := range tables {
-		totalKeys += table.KeyCount
-	}
-	metricBadgerKeys.Set(float64(totalKeys))
-	metricBadgerTables.Set(float64(len(tables)))
 }

@@ -57,7 +57,16 @@ func RealMain() error {
 	factory := &badgerwrap.BadgerFactory{}
 
 	storeRootWithKubeContext := path.Join(conf.StoreRoot, kubeContext)
-	db, err := untyped.OpenStore(factory, storeRootWithKubeContext, time.Duration(1)*time.Hour, conf.BadgerMaxTableSize, conf.BadgerKeepL0InMemory, conf.BadgerVLogFileSize, conf.BadgerVLogMaxEntries, conf.BadgerUseLSMOnlyOptions)
+	storeConfig := &untyped.Config{
+		RootPath:                storeRootWithKubeContext,
+		ConfigPartitionDuration: time.Duration(1) * time.Hour,
+		BadgerMaxTableSize:      conf.BadgerMaxTableSize,
+		BadgerKeepL0InMemory:    conf.BadgerKeepL0InMemory,
+		BadgerVLogFileSize:      conf.BadgerVLogFileSize,
+		BadgerVLogMaxEntries:    conf.BadgerVLogMaxEntries,
+		BadgerUseLSMOnlyOptions: conf.BadgerUseLSMOnlyOptions,
+	}
+	db, err := untyped.OpenStore(factory, storeConfig)
 	if err != nil {
 		return errors.Wrap(err, "failed to init untyped store")
 	}
@@ -111,10 +120,9 @@ func RealMain() error {
 			StoreRoot:          conf.StoreRoot,
 			Freq:               conf.CleanupFrequency,
 			TimeLimit:          conf.MaxLookback,
-			SizeLimitMb:        conf.MaxDiskMb,
+			SizeLimitBytes:     conf.MaxDiskMb * 1024 * 1024,
 			BadgerDiscardRatio: conf.BadgerDiscardRatio,
 			BadgerVLogGCFreq:   conf.BadgerVLogGCFreq,
-			BadgerVLogGCLoop:   conf.BadgerVLogGCLoop,
 		}
 		storemgr = storemanager.NewStoreManager(tables, storeCfg, fs)
 		storemgr.Start()
