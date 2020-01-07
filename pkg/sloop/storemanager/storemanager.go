@@ -94,7 +94,7 @@ func (sm *StoreManager) gcLoop() {
 		} else {
 			metricGcFailedCount.Inc()
 		}
-		metricGcLatency.Add(time.Since(before).Seconds())
+		metricGcLatency.Set(time.Since(before).Seconds())
 		glog.Infof("GC finished in %v with return %q.  Next run in %v", time.Since(before), err, sm.config.Freq)
 		sm.sleeper.Sleep(sm.config.Freq)
 	}
@@ -118,7 +118,7 @@ func (sm *StoreManager) vlogGcLoop() {
 			err := sm.tables.Db().RunValueLogGC(sm.config.BadgerDiscardRatio)
 			metricValueLogGcRunning.Set(0)
 			metricValueLogGcRunCount.Add(1)
-			metricValueLogGcLatency.Add(time.Since(before).Seconds())
+			metricValueLogGcLatency.Set(time.Since(before).Seconds())
 			glog.Infof("RunValueLogGC(%v) run took %v and returned %q", sm.config.BadgerDiscardRatio, time.Since(before), err)
 			if err != nil {
 				break
