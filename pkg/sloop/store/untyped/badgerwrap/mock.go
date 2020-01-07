@@ -118,6 +118,10 @@ func (b *MockDb) Load(r io.Reader, maxPendingWrites int) error {
 	return nil
 }
 
+func (b *MockDb) RunValueLogGC(discardRatio float64) error {
+	return nil
+}
+
 // Transaction
 
 func (t *MockTxn) Get(key []byte) (Item, error) {

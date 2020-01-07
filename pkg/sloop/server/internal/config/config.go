@@ -51,6 +51,13 @@ type SloopConfig struct {
 	ApiServerHost           string        `json:"apiServerHost"`
 	WatchCrds               bool          `json:"watchCrds"`
 	RestoreDatabaseFile     string        `json:"restoreDatabaseFile"`
+	BadgerDiscardRatio      float64       `json:"badgerDiscardRatio"`
+	BadgerVLogGCFreq        time.Duration `json:"badgerVLogGCFreq"`
+	BadgerMaxTableSize      int64         `json:"badgerMaxTableSize"`
+	BadgerKeepL0InMemory    bool          `json:"badgerKeepL0InMemory"`
+	BadgerVLogFileSize      int64         `json:"badgerVLogFileSize"`
+	BadgerVLogMaxEntries    uint          `json:"badgerVLogMaxEntries"`
+	BadgerUseLSMOnlyOptions bool          `json:"badgerUseLSMOnlyOptions"`
 }
 
 func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
@@ -67,8 +74,7 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.StringVar(&config.DebugRecordFile, "record-file", "", "Record watch data to a playback file")
 	fs.BoolVar(&config.UseMockBadger, "use-mock-badger", false, "Use a fake in-memory mock of badger")
 	fs.BoolVar(&config.DisableStoreManager, "disable-store-manager", false, "Turn off store manager which is to clean up database")
-	fs.DurationVar(&config.CleanupFrequency, "cleanup-frequency", time.Minute,
-		"OPTIONAL: Frequency between subsequent runs for the database cleanup")
+	fs.DurationVar(&config.CleanupFrequency, "cleanup-frequency", time.Minute*30, "Frequency between subsequent runs for the database cleanup")
 	fs.BoolVar(&config.KeepMinorNodeUpdates, "keep-minor-node-updates", false, "Keep all node updates even if change is only condition timestamps")
 	fs.StringVar(&config.DefaultLookback, "default-lookback", "1h", "Default UX filter lookback")
 	fs.StringVar(&config.DefaultKind, "default-kind", "_all", "Default UX filter kind")
@@ -78,6 +84,13 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.StringVar(&config.ApiServerHost, "apiserver-host", "", "Kubernetes API server endpoint")
 	fs.BoolVar(&config.WatchCrds, "watch-crds", true, "Watch for activity for CRDs")
 	fs.StringVar(&config.RestoreDatabaseFile, "restore-database-file", "", "Restore database from backup file into current context.")
+	fs.Float64Var(&config.BadgerDiscardRatio, "badger-discard-ratio", 0.1, "Badger value log GC uses this value to decide if it wants to compact a vlog file.  Smaller values free more disk space but use more computing resources")
+	fs.DurationVar(&config.BadgerVLogGCFreq, "badger-vlog-gc-freq", time.Minute*1, "Frequency of running badger's ValueLogGC")
+	fs.Int64Var(&config.BadgerMaxTableSize, "badger-max-table-size", 0, "Max LSM table size in bytes.  0 = use badger default")
+	fs.BoolVar(&config.BadgerKeepL0InMemory, "badger-keep-l0-in-memory", true, "Keeps all level 0 tables in memory for faster writes and compactions")
+	fs.Int64Var(&config.BadgerVLogFileSize, "badger-vlog-file-size", 0, "Max size in bytes per value log file. 0 = use badger default")
+	fs.UintVar(&config.BadgerVLogMaxEntries, "badger-vlog-max-entries", 0, "Max number of entries per value log files. 0 = use badger default")
+	fs.BoolVar(&config.BadgerUseLSMOnlyOptions, "badger-use-lsm-only-options", true, "Sets a higher valueThreshold so values would be collocated with LSM tree reducing vlog disk usage")
 }
 
 // This will first check if a config file is specified on cmd line using a temporary flagSet
@@ -124,6 +137,10 @@ func (c *SloopConfig) Validate() error {
 	_, err := time.ParseDuration(c.DefaultLookback)
 	if err != nil {
 		return errors.Wrapf(err, "DefaultLookback is an invalid duration: %v", c.DefaultLookback)
+	}
+	if c.CleanupFrequency < time.Minute*15 {
+		return fmt.Errorf("CleanupFrequency can not be less than 15 minutes.  Badger is lazy about freeing space " +
+			"on disk so we need to give it time to avoid over-correction")
 	}
 	return nil
 }
