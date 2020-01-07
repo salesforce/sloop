@@ -87,7 +87,7 @@ func getDirSizeRecursive(root string, fs *afero.Afero) (uint64, map[string]int, 
 }
 
 func emitMetrics(stats *storeStats) {
-	metricStoreSizeOnDiskMb.Set(float64(stats.DiskSizeBytes))
+	metricStoreSizeOnDiskMb.Set(float64(stats.DiskSizeBytes / 1024 / 1024))
 	for k, v := range stats.LevelToKeyCount {
 		metricBadgerKeys.WithLabelValues(fmt.Sprintf("%v", k)).Set(float64(v))
 	}
@@ -95,7 +95,7 @@ func emitMetrics(stats *storeStats) {
 		metricBadgerTables.WithLabelValues(fmt.Sprintf("%v", k)).Set(float64(v))
 	}
 	metricBadgerLsmFileCount.Set(float64(stats.DiskLsmFileCount))
-	metricBadgerLsmSizeMb.Set(float64(stats.DiskLsmBytes))
+	metricBadgerLsmSizeMb.Set(float64(stats.DiskLsmBytes / 1024 / 1024))
 	metricBadgerVLogFileCount.Set(float64(stats.DiskVlogFileCount))
-	metricBadgerVLogSizeMb.Set(float64(stats.DiskVlogBytes))
+	metricBadgerVLogSizeMb.Set(float64(stats.DiskVlogBytes / 1024 / 1024))
 }
