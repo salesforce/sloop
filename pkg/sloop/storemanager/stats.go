@@ -21,12 +21,12 @@ var (
 	metricBadgerTables        = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "sloop_badger_tables"}, []string{"level"})
 	metricBadgerLsmFileCount  = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_lsmfilecount"})
 	metricBadgerLsmSizeMb     = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_lsmsizemb"})
-	metricBadgerVlogFileCount = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_vlogfilecount"})
-	metricBadgerVlogSizeMb    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_vlogsizemb"})
+	metricBadgerVLogFileCount = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_vlogfilecount"})
+	metricBadgerVLogSizeMb    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_vlogsizemb"})
 )
 
 type storeStats struct {
-	Timestamp         time.Time
+	timestamp         time.Time
 	DiskSizeBytes     uint64
 	DiskLsmBytes      uint64
 	DiskLsmFileCount  int
@@ -40,7 +40,7 @@ func generateStats(storeRoot string, db badgerwrap.DB, fs *afero.Afero) *storeSt
 	ret := &storeStats{}
 	ret.LevelToKeyCount = make(map[int]uint64)
 	ret.LevelToTableCount = make(map[int]int)
-	ret.Timestamp = time.Now()
+	ret.timestamp = time.Now()
 
 	totalSizeBytes, extFileCount, extByteCount, err := getDirSizeRecursive(storeRoot, fs)
 	if err != nil {
@@ -96,6 +96,6 @@ func emitMetrics(stats *storeStats) {
 	}
 	metricBadgerLsmFileCount.Set(float64(stats.DiskLsmFileCount))
 	metricBadgerLsmSizeMb.Set(float64(stats.DiskLsmBytes))
-	metricBadgerVlogFileCount.Set(float64(stats.DiskVlogFileCount))
-	metricBadgerVlogSizeMb.Set(float64(stats.DiskVlogBytes))
+	metricBadgerVLogFileCount.Set(float64(stats.DiskVlogFileCount))
+	metricBadgerVLogSizeMb.Set(float64(stats.DiskVlogBytes))
 }

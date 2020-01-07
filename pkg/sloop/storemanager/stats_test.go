@@ -23,9 +23,13 @@ func Test_GetDirSizeRecursive(t *testing.T) {
 	fs.WriteFile(path.Join(someDir, "KEYREGISTRY"), []byte("u"), 0700)
 	fs.WriteFile(path.Join(someDir, "MANIFEST"), []byte("u"), 0700)
 
+	subDir := path.Join(someDir, "subDir")
+	fs.Mkdir(subDir, 0700)
+	fs.WriteFile(path.Join(subDir, "randomFile"), []byte("abc"), 0700)
+
 	fileSize, extFileCount, extByteCount, err := getDirSizeRecursive(someDir, &fs)
 	assert.Nil(t, err)
-	assert.Equal(t, uint64(40), fileSize)
-	assert.Equal(t, map[string]int(map[string]int{"": 2, ".sst": 4, ".vlog": 3}), extFileCount)
-	assert.Equal(t, map[string]uint64(map[string]uint64{"": 2, ".sst": 30, ".vlog": 8}), extByteCount)
+	assert.Equal(t, uint64(43), fileSize)
+	assert.Equal(t, map[string]int(map[string]int{"": 3, ".sst": 4, ".vlog": 3}), extFileCount)
+	assert.Equal(t, map[string]uint64(map[string]uint64{"": 5, ".sst": 30, ".vlog": 8}), extByteCount)
 }

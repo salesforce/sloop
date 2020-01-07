@@ -23,9 +23,11 @@ var (
 	metricGcRunCount         = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_run_count"})
 	metricGcSuccessCount     = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_success_count"})
 	metricGcFailedCount      = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_failed_count"})
-	metricGcLatency          = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_latency_sec"})
+	metricGcLatency          = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_latency_sec"})
+	metricGcRunning          = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_running"})
 	metricValueLogGcRunCount = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_valueloggc_run_count"})
-	metricValueLogGcLatency  = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_valueloggc_latency_sec"})
+	metricValueLogGcLatency  = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_valueloggc_latency_sec"})
+	metricValueLogGcRunning  = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_valueloggc_running"})
 )
 
 type Config struct {
@@ -68,57 +70,62 @@ func (sm *StoreManager) isDone() bool {
 }
 
 func (sm *StoreManager) Start() {
-	go func() {
-		sm.wg.Add(1)
-		defer sm.wg.Done()
-		for {
-			if sm.isDone() {
-				glog.Infof("Store manager main loop exiting")
-				return
-			}
-			sm.refreshStats()
-			metricGcRunCount.Inc()
-			before := time.Now()
-			_, err := doCleanup(sm.tables, sm.config.TimeLimit, sm.config.SizeLimitBytes, sm.stats)
-			if err == nil {
-				metricGcSuccessCount.Inc()
-			} else {
-				metricGcFailedCount.Inc()
-			}
-			metricGcLatency.Add(time.Since(before).Seconds())
-			glog.Infof("GC finished in %v with return %q.  Next run in %v", time.Since(before), err, sm.config.Freq)
-			sm.sleeper.Sleep(sm.config.Freq)
-		}
-	}()
+	go sm.gcLoop()
+	go sm.vlogGcLoop()
+}
 
-	// Its up to us to trigger the Badger value log GC.
-	// See https://github.com/dgraph-io/badger#garbage-collection
-	go func() {
-		if sm.config.BadgerVLogGCFreq == 0 {
+func (sm *StoreManager) gcLoop() {
+	sm.wg.Add(1)
+	defer sm.wg.Done()
+	defer metricGcRunning.Set(0)
+	for {
+		if sm.isDone() {
+			glog.Infof("Store manager main loop exiting")
 			return
 		}
-		sm.wg.Add(1)
-		defer sm.wg.Done()
-		for {
-			if sm.isDone() {
-				glog.Infof("ValueLogGC loop exiting")
-				return
-			}
-			sm.refreshStats()
-			for {
-				before := time.Now()
-				err := sm.tables.Db().RunValueLogGC(sm.config.BadgerDiscardRatio)
-				metricValueLogGcRunCount.Add(1)
-				metricValueLogGcLatency.Add(time.Since(before).Seconds())
-				glog.Infof("RunValueLogGC(%v) run took %v and returned %q", sm.config.BadgerDiscardRatio, time.Since(before), err)
-				metricValueLogGcRunCount.Add(1)
-				if err != nil {
-					break
-				}
-			}
-			sm.sleeper.Sleep(sm.config.BadgerVLogGCFreq)
+		sm.refreshStats()
+		metricGcRunCount.Inc()
+		before := time.Now()
+		metricGcRunning.Set(1)
+		_, err := doCleanup(sm.tables, sm.config.TimeLimit, sm.config.SizeLimitBytes, sm.stats)
+		metricGcRunning.Set(0)
+		if err == nil {
+			metricGcSuccessCount.Inc()
+		} else {
+			metricGcFailedCount.Inc()
 		}
-	}()
+		metricGcLatency.Add(time.Since(before).Seconds())
+		glog.Infof("GC finished in %v with return %q.  Next run in %v", time.Since(before), err, sm.config.Freq)
+		sm.sleeper.Sleep(sm.config.Freq)
+	}
+}
+
+func (sm *StoreManager) vlogGcLoop() {
+	// Its up to us to trigger the Badger value log GC.
+	// See https://github.com/dgraph-io/badger#garbage-collection
+	sm.wg.Add(1)
+	defer sm.wg.Done()
+	defer metricValueLogGcRunning.Set(0)
+	for {
+		if sm.isDone() {
+			glog.Infof("ValueLogGC loop exiting")
+			return
+		}
+		sm.refreshStats()
+		for {
+			before := time.Now()
+			metricValueLogGcRunning.Set(1)
+			err := sm.tables.Db().RunValueLogGC(sm.config.BadgerDiscardRatio)
+			metricValueLogGcRunning.Set(0)
+			metricValueLogGcRunCount.Add(1)
+			metricValueLogGcLatency.Add(time.Since(before).Seconds())
+			glog.Infof("RunValueLogGC(%v) run took %v and returned %q", sm.config.BadgerDiscardRatio, time.Since(before), err)
+			if err != nil {
+				break
+			}
+		}
+		sm.sleeper.Sleep(sm.config.BadgerVLogGCFreq)
+	}
 }
 
 func (sm *StoreManager) Shutdown() {
@@ -133,7 +140,7 @@ func (sm *StoreManager) Shutdown() {
 func (sm *StoreManager) refreshStats() {
 	// On startup we have 2 routines trying to do this at the same time
 	// If we have fresh results its good enough
-	if sm.stats != nil && time.Since(sm.stats.Timestamp) < time.Second {
+	if sm.stats != nil && time.Since(sm.stats.timestamp) < time.Second {
 		return
 	}
 	sm.stats = generateStats(sm.config.StoreRoot, sm.tables.Db(), sm.fs)
