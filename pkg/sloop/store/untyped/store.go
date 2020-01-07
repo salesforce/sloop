@@ -35,9 +35,10 @@ func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error
 	if err != nil {
 		glog.Infof("mkdir failed with %v", err)
 	}
-	// For now using a temp name because this all need to be replaced when we add real table/partition support
+
 	var opts badger.Options
 	if config.BadgerUseLSMOnlyOptions {
+		// LSMOnlyOptions uses less disk space for vlog files.  See the comments on the LSMOnlyOptions() func for details
 		opts = badger.LSMOnlyOptions(config.RootPath)
 	} else {
 		opts = badger.DefaultOptions(config.RootPath)

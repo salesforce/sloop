@@ -51,7 +51,6 @@ type SloopConfig struct {
 	ApiServerHost           string        `json:"apiServerHost"`
 	WatchCrds               bool          `json:"watchCrds"`
 	RestoreDatabaseFile     string        `json:"restoreDatabaseFile"`
-	// https://godoc.org/github.com/dgraph-io/badger#DB.RunValueLogGC
 	BadgerDiscardRatio      float64       `json:"badgerDiscardRatio"`
 	BadgerVLogGCFreq        time.Duration `json:"badgerVLogGCFreq"`
 	BadgerMaxTableSize      int64         `json:"badgerMaxTableSize"`
@@ -91,8 +90,7 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.BoolVar(&config.BadgerKeepL0InMemory, "badger-keep-l0-in-memory", true, "Keeps all level 0 tables in memory for faster writes and compactions")
 	fs.Int64Var(&config.BadgerVLogFileSize, "badger-vlog-file-size", 0, "Max size in bytes per value log file. 0 = use badger default")
 	fs.UintVar(&config.BadgerVLogMaxEntries, "badger-vlog-max-entries", 0, "Max number of entries per value log files. 0 = use badger default")
-	fs.BoolVar(&config.BadgerUseLSMOnlyOptions, "badger-use-lsm-only-options", true, "Sets a higher valueThreshold so values would be collocated with LSM tree reducing disk usage")
-
+	fs.BoolVar(&config.BadgerUseLSMOnlyOptions, "badger-use-lsm-only-options", true, "Sets a higher valueThreshold so values would be collocated with LSM tree reducing vlog disk usage")
 }
 
 // This will first check if a config file is specified on cmd line using a temporary flagSet
