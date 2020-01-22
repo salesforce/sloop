@@ -15,6 +15,13 @@ resources: {}
 service:
   port: 80
   targetPort: 8080
+ingress:
+  enabled: true
+  annotations: {}
+  path: /
+  host:
+  tls: false
+  secretName:
 ## Configure extra options for liveness and readiness probes
 livenessProbe:
   enabled: true
