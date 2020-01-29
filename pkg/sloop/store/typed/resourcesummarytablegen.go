@@ -132,6 +132,22 @@ func (t *ResourceSummaryTable) GetMinMaxPartitions(txn badgerwrap.Txn) (bool, st
 	return true, minKey.PartitionId, maxKey.PartitionId
 }
 
+func (t *ResourceSummaryTable) GetMinPartitions(txn badgerwrap.Txn) (bool, string) {
+	ok, minKeyStr := t.GetMinKey(txn)
+	if !ok {
+		return false, ""
+	}
+
+	minKey := &ResourceSummaryKey{}
+
+	err := minKey.Parse(minKeyStr)
+	if err != nil {
+		panic(fmt.Sprintf("invalid key in table: %v key: %q error: %v", t.tableName, minKeyStr, err))
+	}
+
+	return true, minKey.PartitionId
+}
+
 func (t *ResourceSummaryTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]string, error) {
 	resources := []string{}
 	ok, minPar, maxPar := t.GetMinMaxPartitions(txn)

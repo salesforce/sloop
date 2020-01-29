@@ -20,12 +20,17 @@ type Tables interface {
 	WatchActivityTable() *WatchActivityTable
 	Db() badgerwrap.DB
 	GetMinAndMaxPartition() (bool, string, string, error)
+	GetMinPartition(txn badgerwrap.Txn) (bool, string, error)
 	GetTableNames() []string
 	GetTables() []interface{}
 }
 
 type MinMaxPartitionsGetter interface {
 	GetMinMaxPartitions(badgerwrap.Txn) (bool, string, string)
+}
+
+type MinPartitionsGetter interface {
+	GetMinPartitions(badgerwrap.Txn) (bool, string)
 }
 
 type tablesImpl struct {
@@ -94,12 +99,35 @@ func (t *tablesImpl) GetMinAndMaxPartition() (bool, string, string, error) {
 	return true, allPartitions[0], allPartitions[len(allPartitions)-1], nil
 }
 
+func (t *tablesImpl) GetMinPartition(txn badgerwrap.Txn) (bool, string, error) {
+	allPartitions := []string{}
+
+	for _, table := range t.GetTables() {
+		coerced, canCoerce := table.(MinPartitionsGetter)
+		if !canCoerce {
+			glog.Errorf("Expected type to implement GetMinPartition but failed")
+			continue
+		}
+		ok, minPar := coerced.GetMinPartitions(txn)
+		if ok {
+			allPartitions = append(allPartitions, minPar)
+		}
+	}
+
+	if len(allPartitions) == 0 {
+		return false, "", nil
+	}
+
+	sort.Strings(allPartitions)
+	return true, allPartitions[0], nil
+}
+
 func (t *tablesImpl) GetTableNames() []string {
-	return []string{t.watchTable.tableName, t.resourceSummaryTable.tableName, t.eventCountTable.tableName}
+	return []string{t.watchTable.tableName, t.resourceSummaryTable.tableName, t.eventCountTable.tableName, t.watchActivityTable.tableName}
 }
 
 func (t *tablesImpl) GetTables() []interface{} {
 	intfs := new([]interface{})
-	*intfs = append(*intfs, t.eventCountTable, t.resourceSummaryTable, t.watchTable)
+	*intfs = append(*intfs, t.eventCountTable, t.resourceSummaryTable, t.watchTable, t.watchActivityTable)
 	return *intfs
 }

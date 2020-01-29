@@ -83,7 +83,9 @@ func (sm *StoreManager) gcLoop() {
 			glog.Infof("Store manager main loop exiting")
 			return
 		}
-		sm.refreshStats()
+
+		var beforeGCStats = sm.refreshStats()
+
 		metricGcRunCount.Inc()
 		before := time.Now()
 		metricGcRunning.Set(1)
@@ -96,6 +98,10 @@ func (sm *StoreManager) gcLoop() {
 		}
 		metricGcLatency.Set(time.Since(before).Seconds())
 		glog.Infof("GC finished in %v with return %q.  Next run in %v", time.Since(before), err, sm.config.Freq)
+
+		var afterGCEnds = sm.refreshStats()
+		var deltaStats = getDeltaStats(beforeGCStats, afterGCEnds)
+		emitGCMetrics(deltaStats)
 		sm.sleeper.Sleep(sm.config.Freq)
 	}
 }
@@ -111,7 +117,8 @@ func (sm *StoreManager) vlogGcLoop() {
 			glog.Infof("ValueLogGC loop exiting")
 			return
 		}
-		sm.refreshStats()
+
+		var beforeGCStats = sm.refreshStats()
 		for {
 			before := time.Now()
 			metricValueLogGcRunning.Set(1)
@@ -123,6 +130,9 @@ func (sm *StoreManager) vlogGcLoop() {
 			if err != nil {
 				break
 			}
+			var afterGCEnds = sm.refreshStats()
+			var deltaStats = getDeltaStats(beforeGCStats, afterGCEnds)
+			emitGCMetrics(deltaStats)
 		}
 		sm.sleeper.Sleep(sm.config.BadgerVLogGCFreq)
 	}
@@ -137,14 +147,15 @@ func (sm *StoreManager) Shutdown() {
 	sm.wg.Wait()
 }
 
-func (sm *StoreManager) refreshStats() {
+func (sm *StoreManager) refreshStats() *storeStats {
 	// On startup we have 2 routines trying to do this at the same time
 	// If we have fresh results its good enough
 	if sm.stats != nil && time.Since(sm.stats.timestamp) < time.Second {
-		return
+		return sm.stats
 	}
-	sm.stats = generateStats(sm.config.StoreRoot, sm.tables.Db(), sm.fs)
+	sm.stats =  generateStats(sm.config.StoreRoot, sm.tables.Db(), sm.fs)
 	emitMetrics(sm.stats)
+	return sm.stats
 }
 
 func doCleanup(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int, stats *storeStats) (bool, error) {
@@ -208,8 +219,7 @@ func cleanUpTimeCondition(minPartition string, maxPartition string, timeLimit ti
 }
 
 func cleanUpFileSizeCondition(stats *storeStats, sizeLimitBytes int) bool {
-
-	if stats.DiskSizeBytes > uint64(sizeLimitBytes) {
+	if stats.DiskSizeBytes > int64(sizeLimitBytes) {
 		glog.Infof("Start cleaning up because current file size: %v exceeds file size: %v", stats.DiskSizeBytes, sizeLimitBytes)
 		return true
 	}
