@@ -176,3 +176,53 @@ func configHandler(config string) http.HandlerFunc {
 		}
 	}
 }
+
+func debugHandler() http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		t, err := template.New(debugTemplateFile).ParseFiles(path.Join(webFiles, debugTemplateFile))
+		if err != nil {
+			logWebError(err, "failed to parse template", request, writer)
+			return
+		}
+		err = t.ExecuteTemplate(writer, debugTemplateFile, nil)
+		if err != nil {
+			logWebError(err, "Template.ExecuteTemplate failed", request, writer)
+			return
+		}
+	}
+}
+
+// Make a copy with string keys instead of []byte keys
+type badgerTableInfo struct {
+	Level    int
+	LeftKey  string
+	RightKey string
+	KeyCount uint64
+	ID       uint64
+}
+
+func debugBadgerTablesHandler(db badgerwrap.DB) http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		t, err := template.New(debugBadgerTablesTemplateFile).ParseFiles(path.Join(webFiles, debugBadgerTablesTemplateFile))
+		if err != nil {
+			logWebError(err, "failed to parse template", request, writer)
+			return
+		}
+		data := []badgerTableInfo{}
+		for _, table := range db.Tables(true) {
+			thisTable := badgerTableInfo{
+				Level:    table.Level,
+				LeftKey:  string(table.Left),
+				RightKey: string(table.Right),
+				KeyCount: table.KeyCount,
+				ID:       table.ID,
+			}
+			data = append(data, thisTable)
+		}
+		err = t.ExecuteTemplate(writer, debugBadgerTablesTemplateFile, data)
+		if err != nil {
+			logWebError(err, "Template.ExecuteTemplate failed", request, writer)
+			return
+		}
+	}
+}
