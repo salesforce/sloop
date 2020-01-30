@@ -17,13 +17,14 @@ import (
 )
 
 type Config struct {
-	RootPath                string
-	ConfigPartitionDuration time.Duration
-	BadgerMaxTableSize      int64
-	BadgerKeepL0InMemory    bool
-	BadgerVLogFileSize      int64
-	BadgerVLogMaxEntries    uint
-	BadgerUseLSMOnlyOptions bool
+	RootPath                 string
+	ConfigPartitionDuration  time.Duration
+	BadgerMaxTableSize       int64
+	BadgerKeepL0InMemory     bool
+	BadgerVLogFileSize       int64
+	BadgerVLogMaxEntries     uint
+	BadgerUseLSMOnlyOptions  bool
+	BadgerEnableEventLogging bool
 }
 
 func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error) {
@@ -42,6 +43,10 @@ func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error
 		opts = badger.LSMOnlyOptions(config.RootPath)
 	} else {
 		opts = badger.DefaultOptions(config.RootPath)
+	}
+
+	if config.BadgerEnableEventLogging {
+		opts = opts.WithEventLogging(true)
 	}
 
 	if config.BadgerMaxTableSize != 0 {

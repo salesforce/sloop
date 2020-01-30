@@ -9,6 +9,7 @@ package webserver
 
 import (
 	"context"
+	"expvar"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -32,14 +33,18 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	"golang.org/x/net/trace"
 )
 
 const (
-	debugViewKeyTemplateFile  = "debugviewkey.html"
-	debugListKeysTemplateFile = "debuglistkeys.html"
-	debugConfigTemplateFile   = "debugconfig.html"
-	indexTemplateFile         = "index.html"
-	resourceTemplateFile      = "resource.html"
+	debugViewKeyTemplateFile      = "debugviewkey.html"
+	debugListKeysTemplateFile     = "debuglistkeys.html"
+	debugConfigTemplateFile       = "debugconfig.html"
+	debugTemplateFile             = "debug.html"
+	debugBadgerTablesTemplateFile = "debugtables.html"
+	indexTemplateFile             = "index.html"
+	resourceTemplateFile          = "resource.html"
 )
 
 type WebConfig struct {
@@ -167,9 +172,18 @@ func Run(config WebConfig, tables typed.Tables) error {
 	server.mux.HandleFunc("/data/backup", backupHandler(tables.Db(), config.CurrentContext))
 	server.mux.HandleFunc("/data", queryHandler(tables, config.MaxLookback))
 	server.mux.HandleFunc("/resource", resourceHandler(config.ResourceLinks))
-	server.mux.HandleFunc("/debug/", listKeysHandler(tables))
+	// Debug pages
+	server.mux.HandleFunc("/debug/", debugHandler())
+	server.mux.HandleFunc("/debug/listkeys/", listKeysHandler(tables))
+	server.mux.HandleFunc("/debug/tables/", debugBadgerTablesHandler(tables.Db()))
 	server.mux.HandleFunc("/debug/view/", viewKeyHandler(tables))
 	server.mux.HandleFunc("/debug/config/", configHandler(config.ConfigYaml))
+	// Badger uses the trace package, which registers /debug/requests and /debug/events
+	server.mux.HandleFunc("/debug/requests", trace.Traces)
+	server.mux.HandleFunc("/debug/events", trace.Events)
+	// Badger also uses expvar which exposes prometheus compatible metrics on /debug/vars
+	server.mux.HandleFunc("/debug/vars", expvar.Handler().ServeHTTP)
+
 	server.mux.HandleFunc("/healthz", healthHandler())
 	server.mux.Handle("/metrics", promhttp.Handler())
 	server.mux.HandleFunc("/", indexHandler(config))

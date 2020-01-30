@@ -6,16 +6,31 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 -->
 <html>
 <head>
-    <title>Sloop Debug Config</title>
+    <title>Sloop Debug Badger Tables</title>
     <link rel='shortcut icon' type='image/x-icon' href='/webfiles/favicon.ico' />
 </head>
 <body>
 [ <a href="/">Home</a> ][ <a href="/debug/">Debug Menu</a> ]<br/>
 
-<h2>Current Config</h2>
+<h2>Badger Tables</h2>
 
-<table border="1"><tr><td>
-<pre>{{.}}</pre>
-</td></tr></table>
+<table border="1">
+    <tr>
+        <th>Level</th>
+        <th>KeyCount</th>
+        <th>Left</th>
+        <th>Right</th>
+        <th>ID</th>
+    </tr>
+{{range .}}
+    <tr>
+        <td>{{.Level}}</td>
+        <td>{{.KeyCount}}</td>
+        <td>{{.LeftKey}}</td>
+        <td>{{.RightKey}}</td>
+        <td>{{.ID}}</td>
+    </tr>
+{{end}}
+</table>
 </body>
 </html>

@@ -58,13 +58,14 @@ func RealMain() error {
 
 	storeRootWithKubeContext := path.Join(conf.StoreRoot, kubeContext)
 	storeConfig := &untyped.Config{
-		RootPath:                storeRootWithKubeContext,
-		ConfigPartitionDuration: time.Duration(1) * time.Hour,
-		BadgerMaxTableSize:      conf.BadgerMaxTableSize,
-		BadgerKeepL0InMemory:    conf.BadgerKeepL0InMemory,
-		BadgerVLogFileSize:      conf.BadgerVLogFileSize,
-		BadgerVLogMaxEntries:    conf.BadgerVLogMaxEntries,
-		BadgerUseLSMOnlyOptions: conf.BadgerUseLSMOnlyOptions,
+		RootPath:                 storeRootWithKubeContext,
+		ConfigPartitionDuration:  time.Duration(1) * time.Hour,
+		BadgerMaxTableSize:       conf.BadgerMaxTableSize,
+		BadgerKeepL0InMemory:     conf.BadgerKeepL0InMemory,
+		BadgerVLogFileSize:       conf.BadgerVLogFileSize,
+		BadgerVLogMaxEntries:     conf.BadgerVLogMaxEntries,
+		BadgerUseLSMOnlyOptions:  conf.BadgerUseLSMOnlyOptions,
+		BadgerEnableEventLogging: conf.BadgerEnableEventLogging,
 	}
 	db, err := untyped.OpenStore(factory, storeConfig)
 	if err != nil {

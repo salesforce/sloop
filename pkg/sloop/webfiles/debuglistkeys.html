@@ -6,14 +6,16 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 -->
 <html>
 <head>
-    <title>Sloop Debug</title>
+    <title>Sloop Debug Query Badger</title>
     <link rel='shortcut icon' type='image/x-icon' href='/webfiles/favicon.ico' />
 </head>
 <body>
-[ <a href="/">Home</a> ][ <a href="/debug/">List Keys</a> ][ <a href="/debug/config/">Config</a> ]<br/><br/>
+[ <a href="/">Home</a> ][ <a href="/debug/">Debug Menu</a> ]<br/>
+
+<h2>Query Sloop's Badger DB Directly</h2>
 
 <table bgcolor="silver" width="500px"><tr><td style="padding: 20px">
-<form action="/debug/" method="get">
+<form action="/debug/listkeys/" method="get">
     <label for="table">Time Range:</label><br/>
     <select name="table" id="table">
         <option value="watch">watch</option>
