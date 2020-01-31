@@ -106,33 +106,33 @@ func (t *WatchActivityTable) GetMaxKey(txn badgerwrap.Txn) (bool, string) {
 }
 
 func (t *WatchActivityTable) GetMinMaxPartitions(txn badgerwrap.Txn) (bool, string, string) {
-	ok, minKeyStr := t.GetMinKey(txn)
-	if !ok {
+	minPartitionOk, minPar := t.GetMinPartition(txn)
+
+	if !minPartitionOk {
 		return false, "", ""
 	}
+
+	maxPartitionOk, maxPar := t.GetMaxPartition(txn)
+	return maxPartitionOk, minPar, maxPar
+}
+
+func (t *WatchActivityTable) GetMaxPartition(txn badgerwrap.Txn) (bool, string) {
 	ok, maxKeyStr := t.GetMaxKey(txn)
 	if !ok {
-		// This should be impossible
-		return false, "", ""
+		return false, ""
 	}
 
-	minKey := &WatchActivityKey{}
 	maxKey := &WatchActivityKey{}
 
-	err := minKey.Parse(minKeyStr)
-	if err != nil {
-		panic(fmt.Sprintf("invalid key in table: %v key: %q error: %v", t.tableName, minKeyStr, err))
-	}
-
-	err = maxKey.Parse(maxKeyStr)
+	err := maxKey.Parse(maxKeyStr)
 	if err != nil {
 		panic(fmt.Sprintf("invalid key in table: %v key: %q error: %v", t.tableName, maxKeyStr, err))
 	}
 
-	return true, minKey.PartitionId, maxKey.PartitionId
+	return true, maxKey.PartitionId
 }
 
-func (t *WatchActivityTable) GetMinPartitions(txn badgerwrap.Txn) (bool, string) {
+func (t *WatchActivityTable) GetMinPartition(txn badgerwrap.Txn) (bool, string) {
 	ok, minKeyStr := t.GetMinKey(txn)
 	if !ok {
 		return false, ""

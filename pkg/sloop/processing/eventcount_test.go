@@ -11,19 +11,23 @@ import (
 	"fmt"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 	"time"
 )
 
 var (
-	someEventWatchTs       = time.Now().UTC()
+	someEventWatchTs       = time.Date(2019, 8, 29, 21, 24, 55, 6, time.UTC)
 	someEventWatchPTime, _ = ptypes.TimestampProto(someEventWatchTs)
-	someMaxLookBack        = time.Duration(time.Hour * 24 * 14)
+	someMaxLookback        = time.Duration(time.Hour * 24 * 14)
+	firstTimeStamp         = "2019-08-29T21:24:55Z"
+	lastTimeStamp          = "2019-08-29T21:27:55Z"
 	someEventPayload       = `{
   "metadata": {
     "name": "someEventName",
@@ -37,40 +41,22 @@ var (
     "uid": "somePodUid"
   },
   "reason":"failed",
-  "firstTimestamp": "` + someEventWatchTs.Add(-3*time.Minute).Format(time.RFC3339) + `",
-  "lastTimestamp": "` + someEventWatchTs.Format(time.RFC3339) + `",
+  "firstTimestamp": "[firstTimestamp]",
+  "lastTimestamp":  "[lastTimestamp]",
   "count": 10,
   "type": "Warning"
 }`
-	someOldEventPayload = `{
-  "metadata": {
-    "name": "someEventName",
-    "namespace": "someNamespace",
-    "uid": "someEventUid"
-  },
-  "involvedObject": {
-    "kind": "Pod",
-    "namespace": "someNamespace",
-    "name": "somePodName",
-    "uid": "somePodUid"
-  },
-  "reason":"failed",
-  "firstTimestamp": "` + someEventWatchTs.Add(-17*time.Hour*24).Format(time.RFC3339) + `",
-  "lastTimestamp": "` + someEventWatchTs.Add(-15*time.Hour*24).Format(time.RFC3339) + `",
-  "count": 10,
-  "type": "Warning"
-}`
-	setPartitionDuration = untyped.TestHookSetPartitionDuration(time.Hour * 24)
-	currentPartitionId   = untyped.GetPartitionId(someEventWatchTs)
-	expectedEventKey     = "/eventcount/" + currentPartitionId + "/Pod/someNamespace/somePodName/somePodUid"
-	expectedEventMinKey  = someEventWatchTs.Add(-3 * time.Minute).Round(time.Minute).Unix()
 )
 
 const (
+	expectedEventKey    = "/eventcount/001567036800/Pod/someNamespace/somePodName/somePodUid"
+	expectedNewEventKey = "/eventcount/001567123200/Pod/someNamespace/somePodName/somePodUid"
+	expectedEventMinKey = 1567113900
 	expectedEventReason = "failed:Warning"
 )
 
 func Test_EventCountTable_NonEvent(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour * 24)
 	db, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
 	assert.Nil(t, err)
 	tables := typed.NewTableList(db)
@@ -81,39 +67,26 @@ func Test_EventCountTable_NonEvent(t *testing.T) {
 	}
 
 	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
-		return updateEventCountTable(tables, txn, &watchRec, nil, nil, someMaxLookBack)
+		return updateEventCountTable(tables, txn, &watchRec, nil, nil, someMaxLookback)
 	})
 	assert.Nil(t, err)
 
-	foundKeys, err := findEventKeys(tables)
+	foundKeys, err := findEventKeys(tables, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(foundKeys))
 }
 
 func Test_EventCountTable_Event(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour * 24)
 	db, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
 	assert.Nil(t, err)
 	tables := typed.NewTableList(db)
 
-	watchRec := typed.KubeWatchResult{
-		Kind:      kubeextractor.EventKind,
-		Timestamp: someEventWatchPTime,
-		Payload:   someEventPayload,
-	}
-
-	resourceMetadata, err := kubeextractor.ExtractMetadata(watchRec.Payload)
-	assert.Nil(t, err)
-	involvedObject, err := kubeextractor.ExtractInvolvedObject(watchRec.Payload)
-	assert.Nil(t, err)
-
-	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
-		return updateEventCountTable(tables, txn, &watchRec, &resourceMetadata, &involvedObject, someMaxLookBack)
-	})
-	assert.Nil(t, err)
+	addEventCount(t, tables, someEventWatchPTime, firstTimeStamp, lastTimeStamp)
 
 	helper_dumpKeys(t, tables.Db(), "After adding event")
 
-	foundKeys, err := findEventKeys(tables)
+	foundKeys, err := findEventKeys(tables, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, []string{expectedEventKey}, foundKeys)
 
@@ -131,46 +104,76 @@ func Test_EventCountTable_Event(t *testing.T) {
 	reasonCounts := counts.MapMinToEvents[expectedEventMinKey].MapReasonToCount
 	assert.Equal(t, 1, len(reasonCounts))
 	assert.Equal(t, int32(4), reasonCounts[expectedEventReason])
+
 }
 
-func Test_EventCountTable_DupeEventSameResults(t *testing.T) {
+func Test_EventCountTable_TruncateEvent(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour * 24)
 	db, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
 	assert.Nil(t, err)
 	tables := typed.NewTableList(db)
 
-	watchRec := typed.KubeWatchResult{
-		Kind:      kubeextractor.EventKind,
-		Timestamp: someEventWatchPTime,
-		Payload:   someEventPayload,
-	}
+	addEventCount(t, tables, someEventWatchPTime, firstTimeStamp, lastTimeStamp)
 
-	resourceMetadata, err := kubeextractor.ExtractMetadata(watchRec.Payload)
+	foundKeys, err := findEventKeys(tables, 1)
 	assert.Nil(t, err)
-	involvedObject, err := kubeextractor.ExtractInvolvedObject(watchRec.Payload)
-	assert.Nil(t, err)
+	assert.Equal(t, []string{expectedEventKey}, foundKeys)
 
-	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
-		// For dedupe to work we need a record written to the watch table
-		err2 := updateEventCountTable(tables, txn, &watchRec, &resourceMetadata, &involvedObject, someMaxLookBack)
-		if err2 != nil {
-			return err2
-		}
-
-		kubeMetadata, err := kubeextractor.ExtractMetadata(watchRec.Payload)
-		assert.Nil(t, err)
-		err2 = updateKubeWatchTable(tables, txn, &watchRec, &kubeMetadata, false)
-		return err2
-	})
+	counts, err := getEventKey(db, tables.EventCountTable(), expectedEventKey)
 	assert.Nil(t, err)
+	assert.Equal(t, 3, len(counts.MapMinToEvents))
+
+	reasonCounts := counts.MapMinToEvents[expectedEventMinKey].MapReasonToCount
+	assert.Equal(t, 1, len(reasonCounts))
+	assert.Equal(t, int32(4), reasonCounts[expectedEventReason])
+
+	helper_dumpKeys(t, tables.Db(), "After adding 1st event")
+
+	secondStartTimestamp := "2019-08-27T21:21:55Z"
+	secondEndTimestamp := "2019-08-28T21:23:55Z"
+
+	addEventCount(t, tables, someEventWatchPTime, secondStartTimestamp, secondEndTimestamp)
+
+	helper_dumpKeys(t, tables.Db(), "After adding event that occurred before truncateTS")
+
+	foundKeys, err = findEventKeys(tables, 3*24)
+	assert.Nil(t, err)
+	assert.Equal(t, []string{expectedEventKey}, foundKeys)
+
+	counts, err = getEventKey(db, tables.EventCountTable(), expectedEventKey)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(counts.MapMinToEvents))
+
+	thirdStartTimestamp := "2019-08-30T21:21:55Z"
+	thirdEndTimestamp := "2019-08-30T21:23:55Z"
+	thirdEventWatchPTime, _ := ptypes.TimestampProto(time.Date(2019, 8, 30, 21, 24, 55, 6, time.UTC))
+
+	addEventCount(t, tables, thirdEventWatchPTime, thirdStartTimestamp, thirdEndTimestamp)
+
+	helper_dumpKeys(t, tables.Db(), "After adding event that occurred after truncateTS")
+
+	foundKeys, err = findEventKeys(tables, 3*24)
+	assert.Nil(t, err)
+	assert.Equal(t, expectedNewEventKey, foundKeys[1])
+
+	counts, err = getEventKey(db, tables.EventCountTable(), expectedNewEventKey)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(counts.MapMinToEvents))
+}
+
+func Test_EventCountTable_DupeEventSameResults(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour * 24)
+	db, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
+	assert.Nil(t, err)
+	tables := typed.NewTableList(db)
+
+	addEventCount(t, tables, someEventWatchPTime, firstTimeStamp, lastTimeStamp)
 
 	helper_dumpKeys(t, tables.Db(), "After first time processing event")
 
-	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
-		return updateEventCountTable(tables, txn, &watchRec, &resourceMetadata, &involvedObject, someMaxLookBack)
-	})
-	assert.Nil(t, err)
+	addEventCount(t, tables, someEventWatchPTime, firstTimeStamp, lastTimeStamp)
 
-	foundKeys, err := findEventKeys(tables)
+	foundKeys, err := findEventKeys(tables, 1)
 	assert.Nil(t, err)
 
 	fmt.Printf("Keys: %v\n", foundKeys)
@@ -186,10 +189,39 @@ func Test_EventCountTable_DupeEventSameResults(t *testing.T) {
 	assert.Equal(t, int32(4), reasonCounts[expectedEventReason])
 }
 
-func findEventKeys(tables typed.Tables) ([]string, error) {
+func addEventCount(t *testing.T, tables typed.Tables, timeStamp *timestamp.Timestamp, firstTimeStamp string, lastTimeStamp string) {
+	watchRec := typed.KubeWatchResult{
+		Kind:      kubeextractor.EventKind,
+		Timestamp: timeStamp,
+		Payload:   get_event_pay_load(firstTimeStamp, lastTimeStamp),
+	}
+
+	resourceMetadata, err := kubeextractor.ExtractMetadata(watchRec.Payload)
+	assert.Nil(t, err)
+	involvedObject, err := kubeextractor.ExtractInvolvedObject(watchRec.Payload)
+	assert.Nil(t, err)
+
+	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
+		// For dedupe to work we need a record written to the watch table
+		err2 := updateEventCountTable(tables, txn, &watchRec, &resourceMetadata, &involvedObject, someMaxLookback)
+		if err2 != nil {
+			return err2
+		}
+
+		kubeMetadata, err := kubeextractor.ExtractMetadata(watchRec.Payload)
+		assert.Nil(t, err)
+		err2 = updateKubeWatchTable(tables, txn, &watchRec, &kubeMetadata, false)
+		return err2
+	})
+	assert.Nil(t, err)
+
+}
+
+func findEventKeys(tables typed.Tables, numberOfHours int64) ([]string, error) {
+
 	var foundKeys []string
 	err := tables.Db().View(func(txn badgerwrap.Txn) error {
-		ret, _, err2 := tables.EventCountTable().RangeRead(txn, nil, func(s string) bool { return true }, nil, someEventWatchTs.Add(-1*time.Hour), someEventWatchTs.Add(time.Hour))
+		ret, _, err2 := tables.EventCountTable().RangeRead(txn, nil, func(s string) bool { return true }, nil, someEventWatchTs.Add(-time.Duration(numberOfHours)*time.Hour), someEventWatchTs.Add(time.Duration(numberOfHours)*time.Hour))
 		if err2 != nil {
 			return err2
 		}
@@ -224,6 +256,11 @@ func helper_dumpKeys(t *testing.T, db badgerwrap.DB, message string) {
 		return nil
 	})
 	assert.Nil(t, err)
+}
+
+func get_event_pay_load(firstTimeStamp string, lastTimeStamp string) string {
+	payLoad := strings.ReplaceAll(someEventPayload, "[firstTimestamp]", firstTimeStamp)
+	return strings.ReplaceAll(payLoad, "[lastTimestamp]", lastTimeStamp)
 }
 
 func Test_distributeValue(t *testing.T) {
@@ -344,36 +381,4 @@ func Test_adjustForMaxLookback_LongEventGetsTruncated(t *testing.T) {
 	assert.Equal(t, someEventTs3, first)
 	assert.Equal(t, someEventTs4, last)
 	assert.Equal(t, 333, count)
-}
-
-func Test_EventCountTable_Event_Older_Than_MaxLookBack(t *testing.T) {
-	db, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
-	assert.Nil(t, err)
-	tables := typed.NewTableList(db)
-
-	watchRec := typed.KubeWatchResult{
-		Kind:      kubeextractor.EventKind,
-		Timestamp: someEventWatchPTime,
-		Payload:   someOldEventPayload,
-	}
-
-	resourceMetadata, err := kubeextractor.ExtractMetadata(watchRec.Payload)
-	assert.Nil(t, err)
-	involvedObject, err := kubeextractor.ExtractInvolvedObject(watchRec.Payload)
-	assert.Nil(t, err)
-
-	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
-		return updateEventCountTable(tables, txn, &watchRec, &resourceMetadata, &involvedObject, someMaxLookBack)
-	})
-	assert.Nil(t, err)
-
-	helper_dumpKeys(t, tables.Db(), "After adding event")
-
-	foundKeys, err := findEventKeys(tables)
-	assert.Nil(t, err)
-	assert.Nil(t, foundKeys)
-
-	counts, err := getEventKey(db, tables.EventCountTable(), expectedEventKey)
-	assert.NotNil(t, err)
-	assert.Nil(t, counts)
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
+	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/spf13/afero"
 	"sync"
 	"time"
@@ -153,22 +154,30 @@ func (sm *StoreManager) refreshStats() *storeStats {
 	if sm.stats != nil && time.Since(sm.stats.timestamp) < time.Second {
 		return sm.stats
 	}
-	sm.stats =  generateStats(sm.config.StoreRoot, sm.tables.Db(), sm.fs)
+	sm.stats = generateStats(sm.config.StoreRoot, sm.tables.Db(), sm.fs)
 	emitMetrics(sm.stats)
 	return sm.stats
 }
 
 func doCleanup(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int, stats *storeStats) (bool, error) {
-	ok, minPartition, maxPartiton, err := tables.GetMinAndMaxPartition()
-	if err != nil {
-		return false, fmt.Errorf("failed to get min partition : %s, max partition: %s, err:%v", minPartition, maxPartiton, err)
+	var maxPartition, minPartition string
+	var ok bool
+	var minMaxError error
+
+	err := tables.Db().View(func(txn badgerwrap.Txn) error {
+		ok, _, maxPartition, minMaxError = tables.GetMinAndMaxPartition(txn)
+		return nil
+	})
+
+	if err != nil || minMaxError != nil {
+		return false, fmt.Errorf("failed to get min partition : %s, max partition: %s, err:%v", minPartition, maxPartition, err)
 	}
 	if !ok {
 		return false, nil
 	}
 
 	anyCleanupPerformed := false
-	if cleanUpTimeCondition(minPartition, maxPartiton, timeLimit) || cleanUpFileSizeCondition(stats, sizeLimitBytes) {
+	if cleanUpTimeCondition(minPartition, maxPartition, timeLimit) || cleanUpFileSizeCondition(stats, sizeLimitBytes) {
 		partStart, partEnd, err := untyped.GetTimeRangeForPartition(minPartition)
 		glog.Infof("GC removing partition %q with data from %v to %v (err %v)", minPartition, partStart, partEnd, err)
 		var errMsgs []string

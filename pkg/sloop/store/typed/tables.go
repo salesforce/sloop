@@ -19,18 +19,17 @@ type Tables interface {
 	WatchTable() *KubeWatchResultTable
 	WatchActivityTable() *WatchActivityTable
 	Db() badgerwrap.DB
-	GetMinAndMaxPartition() (bool, string, string, error)
 	GetMinPartition(txn badgerwrap.Txn) (bool, string, error)
+	GetMaxPartition(txn badgerwrap.Txn) (bool, string, error)
+	GetMinAndMaxPartition(txn badgerwrap.Txn) (bool, string, string, error)
 	GetTableNames() []string
 	GetTables() []interface{}
 }
 
-type MinMaxPartitionsGetter interface {
+type PartitionsGetter interface {
+	GetMinPartition(badgerwrap.Txn) (bool, string)
+	GetMaxPartition(badgerwrap.Txn) (bool, string)
 	GetMinMaxPartitions(badgerwrap.Txn) (bool, string, string)
-}
-
-type MinPartitionsGetter interface {
-	GetMinPartitions(badgerwrap.Txn) (bool, string)
 }
 
 type tablesImpl struct {
@@ -71,26 +70,21 @@ func (t *tablesImpl) Db() badgerwrap.DB {
 	return t.db
 }
 
-func (t *tablesImpl) GetMinAndMaxPartition() (bool, string, string, error) {
+func (t *tablesImpl) GetMinAndMaxPartition(txn badgerwrap.Txn) (bool, string, string, error) {
 	allPartitions := []string{}
-	err := t.db.View(func(txn badgerwrap.Txn) error {
-		for _, table := range t.GetTables() {
-			coerced, canCoerce := table.(MinMaxPartitionsGetter)
-			if !canCoerce {
-				glog.Errorf("Expected type to implement GetMinMaxPartitions but failed")
-				continue
-			}
-			ok, minPar, maxPar := coerced.GetMinMaxPartitions(txn)
-			if ok {
-				allPartitions = append(allPartitions, minPar, maxPar)
-			}
-		}
-		return nil
-	})
 
-	if err != nil {
-		return false, "", "", err
+	for _, table := range t.GetTables() {
+		coerced, canCoerce := table.(PartitionsGetter)
+		if !canCoerce {
+			glog.Errorf("Expected type to implement GetMinMaxPartitions but failed")
+			continue
+		}
+		ok, minPar, maxPar := coerced.GetMinMaxPartitions(txn)
+		if ok {
+			allPartitions = append(allPartitions, minPar, maxPar)
+		}
 	}
+
 	if len(allPartitions) == 0 {
 		return false, "", "", nil
 	}
@@ -103,14 +97,37 @@ func (t *tablesImpl) GetMinPartition(txn badgerwrap.Txn) (bool, string, error) {
 	allPartitions := []string{}
 
 	for _, table := range t.GetTables() {
-		coerced, canCoerce := table.(MinPartitionsGetter)
+		coerced, canCoerce := table.(PartitionsGetter)
 		if !canCoerce {
 			glog.Errorf("Expected type to implement GetMinPartition but failed")
 			continue
 		}
-		ok, minPar := coerced.GetMinPartitions(txn)
+		ok, minPar := coerced.GetMinPartition(txn)
 		if ok {
 			allPartitions = append(allPartitions, minPar)
+		}
+	}
+
+	if len(allPartitions) == 0 {
+		return false, "", nil
+	}
+
+	sort.Strings(allPartitions)
+	return true, allPartitions[0], nil
+}
+
+func (t *tablesImpl) GetMaxPartition(txn badgerwrap.Txn) (bool, string, error) {
+	allPartitions := []string{}
+
+	for _, table := range t.GetTables() {
+		coerced, canCoerce := table.(PartitionsGetter)
+		if !canCoerce {
+			glog.Errorf("Expected type to implement GetMaxPartition but failed")
+			continue
+		}
+		ok, maxPar := coerced.GetMaxPartition(txn)
+		if ok {
+			allPartitions = append(allPartitions, maxPar)
 		}
 	}
 

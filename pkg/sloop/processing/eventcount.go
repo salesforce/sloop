@@ -48,33 +48,23 @@ func updateEventCountTable(
 		return nil
 	}
 
-	// Truncate long-lived events to latest of (Now.Timestamp - maxLookBack - partitionDuration)
-	// and (Now.Timestamp - oldestPartitionTimeStamp - partitionDuration)
-	// This avoids filling in data that will immediately
-	// be garbage collected, and avoids creating transactions that are too large and fail
+	// Truncate long-lived events to available partitions
+	// This avoids filling in data that will go beyond the current time range
 
-	// Thus it solves the following scenario where new data is shown using *
-	// Before Event Count data is added:    MaxLookBack|----- Count: 50 ---|
-	// After Event Count data is added :    *****MaxLookBack|----- Count: 50 ---|
+	// Default truncate as computedLastTs -1 * PartitionDuration.
+	// Essentially only allowing events in 1 partition by default.
+	truncateTs := computedLastTs.Add(-1 * untyped.GetPartitionDuration())
 
-	truncateTs := time.Now().UTC().Add(-1*maxLookback + untyped.GetPartitionDuration())
-
-	// The sprinkling of event count data uses max look back as a boundary resulting in small partitions containing very
-	// less event count data spread all across till look back time as shown below. Thus, refining the truncate Timestamp to incorporate MinPartition.
-
-	// Before Event Count data is added:     MaxLookBack|        |MinPartition -----|
-	// After Event Count data is added:      MaxLookBack|********|MinPartition -----|
-	if ok, minPartition, err := tables.GetMinPartition(txn); err == nil && ok {
+	// If there is only one partition, use minPartitionStartTime to ensure we receive events
+	// in that partition.
+	// Otherwise add events to all partitions from MinPartitionEndTime to computedTs.
+	// This ensures no events are added to the very last partition which may get garbage collected soon.
+	if ok, minPartition, maxPartition := tables.EventCountTable().GetMinMaxPartitions(txn); ok {
 		if minPartitionStartTime, minPartitionEndTime, err := untyped.GetTimeRangeForPartition(minPartition); err == nil {
-			// Check if minPartitionEndTime is later then truncateTs, use minPartitionEndTime
-			if minPartitionEndTime.After(truncateTs) {
-				truncateTs = minPartitionEndTime
-			}
-
-			// Check if the minPartitionStartTime is fairly recent i.e. in case of tests or new start of sloop,
-			// use minPartitionStartTime as truncateTs so that we do get events in event count table.
-			if minPartitionStartTime.After(time.Now().UTC().Add(-2 * time.Hour)) {
+			if minPartition == maxPartition {
 				truncateTs = minPartitionStartTime
+			} else {
+				truncateTs = minPartitionEndTime
 			}
 		}
 	}

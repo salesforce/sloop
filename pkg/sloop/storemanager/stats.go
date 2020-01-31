@@ -23,12 +23,12 @@ var (
 	metricBadgerLsmSizeMb            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_lsmsizemb"})
 	metricBadgerVLogFileCount        = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_vlogfilecount"})
 	metricBadgerVLogSizeMb           = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_vlogsizemb"})
-	metricCleanedStoreSizeOnDiskMb   = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_garbage_collected_sizeondiskmb"})
-	metricCleanedBadgerKeys          = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "sloop_garbage_collected_badger_keys"}, []string{"level"})
-	metricCleanedBadgerLsmFileCount  = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_garbage_collected_badger_lsmfilecount"})
-	metricCleanedBadgerLsmSizeMb     = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_garbage_collected_badger_lsmsizemb"})
-	metricCleanedBadgerVLogFileCount = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_garbage_collected_badger_vlogfilecount"})
-	metricCleanedBadgerVLogSizeMb    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_garbage_collected_badger_vlogsizemb"})
+	metricCleanedStoreSizeOnDiskMb   = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_delta_aftergc_sizeondiskmb"})
+	metricCleanedBadgerKeys          = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "sloop_delta_aftergc_badger_keys"}, []string{"level"})
+	metricCleanedBadgerLsmFileCount  = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_delta_aftergc_badger_lsmfilecount"})
+	metricCleanedBadgerLsmSizeMb     = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_delta_aftergc_badger_lsmsizemb"})
+	metricCleanedBadgerVLogFileCount = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_delta_aftergc_badger_vlogfilecount"})
+	metricCleanedBadgerVLogSizeMb    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_delta_aftergc_badger_vlogsizemb"})
 )
 
 type storeStats struct {
@@ -126,7 +126,6 @@ func getDeltaStats(beforeStats *storeStats, afterStats *storeStats) *storeStats 
 		metricCleanedBadgerKeys.WithLabelValues(fmt.Sprintf("%v", k)).Set(float64(v) - float64(afterStats.LevelToKeyCount[k]))
 	}
 	ret.DiskSizeBytes = beforeStats.DiskSizeBytes - afterStats.DiskSizeBytes
-	fmt.Printf("before %6d and after %6d and delta %6d", beforeStats.DiskSizeBytes, afterStats.DiskSizeBytes, ret.DiskSizeBytes)
 	ret.DiskLsmFileCount = beforeStats.DiskLsmFileCount - afterStats.DiskLsmFileCount
 	ret.DiskLsmBytes = beforeStats.DiskLsmBytes - afterStats.DiskLsmBytes
 	ret.DiskVlogFileCount = beforeStats.DiskVlogFileCount - afterStats.DiskVlogFileCount
