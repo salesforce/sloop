@@ -13,7 +13,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
-	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"net/url"
 	"strconv"
 	"time"
@@ -102,16 +101,9 @@ func computeTimeRangeInternal(params url.Values, endOfTime time.Time, maxLookBac
 // This bit of logic is needed for queries with a lookback to determine a good end time
 func getEndOfTime(tables typed.Tables) time.Time {
 	now := time.Now()
-	var maxPartition string
-	var ok bool
-	var minMaxError error
 
-	err := tables.Db().View(func(txn badgerwrap.Txn) error {
-		ok, _, maxPartition, minMaxError = tables.GetMinAndMaxPartition(txn)
-		return nil
-	})
-
-	if err != nil || minMaxError != nil || !ok {
+	ok, _, maxPartition, err := tables.GetMinAndMaxPartition()
+	if err != nil || !ok {
 		if err != nil {
 			glog.Errorf("Error getting MinAndMaxPartition: %v", err)
 		}

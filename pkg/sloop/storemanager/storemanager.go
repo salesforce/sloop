@@ -14,7 +14,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
-	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/spf13/afero"
 	"sync"
 	"time"
@@ -160,16 +159,8 @@ func (sm *StoreManager) refreshStats() *storeStats {
 }
 
 func doCleanup(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int, stats *storeStats) (bool, error) {
-	var maxPartition, minPartition string
-	var ok bool
-	var minMaxError error
-
-	err := tables.Db().View(func(txn badgerwrap.Txn) error {
-		ok, _, maxPartition, minMaxError = tables.GetMinAndMaxPartition(txn)
-		return nil
-	})
-
-	if err != nil || minMaxError != nil {
+	ok, minPartition, maxPartition, err := tables.GetMinAndMaxPartition()
+	if err != nil {
 		return false, fmt.Errorf("failed to get min partition : %s, max partition: %s, err:%v", minPartition, maxPartition, err)
 	}
 	if !ok {
