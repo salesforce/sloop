@@ -50,7 +50,6 @@ var (
 
 const (
 	expectedEventKey    = "/eventcount/001567036800/Pod/someNamespace/somePodName/somePodUid"
-	expectedNewEventKey = "/eventcount/001567123200/Pod/someNamespace/somePodName/somePodUid"
 	expectedEventMinKey = 1567113900
 	expectedEventReason = "failed:Warning"
 )
@@ -107,56 +106,90 @@ func Test_EventCountTable_Event(t *testing.T) {
 
 }
 
-func Test_EventCountTable_TruncateEvent(t *testing.T) {
+func Test_EventCountTable_Event_Truncated_Before_TruncateTS(t *testing.T) {
+	// This tests the following scenario
+	// 1. An event is added, truncateTS is set to its start Time - 1 partition duration
+	// 2. And older is added which is older than the value of truncate TS
+	// Expected Behavior: The old event would be truncated.
+
 	untyped.TestHookSetPartitionDuration(time.Hour * 24)
 	db, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
 	assert.Nil(t, err)
 	tables := typed.NewTableList(db)
 
-	addEventCount(t, tables, someEventWatchPTime, firstTimeStamp, lastTimeStamp)
+	evenTSStartTime   := "2019-08-29T21:24:55Z"
+	evenTSEndTime     := "2019-08-29T21:27:55Z"
+	// adding the first event which ends up adding the first partition
+	addEventCount(t, tables, someEventWatchPTime, evenTSStartTime, evenTSEndTime)
 
-	foundKeys, err := findEventKeys(tables, 1)
+	foundKeys, err := findEventKeys(tables, 6)
 	assert.Nil(t, err)
 	assert.Equal(t, []string{expectedEventKey}, foundKeys)
-
-	counts, err := getEventKey(db, tables.EventCountTable(), expectedEventKey)
-	assert.Nil(t, err)
-	assert.Equal(t, 3, len(counts.MapMinToEvents))
-
-	reasonCounts := counts.MapMinToEvents[expectedEventMinKey].MapReasonToCount
-	assert.Equal(t, 1, len(reasonCounts))
-	assert.Equal(t, int32(4), reasonCounts[expectedEventReason])
+	assert.Equal(t, 1, len(foundKeys))
 
 	helper_dumpKeys(t, tables.Db(), "After adding 1st event")
 
-	secondStartTimestamp := "2019-08-27T21:21:55Z"
-	secondEndTimestamp := "2019-08-28T21:23:55Z"
+	startTSBeforeTruncateTS := "2019-08-27T21:21:55Z"
+	endTSBeforeTruncateTS := "2019-08-28T21:23:55Z"
 
-	addEventCount(t, tables, someEventWatchPTime, secondStartTimestamp, secondEndTimestamp)
+	addEventCount(t, tables, someEventWatchPTime, startTSBeforeTruncateTS, endTSBeforeTruncateTS)
 
 	helper_dumpKeys(t, tables.Db(), "After adding event that occurred before truncateTS")
 
 	foundKeys, err = findEventKeys(tables, 3*24)
 	assert.Nil(t, err)
+
+	// The new key is truncated as its before the start of minPartition and thus the number of keys remain 1
 	assert.Equal(t, []string{expectedEventKey}, foundKeys)
+	assert.Equal(t, 1, len(foundKeys))
+}
 
-	counts, err = getEventKey(db, tables.EventCountTable(), expectedEventKey)
+func Test_EventCountTable_Events_Added_After_TruncateTS(t *testing.T) {
+	// This tests the following scenario
+	// 1. An event is added, truncateTS is set to its start Time - 1 partition duration
+	// 2. And new event is added which is after truncateTs
+	// 3. Third event is added which is also after Truncate TS
+	// Expected Behavior: The new events will be added.
+
+	untyped.TestHookSetPartitionDuration(time.Hour * 24)
+	db, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
 	assert.Nil(t, err)
-	assert.Equal(t, 3, len(counts.MapMinToEvents))
+	tables := typed.NewTableList(db)
 
-	thirdStartTimestamp := "2019-08-30T21:21:55Z"
-	thirdEndTimestamp := "2019-08-30T21:23:55Z"
-	thirdEventWatchPTime, _ := ptypes.TimestampProto(time.Date(2019, 8, 30, 21, 24, 55, 6, time.UTC))
+	timestamp28AugustStartTime := "2019-08-28T21:24:55Z"
+	timestamp28AugustEndTime := "2019-08-28T23:27:55Z"
+	eventPTime28August, _ := ptypes.TimestampProto(time.Date(2019, 8, 28, 21, 24, 55, 6, time.UTC))
 
-	addEventCount(t, tables, thirdEventWatchPTime, thirdStartTimestamp, thirdEndTimestamp)
+	// adding the first event which ends up adding the first partition
+	addEventCount(t, tables, eventPTime28August, timestamp28AugustStartTime, timestamp28AugustEndTime)
 
-	helper_dumpKeys(t, tables.Db(), "After adding event that occurred after truncateTS")
 
-	foundKeys, err = findEventKeys(tables, 3*24)
+	timestamp29AugustStartTime := "2019-08-29T21:24:55Z"
+	timestamp29AugustEndTime := "2019-08-29T23:27:55Z"
+	eventPTime29August, _ := ptypes.TimestampProto(time.Date(2019, 8, 29, 21, 24, 55, 6, time.UTC))
+
+	// adding the second event which ends up adding the second partition
+	addEventCount(t, tables, eventPTime29August, timestamp29AugustStartTime, timestamp29AugustEndTime)
+
+
+	timestamp30AugustStartTime := "2019-08-30T21:21:55Z"
+	timestamp30AugustEndTime := "2019-08-30T21:23:55Z"
+	eventPTime30August, _ := ptypes.TimestampProto(time.Date(2019, 8, 30, 21, 24, 55, 6, time.UTC))
+
+	addEventCount(t, tables, eventPTime30August, timestamp30AugustStartTime, timestamp30AugustEndTime)
+
+	foundKeys, err := findEventKeys(tables, 24*3)
 	assert.Nil(t, err)
-	assert.Equal(t, expectedNewEventKey, foundKeys[1])
 
-	counts, err = getEventKey(db, tables.EventCountTable(), expectedNewEventKey)
+	// The new keys are added as successfully
+	assert.Equal(t, 3, len(foundKeys))
+
+	helper_dumpKeys(t, tables.Db(), "After adding the three events")
+
+	expectedNewEventKey := "/eventcount/001567123200/Pod/someNamespace/somePodName/somePodUid"
+
+	// The new key for 30th August has been added successfully
+	counts, err := getEventKey(db, tables.EventCountTable(), expectedNewEventKey)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(counts.MapMinToEvents))
 }

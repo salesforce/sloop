@@ -52,7 +52,7 @@ func updateEventCountTable(
 	// This avoids filling in data that will go beyond the current time range
 
 	// Default truncate as computedLastTs -1 * PartitionDuration.
-	// Essentially only allowing events in 1 partition by default.
+	// Essentially only allowing events in 1 partition by default. This scenario will only be hit for first event on new sloop with no data.
 	truncateTs := computedLastTs.Add(-1 * untyped.GetPartitionDuration())
 
 	// If there is only one partition, use minPartitionStartTime to ensure we receive events
