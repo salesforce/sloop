@@ -95,11 +95,11 @@ func (t *tablesImpl) GetMinAndMaxPartition() (bool, string, string, error) {
 }
 
 func (t *tablesImpl) GetTableNames() []string {
-	return []string{t.watchTable.tableName, t.resourceSummaryTable.tableName, t.eventCountTable.tableName}
+	return []string{t.watchTable.tableName, t.resourceSummaryTable.tableName, t.eventCountTable.tableName, t.watchActivityTable.tableName}
 }
 
 func (t *tablesImpl) GetTables() []interface{} {
 	intfs := new([]interface{})
-	*intfs = append(*intfs, t.eventCountTable, t.resourceSummaryTable, t.watchTable)
+	*intfs = append(*intfs, t.eventCountTable, t.resourceSummaryTable, t.watchTable, t.watchActivityTable)
 	return *intfs
 }

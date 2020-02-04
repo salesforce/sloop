@@ -16,21 +16,27 @@ const vlogExt = ".vlog" // value log data
 const sstExt = ".sst"   // LSM data
 
 var (
-	metricStoreSizeOnDiskMb   = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_store_sizeondiskmb"})
-	metricBadgerKeys          = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "sloop_badger_keys"}, []string{"level"})
-	metricBadgerTables        = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "sloop_badger_tables"}, []string{"level"})
-	metricBadgerLsmFileCount  = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_lsmfilecount"})
-	metricBadgerLsmSizeMb     = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_lsmsizemb"})
-	metricBadgerVLogFileCount = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_vlogfilecount"})
-	metricBadgerVLogSizeMb    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_vlogsizemb"})
+	metricStoreSizeOnDiskMb          = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_store_sizeondiskmb"})
+	metricBadgerKeys                 = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "sloop_badger_keys"}, []string{"level"})
+	metricBadgerTables               = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "sloop_badger_tables"}, []string{"level"})
+	metricBadgerLsmFileCount         = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_lsmfilecount"})
+	metricBadgerLsmSizeMb            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_lsmsizemb"})
+	metricBadgerVLogFileCount        = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_vlogfilecount"})
+	metricBadgerVLogSizeMb           = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_badger_vlogsizemb"})
+	metricCleanedStoreSizeOnDiskMb   = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_delta_aftergc_sizeondiskmb"})
+	metricCleanedBadgerKeys          = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "sloop_delta_aftergc_badger_keys"}, []string{"level"})
+	metricCleanedBadgerLsmFileCount  = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_delta_aftergc_badger_lsmfilecount"})
+	metricCleanedBadgerLsmSizeMb     = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_delta_aftergc_badger_lsmsizemb"})
+	metricCleanedBadgerVLogFileCount = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_delta_aftergc_badger_vlogfilecount"})
+	metricCleanedBadgerVLogSizeMb    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_delta_aftergc_badger_vlogsizemb"})
 )
 
 type storeStats struct {
 	timestamp         time.Time
-	DiskSizeBytes     uint64
-	DiskLsmBytes      uint64
+	DiskSizeBytes     int64
+	DiskLsmBytes      int64
 	DiskLsmFileCount  int
-	DiskVlogBytes     uint64
+	DiskVlogBytes     int64
 	DiskVlogFileCount int
 	LevelToKeyCount   map[int]uint64
 	LevelToTableCount map[int]int
@@ -47,11 +53,11 @@ func generateStats(storeRoot string, db badgerwrap.DB, fs *afero.Afero) *storeSt
 		// Swallowing on purpose as we still want the other stats
 		glog.Errorf("Failed to check storage size on disk: %v", err)
 	}
-	ret.DiskSizeBytes = totalSizeBytes
+	ret.DiskSizeBytes = int64(totalSizeBytes)
 	ret.DiskLsmFileCount = extFileCount[sstExt]
-	ret.DiskLsmBytes = extByteCount[sstExt]
+	ret.DiskLsmBytes = int64(extByteCount[sstExt])
 	ret.DiskVlogFileCount = extFileCount[vlogExt]
-	ret.DiskVlogBytes = extByteCount[vlogExt]
+	ret.DiskVlogBytes = int64(extByteCount[vlogExt])
 
 	tables := db.Tables(true)
 	for _, table := range tables {
@@ -98,4 +104,32 @@ func emitMetrics(stats *storeStats) {
 	metricBadgerLsmSizeMb.Set(float64(stats.DiskLsmBytes / 1024 / 1024))
 	metricBadgerVLogFileCount.Set(float64(stats.DiskVlogFileCount))
 	metricBadgerVLogSizeMb.Set(float64(stats.DiskVlogBytes / 1024 / 1024))
+}
+
+func emitGCMetrics(stats *storeStats) {
+	metricCleanedStoreSizeOnDiskMb.Set(float64(stats.DiskSizeBytes / 1024 / 1024))
+	for k, v := range stats.LevelToKeyCount {
+		metricCleanedBadgerKeys.WithLabelValues(fmt.Sprintf("%v", k)).Set(float64(v))
+	}
+	metricCleanedBadgerLsmFileCount.Set(float64(stats.DiskLsmFileCount))
+	metricCleanedBadgerLsmSizeMb.Set(float64(stats.DiskLsmBytes / 1024 / 1024))
+	metricCleanedBadgerVLogFileCount.Set(float64(stats.DiskVlogFileCount))
+	metricCleanedBadgerVLogSizeMb.Set(float64(stats.DiskVlogBytes / 1024 / 1024))
+}
+
+func getDeltaStats(beforeStats *storeStats, afterStats *storeStats) *storeStats {
+	ret := &storeStats{}
+	ret.LevelToKeyCount = make(map[int]uint64)
+	ret.LevelToTableCount = make(map[int]int)
+
+	for k, v := range beforeStats.LevelToKeyCount {
+		metricCleanedBadgerKeys.WithLabelValues(fmt.Sprintf("%v", k)).Set(float64(v) - float64(afterStats.LevelToKeyCount[k]))
+	}
+	ret.DiskSizeBytes = beforeStats.DiskSizeBytes - afterStats.DiskSizeBytes
+	ret.DiskLsmFileCount = beforeStats.DiskLsmFileCount - afterStats.DiskLsmFileCount
+	ret.DiskLsmBytes = beforeStats.DiskLsmBytes - afterStats.DiskLsmBytes
+	ret.DiskVlogFileCount = beforeStats.DiskVlogFileCount - afterStats.DiskVlogFileCount
+	ret.DiskVlogBytes = beforeStats.DiskVlogBytes - afterStats.DiskVlogBytes
+
+	return ret
 }

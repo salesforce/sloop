@@ -9,7 +9,6 @@ package processing
 
 import (
 	"github.com/golang/glog"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
@@ -49,13 +48,27 @@ func updateEventCountTable(
 		return nil
 	}
 
-	// Truncate long-lived events to (watch.Timestamp - maxLookback).  This avoids filling in data that will immediately
-	// be garbage collected, and avoids creating transactions that are too large and fail
-	watchTs, err := ptypes.Timestamp(watchRec.Timestamp)
-	if err != nil {
-		return err
+	// Truncate long-lived events to available partitions
+	// This avoids filling in data that will go beyond the current time range
+
+	// Default truncate as computedLastTs -1 * PartitionDuration.
+	// Essentially only allowing events in 1 partition by default. This scenario will only be hit for first event on new sloop with no data.
+	truncateTs := computedLastTs.Add(-1 * untyped.GetPartitionDuration())
+
+	// If there is only one partition, use minPartitionStartTime to ensure we receive events
+	// in that partition.
+	// Otherwise add events to all partitions from MinPartitionEndTime to computedTs.
+	// This ensures no events are added to the very last partition which may get garbage collected soon.
+	if ok, minPartition, maxPartition := tables.EventCountTable().GetMinMaxPartitions(txn); ok {
+		if minPartitionStartTime, minPartitionEndTime, err := untyped.GetTimeRangeForPartition(minPartition); err == nil {
+			if minPartition == maxPartition {
+				truncateTs = minPartitionStartTime
+			} else {
+				truncateTs = minPartitionEndTime
+			}
+		}
 	}
-	truncateTs := watchTs.Add(-1 * maxLookback)
+
 	computedFirstTs, computedLastTs, computedCount = adjustForMaxLookback(computedFirstTs, computedLastTs, computedCount, truncateTs)
 
 	eventCountByMinute := spreadOutEvents(computedFirstTs, computedLastTs, computedCount)

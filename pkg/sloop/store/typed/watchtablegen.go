@@ -106,30 +106,46 @@ func (t *KubeWatchResultTable) GetMaxKey(txn badgerwrap.Txn) (bool, string) {
 }
 
 func (t *KubeWatchResultTable) GetMinMaxPartitions(txn badgerwrap.Txn) (bool, string, string) {
-	ok, minKeyStr := t.GetMinKey(txn)
-	if !ok {
-		return false, "", ""
-	}
-	ok, maxKeyStr := t.GetMaxKey(txn)
-	if !ok {
-		// This should be impossible
+	minPartitionOk, minPar := t.GetMinPartition(txn)
+
+	if !minPartitionOk {
 		return false, "", ""
 	}
 
-	minKey := &WatchTableKey{}
+	maxPartitionOk, maxPar := t.GetMaxPartition(txn)
+	return maxPartitionOk, minPar, maxPar
+}
+
+func (t *KubeWatchResultTable) GetMaxPartition(txn badgerwrap.Txn) (bool, string) {
+	ok, maxKeyStr := t.GetMaxKey(txn)
+	if !ok {
+		return false, ""
+	}
+
 	maxKey := &WatchTableKey{}
+
+	err := maxKey.Parse(maxKeyStr)
+	if err != nil {
+		panic(fmt.Sprintf("invalid key in table: %v key: %q error: %v", t.tableName, maxKeyStr, err))
+	}
+
+	return true, maxKey.PartitionId
+}
+
+func (t *KubeWatchResultTable) GetMinPartition(txn badgerwrap.Txn) (bool, string) {
+	ok, minKeyStr := t.GetMinKey(txn)
+	if !ok {
+		return false, ""
+	}
+
+	minKey := &WatchTableKey{}
 
 	err := minKey.Parse(minKeyStr)
 	if err != nil {
 		panic(fmt.Sprintf("invalid key in table: %v key: %q error: %v", t.tableName, minKeyStr, err))
 	}
 
-	err = maxKey.Parse(maxKeyStr)
-	if err != nil {
-		panic(fmt.Sprintf("invalid key in table: %v key: %q error: %v", t.tableName, maxKeyStr, err))
-	}
-
-	return true, minKey.PartitionId, maxKey.PartitionId
+	return true, minKey.PartitionId
 }
 
 func (t *KubeWatchResultTable) GetUniquePartitionList(txn badgerwrap.Txn) ([]string, error) {

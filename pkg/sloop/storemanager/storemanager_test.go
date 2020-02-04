@@ -75,10 +75,12 @@ func help_get_db(t *testing.T) badgerwrap.DB {
 	key1 := typed.NewWatchTableKey(partitionId, someKind+"a", someNamespace, someName, someTs).String()
 	key2 := typed.NewResourceSummaryKey(someTs, someKind+"b", someNamespace, someName, someUid).String()
 	key3 := typed.NewEventCountKey(someTs, someKind+"c", someNamespace, someName, someUid).String()
+	key4 := typed.NewWatchActivityKey(untyped.GetPartitionId(someTs), someKind+"d", someNamespace, someName, someUid).String()
 
 	wtval := &typed.KubeWatchResult{Kind: someKind}
 	rtval := &typed.ResourceSummary{DeletedAtEnd: false}
 	ecVal := &typed.ResourceEventCounts{XXX_sizecache: int32(0)}
+	waVal := &typed.WatchActivity{XXX_sizecache: int32((0))}
 
 	db, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
 	assert.Nil(t, err)
@@ -87,6 +89,7 @@ func help_get_db(t *testing.T) badgerwrap.DB {
 	wt := typed.OpenKubeWatchResultTable()
 	rt := typed.OpenResourceSummaryTable()
 	ec := typed.OpenResourceEventCountsTable()
+	wa := typed.OpenWatchActivityTable()
 	err = db.Update(func(txn badgerwrap.Txn) error {
 		txerr := wt.Set(txn, key1, wtval)
 		if txerr != nil {
@@ -97,6 +100,10 @@ func help_get_db(t *testing.T) badgerwrap.DB {
 			return txerr
 		}
 		txerr = ec.Set(txn, key3, ecVal)
+		if txerr != nil {
+			return txerr
+		}
+		txerr = wa.Set(txn, key4, waVal)
 		if txerr != nil {
 			return txerr
 		}

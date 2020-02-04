@@ -14,7 +14,7 @@ import (
 )
 
 // For now we want the ability to try different durations, and this can not change during runtime
-// Keys need access to GetPartitionId() which needs this value, and we dont want to pass aroudn config everywhere
+// Keys need access to GetPartitionId() which needs this value, and we dont want to pass around config everywhere
 // that deals with keys.
 // TODO: Later when we figure out an ideal partition duration lets remove it from config so users dont change it
 // and end up with data that does not match the business logic
@@ -33,13 +33,22 @@ func GetPartitionId(timestamp time.Time) string {
 	}
 }
 
-func GetTimeRangeForPartition(partitionId string) (time.Time, time.Time, error) {
+func GetTimeForPartition(partitionId string) (time.Time, error) {
 	partInt, err := strconv.ParseInt(partitionId, 10, 64)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	partitionTime := time.Unix(partInt, 0).UTC()
+	return partitionTime, nil
+}
+
+func GetTimeRangeForPartition(partitionId string) (time.Time, time.Time, error) {
+	oldestTime, err := GetTimeForPartition(partitionId)
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
 
-	oldestTime := time.Unix(partInt, 0).UTC()
 	var newestTime time.Time
 	if partitionDuration == time.Hour {
 		newestTime = oldestTime.Add(time.Hour)
@@ -51,8 +60,9 @@ func GetTimeRangeForPartition(partitionId string) (time.Time, time.Time, error) 
 	return oldestTime, newestTime, nil
 }
 
-func TestHookSetPartitionDuration(partDuration time.Duration) {
+func TestHookSetPartitionDuration(partDuration time.Duration) bool {
 	partitionDuration = partDuration
+	return true
 }
 
 func GetPartitionDuration() time.Duration {
