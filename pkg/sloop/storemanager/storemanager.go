@@ -9,11 +9,13 @@ package storemanager
 
 import (
 	"fmt"
+	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
+	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/spf13/afero"
 	"sync"
 	"time"
@@ -175,9 +177,9 @@ func doCleanup(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int,
 		for _, tableName := range tables.GetTableNames() {
 			prefix := fmt.Sprintf("/%s/%s", tableName, minPartition)
 			start := time.Now()
-			err = tables.Db().DropPrefix([]byte(prefix))
+			err, count := dropPrefixNoLock([]byte(prefix), tables.Db())
 			elapsed := time.Since(start)
-			glog.Infof("Call to DropPrefix(%v) took %v and returned %v", prefix, elapsed, err)
+			glog.Infof("Call to DropPrefix(%v) took %v and removed %d with error: %v", prefix, elapsed, count, err)
 			if err != nil {
 				errMsgs = append(errMsgs, fmt.Sprintf("failed to cleanup with min key: %s, elapsed: %v,err: %v,", prefix, elapsed, err))
 			}
@@ -225,4 +227,50 @@ func cleanUpFileSizeCondition(stats *storeStats, sizeLimitBytes int) bool {
 	}
 	glog.V(2).Infof("Can not clean up, disk size: %v is not exceeding size limit: %v yet", stats.DiskSizeBytes, uint64(sizeLimitBytes))
 	return false
+}
+
+func dropPrefixNoLock(keyPrefix []byte, db badgerwrap.DB) (error, int) {
+	var err error
+	allKeys := [][]byte{}
+	err = db.View(func(txn badgerwrap.Txn) error {
+		iterOpt := badger.DefaultIteratorOptions
+		iterOpt.Prefix = keyPrefix
+		iterOpt.AllVersions = false
+		iterOpt.PrefetchValues = false
+		it := txn.NewIterator(iterOpt)
+		defer it.Close()
+		for it.Seek(keyPrefix); it.ValidForPrefix(keyPrefix); it.Next() {
+			keyToDel := it.Item().KeyCopy(nil)
+			allKeys = append(allKeys, keyToDel)
+		}
+		return nil
+	})
+	if err != nil {
+		return err, 0
+	}
+	numOfKeysDeleted := 0
+	collectSize := 100000
+	keysThisBatch := [][]byte{}
+	for idx, thisKey := range allKeys {
+		keysThisBatch = append(keysThisBatch, thisKey)
+		if len(keysThisBatch) > collectSize || idx == len(allKeys)-1 {
+			// TODO: Use batch, but that needs addions to wrapper
+			err := db.Update(func(txn badgerwrap.Txn) error {
+				for _, keyToDel := range keysThisBatch {
+					txn.Delete(keyToDel)
+				}
+				return nil
+			})
+
+			if err != nil {
+
+				return err, numOfKeysDeleted
+			}
+
+			numOfKeysDeleted += len(keysThisBatch)
+			keysThisBatch = make([][]byte, 0, collectSize)
+		}
+
+	}
+	return nil, numOfKeysDeleted
 }
