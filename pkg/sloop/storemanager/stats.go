@@ -119,8 +119,6 @@ func emitGCMetrics(stats *storeStats) {
 
 func getDeltaStats(beforeStats *storeStats, afterStats *storeStats) *storeStats {
 	ret := &storeStats{}
-	ret.LevelToKeyCount = make(map[int]uint64)
-	ret.LevelToTableCount = make(map[int]int)
 
 	for k, v := range beforeStats.LevelToKeyCount {
 		metricCleanedBadgerKeys.WithLabelValues(fmt.Sprintf("%v", k)).Set(float64(v) - float64(afterStats.LevelToKeyCount[k]))

@@ -122,7 +122,7 @@ func Test_doCleanup_true(t *testing.T) {
 		DiskSizeBytes: 10,
 	}
 
-	flag, err := doCleanup(tables, time.Hour, 2, stats)
+	flag, _, err := doCleanup(tables, time.Hour, 2, stats)
 	assert.True(t, flag)
 	assert.Nil(t, err)
 }
@@ -135,7 +135,7 @@ func Test_doCleanup_false(t *testing.T) {
 		DiskSizeBytes: 10,
 	}
 
-	flag, err := doCleanup(tables, time.Hour, 1000, stats)
+	flag, _, err := doCleanup(tables, time.Hour, 1000, stats)
 	assert.False(t, flag)
 	assert.Nil(t, err)
 }
