@@ -117,8 +117,8 @@ func Test_EventCountTable_Event_Truncated_Before_TruncateTS(t *testing.T) {
 	assert.Nil(t, err)
 	tables := typed.NewTableList(db)
 
-	evenTSStartTime   := "2019-08-29T21:24:55Z"
-	evenTSEndTime     := "2019-08-29T21:27:55Z"
+	evenTSStartTime := "2019-08-29T21:24:55Z"
+	evenTSEndTime := "2019-08-29T21:27:55Z"
 	// adding the first event which ends up adding the first partition
 	addEventCount(t, tables, someEventWatchPTime, evenTSStartTime, evenTSEndTime)
 
@@ -163,14 +163,12 @@ func Test_EventCountTable_Events_Added_After_TruncateTS(t *testing.T) {
 	// adding the first event which ends up adding the first partition
 	addEventCount(t, tables, eventPTime28August, timestamp28AugustStartTime, timestamp28AugustEndTime)
 
-
 	timestamp29AugustStartTime := "2019-08-29T21:24:55Z"
 	timestamp29AugustEndTime := "2019-08-29T23:27:55Z"
 	eventPTime29August, _ := ptypes.TimestampProto(time.Date(2019, 8, 29, 21, 24, 55, 6, time.UTC))
 
 	// adding the second event which ends up adding the second partition
 	addEventCount(t, tables, eventPTime29August, timestamp29AugustStartTime, timestamp29AugustEndTime)
-
 
 	timestamp30AugustStartTime := "2019-08-30T21:21:55Z"
 	timestamp30AugustEndTime := "2019-08-30T21:23:55Z"

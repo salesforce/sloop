@@ -72,7 +72,7 @@ type Item interface {
 	//	EstimatedSize() int64
 	//	ExpiresAt() uint64
 	//	IsDeletedOrExpired() bool
-		KeyCopy(dst []byte) []byte
+	KeyCopy(dst []byte) []byte
 	//	KeySize() int64
 	//	String() string
 	//	UserMeta() byte
