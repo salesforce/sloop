@@ -20,18 +20,19 @@ import (
 )
 
 var (
-	metricGcRunCount            = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_run_count"})
-	metricGcSuccessCount        = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_success_count"})
-	metricGcFailedCount         = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_failed_count"})
-	metricGcLatency             = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_latency_sec"})
-	metricGcRunning             = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_running"})
-	metricGcCleanUpPerformed    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_cleanup_performed"})
-	metricGcDeletedNumberOfKeys = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_deleted_num_of_keys"})
+	metricGcRunCount                   = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_run_count"})
+	metricGcSuccessCount               = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_success_count"})
+	metricGcFailedCount                = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_failed_count"})
+	metricGcLatency                    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_latency_sec"})
+	metricGcRunning                    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_running"})
+	metricGcCleanUpPerformed           = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_cleanup_performed"})
+	metricGcDeletedNumberOfKeys        = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_deleted_num_of_keys"})
 	metricGcDeletedNumberOfKeysByTable = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "sloop_deleted_keys_by_table"}, []string{"table"})
-	metricAgeOfMinimumPartition = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_age_of_minimum_partition_hr"})
-	metricValueLogGcRunCount    = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_valueLoggc_run_count"})
-	metricValueLogGcLatency     = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_valueLoggc_latency_sec"})
-	metricValueLogGcRunning     = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_valueLoggc_running"})
+	metricAgeOfMinimumPartition        = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_age_of_minimum_partition_hr"})
+	metricAgeOfMaximumPartition        = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_age_of_maximum_partition_hr"})
+	metricValueLogGcRunCount           = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_valueLoggc_run_count"})
+	metricValueLogGcLatency            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_valueLoggc_latency_sec"})
+	metricValueLogGcRunning            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_valueLoggc_running"})
 )
 
 type Config struct {
@@ -180,13 +181,16 @@ func doCleanup(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int,
 		partStart, partEnd, err := untyped.GetTimeRangeForPartition(minPartition)
 		glog.Infof("GC removing partition %q with data from %v to %v (err %v)", minPartition, partStart, partEnd, err)
 
-		minPartitionAge, err = untyped.GetAgeOfPartitionInHours(minPartition, maxPartition)
+		minPartitionAge, err = untyped.GetAgeOfPartitionInHours(minPartition)
 		metricAgeOfMinimumPartition.Set(minPartitionAge)
+		maxPartitionAge, err := untyped.GetAgeOfPartitionInHours(maxPartition)
+		metricAgeOfMaximumPartition.Set(maxPartitionAge)
+
 		var errMessages []string
 		for _, tableName := range tables.GetTableNames() {
 			prefix := fmt.Sprintf("/%s/%s", tableName, minPartition)
 			start := time.Now()
-			err, numOfDeletedKeys := dropPrefixNoLock([]byte(prefix), tables.Db())
+			err, numOfDeletedKeys := untyped.DropPrefixNoLock([]byte(prefix), tables.Db())
 			metricGcDeletedNumberOfKeysByTable.WithLabelValues(fmt.Sprintf("%v", tableName)).Set(numOfDeletedKeys)
 			totalNumOfDeletedKeys += numOfDeletedKeys
 			elapsed := time.Since(start)
