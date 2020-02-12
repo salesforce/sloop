@@ -32,23 +32,25 @@ func DropPrefixNoLock(keyPrefix []byte, db badgerwrap.DB) (error, float64) {
 	// deleting the keys collected in batches
 	numOfKeysDeleted := 0
 	var keysThisBatch [][]byte
+	var deletedKeysInThisBatch = 0
 	for idx, thisKey := range allKeys {
 		keysThisBatch = append(keysThisBatch, thisKey)
 		if len(keysThisBatch) > collectSize || idx == len(allKeys)-1 {
 			err := db.Update(func(txn badgerwrap.Txn) error {
 				for _, keyToDel := range keysThisBatch {
 					txn.Delete(keyToDel)
+					deletedKeysInThisBatch++
 				}
 				return nil
 			})
 
+			numOfKeysDeleted += deletedKeysInThisBatch
 			if err != nil {
-
 				return err, float64(numOfKeysDeleted)
 			}
 
-			numOfKeysDeleted += len(keysThisBatch)
 			keysThisBatch = make([][]byte, 0, collectSize)
+			deletedKeysInThisBatch = 0
 		}
 
 	}

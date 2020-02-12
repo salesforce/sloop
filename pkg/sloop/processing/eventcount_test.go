@@ -117,10 +117,10 @@ func Test_EventCountTable_Event_Truncated_Before_TruncateTS(t *testing.T) {
 	assert.Nil(t, err)
 	tables := typed.NewTableList(db)
 
-	evenTSStartTime := "2019-08-29T21:24:55Z"
-	evenTSEndTime := "2019-08-29T21:27:55Z"
+	eventStartTime := "2019-08-29T21:24:55Z"
+	eventEndTime := "2019-08-29T21:27:55Z"
 	// adding the first event which ends up adding the first partition
-	addEventCount(t, tables, someEventWatchPTime, evenTSStartTime, evenTSEndTime)
+	addEventCount(t, tables, someEventWatchPTime, eventStartTime, eventEndTime)
 
 	foundKeys, err := findEventKeys(tables, 6)
 	assert.Nil(t, err)

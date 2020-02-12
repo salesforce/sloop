@@ -104,7 +104,7 @@ func (sm *StoreManager) gcLoop() {
 			metricGcFailedCount.Inc()
 		}
 		metricGcLatency.Set(time.Since(before).Seconds())
-		glog.Infof("GC finished in %v with error %v.  Next run in %v", time.Since(before), err, sm.config.Freq)
+		glog.Infof("GC finished in %v with error '%v'.  Next run in %v", time.Since(before), err, sm.config.Freq)
 
 		var afterGCEnds = sm.refreshStats()
 		var deltaStats = getDeltaStats(beforeGCStats, afterGCEnds)
@@ -175,16 +175,20 @@ func doCleanup(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int,
 	}
 
 	var totalNumOfDeletedKeys float64 = 0
-	var minPartitionAge float64 = 0
 	anyCleanupPerformed := false
 	if cleanUpTimeCondition(minPartition, maxPartition, timeLimit) || cleanUpFileSizeCondition(stats, sizeLimitBytes) {
 		partStart, partEnd, err := untyped.GetTimeRangeForPartition(minPartition)
 		glog.Infof("GC removing partition %q with data from %v to %v (err %v)", minPartition, partStart, partEnd, err)
-
+		minPartitionAge := 0.0
 		minPartitionAge, err = untyped.GetAgeOfPartitionInHours(minPartition)
-		metricAgeOfMinimumPartition.Set(minPartitionAge)
+		if err!= nil {
+			metricAgeOfMinimumPartition.Set(minPartitionAge)
+		}
+
 		maxPartitionAge, err := untyped.GetAgeOfPartitionInHours(maxPartition)
-		metricAgeOfMaximumPartition.Set(maxPartitionAge)
+		if err!= nil {
+			metricAgeOfMaximumPartition.Set(maxPartitionAge)
+		}
 
 		var errMessages []string
 		for _, tableName := range tables.GetTableNames() {
