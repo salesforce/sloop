@@ -124,6 +124,10 @@ func (i *BadgerItem) ValueCopy(dst []byte) ([]byte, error) {
 	return i.item.ValueCopy(dst)
 }
 
+func (i *BadgerItem) KeyCopy(dst []byte) []byte {
+	return i.item.KeyCopy(dst)
+}
+
 // Iterator
 
 func (i *BadgerIterator) Close() {

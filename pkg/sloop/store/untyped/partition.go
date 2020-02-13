@@ -60,9 +60,18 @@ func GetTimeRangeForPartition(partitionId string) (time.Time, time.Time, error) 
 	return oldestTime, newestTime, nil
 }
 
-func TestHookSetPartitionDuration(partDuration time.Duration) bool {
+func GetAgeOfPartitionInHours(partitionId string) (float64, error) {
+	timeForPartition, err := GetTimeForPartition(partitionId)
+	if err != nil {
+		return -1, err
+	}
+
+	nanosecondsInAnHour := time.Duration(60 * 60 * 1000000000)
+	return float64(time.Now().Sub(timeForPartition) / nanosecondsInAnHour), nil
+}
+
+func TestHookSetPartitionDuration(partDuration time.Duration) {
 	partitionDuration = partDuration
-	return true
 }
 
 func GetPartitionDuration() time.Duration {

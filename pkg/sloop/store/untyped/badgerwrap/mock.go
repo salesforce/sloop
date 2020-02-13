@@ -179,6 +179,13 @@ func (i *MockItem) ValueCopy(dst []byte) ([]byte, error) {
 	return newcopy, nil
 }
 
+func (i *MockItem) KeyCopy(dst []byte) []byte {
+	copy(dst, i.key)
+	newcopy := make([]byte, len(i.key))
+	copy(newcopy, i.key)
+	return newcopy
+}
+
 // Iterator
 
 func (i *MockIterator) Close() {
