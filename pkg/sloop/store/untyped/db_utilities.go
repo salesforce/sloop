@@ -5,54 +5,75 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 )
 
-var collectSize = 100000
-
-func DropPrefixNoLock(keyPrefix []byte, db badgerwrap.DB) (error, float64) {
-	var err error
-	var allKeys [][]byte
-
-	// getting all the keys to delete that have the given prefix
-	err = db.View(func(txn badgerwrap.Txn) error {
-		iterOpt := badger.DefaultIteratorOptions
-		iterOpt.Prefix = keyPrefix
-		iterOpt.AllVersions = false
-		iterOpt.PrefetchValues = false
-		it := txn.NewIterator(iterOpt)
-		defer it.Close()
-		for it.Seek(keyPrefix); it.ValidForPrefix(keyPrefix); it.Next() {
-			keyToDel := it.Item().KeyCopy(nil)
-			allKeys = append(allKeys, keyToDel)
+func deleteKeys(db badgerwrap.DB, keysForDelete [][]byte) (error, int) {
+	deletedKeysInThisBatch := 0
+	err := db.Update(func(txn badgerwrap.Txn) error {
+		for _, key := range keysForDelete {
+			err := txn.Delete(key)
+			if err != nil {
+				return err
+			}
+			deletedKeysInThisBatch++
 		}
 		return nil
 	})
+
 	if err != nil {
-		return err, 0
+		return err, deletedKeysInThisBatch
 	}
 
-	// deleting the keys collected in batches
-	numOfKeysDeleted := 0
-	var keysThisBatch [][]byte
-	var deletedKeysInThisBatch = 0
-	for idx, thisKey := range allKeys {
-		keysThisBatch = append(keysThisBatch, thisKey)
-		if len(keysThisBatch) > collectSize || idx == len(allKeys)-1 {
-			err := db.Update(func(txn badgerwrap.Txn) error {
-				for _, keyToDel := range keysThisBatch {
-					txn.Delete(keyToDel)
-					deletedKeysInThisBatch++
-				}
-				return nil
-			})
+	return nil, deletedKeysInThisBatch
+}
 
+func DeleteKeysWithPrefix(keyPrefix []byte, db badgerwrap.DB, deletionBatchSize int) (error, float64, float64) {
+	var err error
+	numOfKeysToDelete := 0
+	numOfKeysDeleted := 0
+	keysLeftToDelete := true
+
+	for keysLeftToDelete {
+
+		keysThisBatch := make([][]byte, 0, deletionBatchSize)
+
+		// getting the keys to delete that have the given prefix
+		_ = db.View(func(txn badgerwrap.Txn) error {
+			iterOpt := badger.DefaultIteratorOptions
+			iterOpt.Prefix = keyPrefix
+			iterOpt.AllVersions = false
+			iterOpt.PrefetchValues = false
+			it := txn.NewIterator(iterOpt)
+			defer it.Close()
+
+			for it.Seek(keyPrefix); it.ValidForPrefix(keyPrefix); it.Next() {
+				keyToDel := it.Item().KeyCopy(nil)
+				keysThisBatch = append(keysThisBatch, keyToDel)
+				if len(keysThisBatch) == deletionBatchSize {
+					break
+				}
+
+			}
+			return nil
+		})
+
+		// deleting the keys in batch
+		if len(keysThisBatch) > 0 {
+			err, deletedKeysInThisBatch := deleteKeys(db, keysThisBatch)
+			numOfKeysToDelete += len(keysThisBatch)
 			numOfKeysDeleted += deletedKeysInThisBatch
 			if err != nil {
-				return err, float64(numOfKeysDeleted)
+				return err, float64(numOfKeysDeleted), float64(numOfKeysToDelete)
 			}
-
-			keysThisBatch = make([][]byte, 0, collectSize)
-			deletedKeysInThisBatch = 0
 		}
 
+		if len(keysThisBatch) < deletionBatchSize {
+			keysLeftToDelete = false
+		}
 	}
-	return nil, float64(numOfKeysDeleted)
+
+	if err != nil {
+		return err, float64(numOfKeysDeleted), float64(numOfKeysToDelete)
+	}
+
+	return nil, float64(numOfKeysDeleted), float64(numOfKeysToDelete)
+
 }

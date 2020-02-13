@@ -9,29 +9,32 @@ import (
 
 var commonPrefix = "/commonprefix/001546405200/"
 
-func Test_Db_Utilities_DropPrefixNoLock_DeleteAllKeys(t *testing.T) {
+func Test_Db_Utilities_DeleteKeysWithPrefix_DeleteAllKeys(t *testing.T) {
 	db := helper_get_db(t)
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix(commonPrefix))
-	err, numOfDeletedKeys := DropPrefixNoLock([]byte(commonPrefix), db)
+	err, numOfDeletedKeys, numOfKeysToDelete := DeleteKeysWithPrefix([]byte(commonPrefix), db, 10)
 	assert.Nil(t, err)
 	assert.Equal(t, float64(4), numOfDeletedKeys)
+	assert.Equal(t, float64(4), numOfKeysToDelete)
 }
 
-func Test_Db_Utilities_DropPrefixNoLock_DeleteNoKeys(t *testing.T) {
+func Test_Db_Utilities_DeleteKeysWithPrefix_DeleteNoKeys(t *testing.T) {
 	db := helper_get_db(t)
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix(commonPrefix))
-	err, numOfDeletedKeys := DropPrefixNoLock([]byte(commonPrefix+"random"), db)
+	err, numOfDeletedKeys, numOfKeysToDelete := DeleteKeysWithPrefix([]byte(commonPrefix+"random"), db, 10)
 	assert.Nil(t, err)
 	assert.Equal(t, float64(0), numOfDeletedKeys)
+	assert.Equal(t, float64(0), numOfKeysToDelete)
 }
 
-func Test_Db_Utilities_DropPrefixNoLock_DeleteSomeKeys(t *testing.T) {
+func Test_Db_Utilities_DeleteKeysWithPrefix_DeleteSomeKeys(t *testing.T) {
 	db := helper_get_db(t)
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix(commonPrefix))
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix("randomStuff"+commonPrefix))
-	err, numOfDeletedKeys := DropPrefixNoLock([]byte(commonPrefix), db)
+	err, numOfDeletedKeys, numOfKeysToDelete := DeleteKeysWithPrefix([]byte(commonPrefix), db, 10)
 	assert.Nil(t, err)
 	assert.Equal(t, float64(4), numOfDeletedKeys)
+	assert.Equal(t, float64(4), numOfKeysToDelete)
 }
 
 func helper_get_db(t *testing.T) badgerwrap.DB {
