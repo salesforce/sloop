@@ -36,6 +36,7 @@ func EventHeatMap3Query(params url.Values, t typed.Tables, queryStartTime time.T
 		return nil, err
 	}
 
+
 	glog.Infof("reqId: %v EventHeatMap3Query read %v events, %v resources, and %v watch activity", requestId, len(rawRows.Events), len(rawRows.Resources), len(rawRows.WatchActivity))
 
 	// Remove rows that don't fit in time range, and clip rows that go outside time range
@@ -63,11 +64,28 @@ func EventHeatMap3Query(params url.Values, t typed.Tables, queryStartTime time.T
 		return []byte{}, err
 	}
 
-	// add the event counts in as overlay
-	mapResSumKeyToOverlay, err := eventCountsToOverlayMap(rawRows.Events)
-	if err != nil {
-		return []byte{}, err
+	var mapResSumKeyToOverlay map[typed.ResourceSummaryKey][]Overlay
+	if params.Get("eventBucketWidth") == "" {
+		// add the event counts in as overlay
+		mapResSumKeyToOverlay, err = eventCountsToOverlayMap(rawRows.Events)
+		if err != nil {
+			return []byte{}, err
+		}
+	} else {
+		eventBucketWidth := time.Minute
+		if params.Get("eventBucketWidth") != "" {
+			eventBucketWidth, err = time.ParseDuration(params.Get("eventBucketWidth"))
+			if eventBucketWidth <= time.Minute * 0 {
+				return []byte{}, fmt.Errorf("compute event bucket width failed with error: %v", err)
+			}
+			// add the event counts in as overlay
+			mapResSumKeyToOverlay, err = eventCountsToOverlayMapBucketed(rawRows.Events, eventBucketWidth)
+			if err != nil {
+				return []byte{}, err
+			}
+		}
 	}
+
 	err = mergeHeatmapWithResources(mapResSumKeyToD3Gantt, mapResSumKeyToOverlay)
 	if err != nil {
 		return []byte{}, err
@@ -230,6 +248,68 @@ func resSumRowsToD3GanttMap(summaries map[typed.ResourceSummaryKey]*typed.Resour
 	}
 	return result, nil
 }
+// Take a row from EventCountTable and extract the matching ResSum key and a slice of D3 Overlays
+func eventCountRowToD3GanttOverlayBucketed(key typed.EventCountKey, value *typed.ResourceEventCounts, bucketWidth time.Duration) (typed.ResourceSummaryKey, []Overlay, error) {
+	partitionStartTimestamp, _, err := untyped.GetTimeRangeForPartition(key.PartitionId)
+	if err != nil {
+		return typed.ResourceSummaryKey{}, []Overlay{}, err
+	}
+
+	refResSumKey := typed.NewResourceSummaryKey(partitionStartTimestamp, key.Kind, key.Namespace, key.Name, key.Uid)
+
+	// This is a little ugly, but we want to group all the same reasons for the same bucket and sum them
+	mapBucketMinToReasonToCount := map[int64]map[string]int32{}
+	for unixMinute, eventCountMap := range value.MapMinToEvents {
+		// Int divide the minute out of the bucket index (Resolution cannot go higher than per-minute)
+		bucketedMinute := ((unixMinute * int64(time.Minute)) / int64(bucketWidth)) * int64(bucketWidth)
+		for reason, count := range eventCountMap.MapReasonToCount {
+			_, ok := mapBucketMinToReasonToCount[bucketedMinute]
+			if !ok {
+				mapBucketMinToReasonToCount[bucketedMinute] = map[string]int32{}
+			}
+			mapBucketMinToReasonToCount[bucketedMinute][reason] += count
+		}
+	}
+
+	mapBucketMinToText := map[int64]string{}
+	for unixMinute, mapReasonToCount := range mapBucketMinToReasonToCount {
+		// Int divide the minute out of the bucket index (Resolution cannot go higher than per-minute)
+		bucketedMinute := ((unixMinute * int64(time.Minute)) / int64(bucketWidth)) * int64(bucketWidth)
+		// We need to get all reasons and sort them so we have deterministic output for easy unit tests
+		sortedReasons := []string{}
+		for reason, _ := range mapReasonToCount {
+			sortedReasons = append(sortedReasons, reason)
+		}
+		sort.Strings(sortedReasons)
+
+		text := ""
+		for idx, reason := range sortedReasons {
+			if idx != 0 {
+				text += " "
+			}
+			text += fmt.Sprintf("%v:%v", reason, mapReasonToCount[reason])
+			mapBucketMinToText[bucketedMinute] = text
+		}
+	}
+
+	overlays := []Overlay{}
+
+	for bucketMin, text := range mapBucketMinToText {
+		newOverlay := Overlay{
+			Text:      text,
+			StartDate: bucketMin,
+			Duration:  int64(bucketWidth / time.Second),
+			EndDate:   time.Unix(bucketMin, 0).UTC().Add(bucketWidth).Unix(),
+		}
+		overlays = append(overlays, newOverlay)
+	}
+
+	sort.Slice(overlays, func(i, j int) bool {
+		return overlays[i].StartDate < overlays[j].StartDate
+	})
+
+	return *refResSumKey, overlays, nil
+}
 
 // Take a row from EventCountTable and extract the matching ResSum key and a slice of D3 Overlays
 func eventCountRowToD3GanttOverlay(key typed.EventCountKey, value *typed.ResourceEventCounts) (typed.ResourceSummaryKey, []Overlay, error) {
@@ -295,6 +375,21 @@ func eventCountsToOverlayMap(events map[typed.EventCountKey]*typed.ResourceEvent
 
 	for key, value := range events {
 		resSumRefKey, overlays, err := eventCountRowToD3GanttOverlay(key, value)
+		if err != nil {
+			return retMap, err
+		}
+		// In order for keys to join properly we need an empty partition ID
+		resSumRefKey.PartitionId = EmptyPartition
+		retMap[resSumRefKey] = append(retMap[resSumRefKey], overlays...)
+	}
+	return retMap, nil
+}
+
+func eventCountsToOverlayMapBucketed(events map[typed.EventCountKey]*typed.ResourceEventCounts, bucketWidth time.Duration) (map[typed.ResourceSummaryKey][]Overlay, error) {
+	retMap := map[typed.ResourceSummaryKey][]Overlay{}
+
+	for key, value := range events {
+		resSumRefKey, overlays, err := eventCountRowToD3GanttOverlayBucketed(key, value, bucketWidth)
 		if err != nil {
 			return retMap, err
 		}

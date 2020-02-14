@@ -141,9 +141,6 @@ func backupHandler(db badgerwrap.DB, currentContext string) http.HandlerFunc {
 	}
 }
 
-// Returns json to feed into dhtmlgantt
-// Info on data format: https://docs.dhtmlx.com/gantt/desktop__loading.html
-
 func queryHandler(tables typed.Tables, maxLookBack time.Duration) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("content-type", "application/json")
@@ -154,8 +151,11 @@ func queryHandler(tables typed.Tables, maxLookBack time.Duration) http.HandlerFu
 			logWebError(err, "Failed to run query", request, writer)
 			return
 		}
-
-		writer.Write(data)
+		_, err = writer.Write(data)
+		if err != nil {
+			logWebError(err, "Failed to write query response to client", request, writer)
+			return
+		}
 	}
 }
 
