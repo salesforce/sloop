@@ -49,16 +49,17 @@ const (
 )
 
 type WebConfig struct {
-	Port             int
-	WebFilesPath     string
-	DefaultNamespace string
-	DefaultLookback  string
-	DefaultResources string
-	MaxLookback      time.Duration
-	ConfigYaml       string
-	ResourceLinks    []ResourceLinkTemplate
-	LeftBarLinks     []LinkTemplate
-	CurrentContext   string
+	Port               int
+	WebFilesPath       string
+	DefaultNamespace   string
+	DefaultLookback    string
+	DefaultResources   string
+	DefaultBucketWidth string
+	MaxLookback        time.Duration
+	ConfigYaml         string
+	ResourceLinks      []ResourceLinkTemplate
+	LeftBarLinks       []LinkTemplate
+	CurrentContext     string
 }
 
 var (

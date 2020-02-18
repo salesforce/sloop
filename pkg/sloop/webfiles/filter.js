@@ -75,7 +75,7 @@ function populateDropdownFromQuery(param, elementId, defaultValue, queryUrl) {
     return value
 }
 
-function setFiltersAndReturnQueryUrl(defaultLookback, defaultKind, defaultNamespace) {
+function setFiltersAndReturnQueryUrl(defaultLookback, defaultKind, defaultNamespace, defaultBucketWidth) {
     // Keep this in sync with pkg/sloop/queries/params.go
 
     // Some of these need to hit the backend which takes a little time
@@ -84,16 +84,16 @@ function setFiltersAndReturnQueryUrl(defaultLookback, defaultKind, defaultNamesp
     // TODO: Also, we may consider initially populating the drop-down with the value from url params as a placholder
     //       until we get the full list back
 
-    lookback =        setDropdown("lookback", "filterlookback", defaultLookback, true)
-    sort =            setDropdown("sort",     "filtersort",     "start_time", false)
+    lookback =        setDropdown("lookback", "filterlookback", defaultLookback, true);
+    sort =            setDropdown("sort",     "filtersort",     "start_time", false);
+    bucketwidth =     setDropdown("bucketing","filterbucketing", defaultBucketWidth, true);
 
     namematch = setText("namematch", "filternamematch", "")
 
     query =           populateDropdownFromQuery("query",     "filterquery",     "EventHeatMap",  "/data?query=Queries&lookback="+lookback);
     ns =              populateDropdownFromQuery("namespace", "filternamespace", defaultNamespace, "/data?query=Namespaces&lookback="+lookback);
     kind =            populateDropdownFromQuery("kind",      "filterkind",      defaultKind,      "/data?query=Kinds&lookback="+lookback);
-
-    dataQuery = "/data?query="+query+"&namespace="+ns+"&lookback="+lookback+"&kind="+kind+"&sort="+sort+"&namematch="+namematch
+    dataQuery = "/data?query="+query+"&namespace="+ns+"&lookback="+lookback+"&kind="+kind+"&sort="+sort+"&namematch="+namematch+"&bucketing="+bucketwidth;
     return dataQuery
 }
 

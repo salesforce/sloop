@@ -41,6 +41,15 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
                 <option value="336h">2 Weeks</option>
             </select><br><br>
 
+            <label for="filterbucketing">Event Bucket Resolution:</label><br/>
+            <select name="bucketing" id="filterbucketing">
+                <option value="1m">1 Minute</option>
+                <option value="10m">10 Minutes</option>
+                <option value="1h">1 Hour</option>
+                <option value="1d">1 day</option>
+            </select><br><br>
+
+
             <label for="filternamespace">Filter Namespace:</label><br/>
             <select name="namespace" id="filternamespace">
             </select>
@@ -98,7 +107,7 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 
     <script>
         // When we reload the page this will set the correct selections for the drop-downs based on passed in parameters
-        dataQueryUrl = setFiltersAndReturnQueryUrl("{{.DefaultLookback}}", "{{.DefaultKind}}", "{{.DefaultNamespace}}");
+        dataQueryUrl = setFiltersAndReturnQueryUrl("{{.DefaultLookback}}", "{{.DefaultKind}}", "{{.DefaultNamespace}}", "{{.DefaultBucketWidth}}");
         document.getElementById("datafilelink").href = dataQueryUrl;
     </script>
     <script src="/webfiles/sloop_ui.js"></script>

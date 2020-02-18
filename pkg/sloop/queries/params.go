@@ -12,6 +12,7 @@ package queries
 const (
 	LookbackParam  = "lookback"
 	NamespaceParam = "namespace"
+	BucketingParam = "bucketing"
 	KindParam      = "kind"
 	NameParam      = "name"
 	NameMatchParam = "namematch" // substring match on name

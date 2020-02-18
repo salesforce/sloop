@@ -106,6 +106,7 @@ func helper_UrlValues() url.Values {
 	return map[string][]string{
 		NamespaceParam: []string{AllNamespaces},
 		KindParam:      []string{AllKinds},
+		BucketingParam: {"1m"},
 	}
 }
 

@@ -396,7 +396,7 @@ function createResourceBar(d) {
                 .attr("rx", 6)
                 .attr("ry", 6)
                 .attr("height", yAxisBand.bandwidth() * 0.6)
-                .attr("width", overlayW * 0.75)
+                .attr("width", overlayW * 0.9999) // Leave a tiny amount of wiggle room - chart looks goofy without it
                 .attr("fill", d3.color(severityColorGenFunc(overlay.severity)))
                 .attr("stroke", palette.baseDark[3])
                 .attr("stroke-width", "1px")

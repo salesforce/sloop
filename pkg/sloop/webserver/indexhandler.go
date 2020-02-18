@@ -14,11 +14,12 @@ import (
 )
 
 type indexData struct {
-	DefaultLookback  string
-	DefaultNamespace string
-	DefaultKind      string
-	LeftBarLinks     []ComputedLink
-	CurrentContext   string
+	DefaultLookback    string
+	DefaultNamespace   string
+	DefaultKind        string
+	DefaultBucketWidth string
+	LeftBarLinks       []ComputedLink
+	CurrentContext     string
 }
 
 func indexHandler(config WebConfig) http.HandlerFunc {
@@ -33,6 +34,7 @@ func indexHandler(config WebConfig) http.HandlerFunc {
 		data.DefaultLookback = config.DefaultLookback
 		data.DefaultNamespace = config.DefaultNamespace
 		data.DefaultKind = config.DefaultResources
+		data.DefaultBucketWidth = config.DefaultBucketWidth
 		data.CurrentContext = config.CurrentContext
 		data.LeftBarLinks, err = makeLeftBarLinks(config.LeftBarLinks)
 		if err != nil {
