@@ -20,14 +20,20 @@ import (
 )
 
 var (
-	metricGcRunCount         = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_run_count"})
-	metricGcSuccessCount     = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_success_count"})
-	metricGcFailedCount      = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_failed_count"})
-	metricGcLatency          = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_latency_sec"})
-	metricGcRunning          = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_running"})
-	metricValueLogGcRunCount = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_valueloggc_run_count"})
-	metricValueLogGcLatency  = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_valueloggc_latency_sec"})
-	metricValueLogGcRunning  = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_valueloggc_running"})
+	metricGcRunCount                   = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_run_count"})
+	metricGcSuccessCount               = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_success_count"})
+	metricGcFailedCount                = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_failed_count"})
+	metricGcLatency                    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_latency_sec"})
+	metricGcRunning                    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_running"})
+	metricGcCleanUpPerformed           = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_cleanup_performed"})
+	metricGcDeletedNumberOfKeys        = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_deleted_num_of_keys"})
+	metricGcNumberOfKeysToDelete       = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_num_of_keys_to_delete"})
+	metricGcDeletedNumberOfKeysByTable = promauto.NewGaugeVec(prometheus.GaugeOpts{Name: "sloop_deleted_keys_by_table"}, []string{"table"})
+	metricAgeOfMinimumPartition        = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_age_of_minimum_partition_hr"})
+	metricAgeOfMaximumPartition        = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_age_of_maximum_partition_hr"})
+	metricValueLogGcRunCount           = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_valueLoggc_run_count"})
+	metricValueLogGcLatency            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_valueLoggc_latency_sec"})
+	metricValueLogGcRunning            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_valueLoggc_running"})
 )
 
 type Config struct {
@@ -37,6 +43,7 @@ type Config struct {
 	SizeLimitBytes     int
 	BadgerDiscardRatio float64
 	BadgerVLogGCFreq   time.Duration
+	DeletionBatchSize  int
 }
 
 type StoreManager struct {
@@ -89,7 +96,10 @@ func (sm *StoreManager) gcLoop() {
 		metricGcRunCount.Inc()
 		before := time.Now()
 		metricGcRunning.Set(1)
-		_, err := doCleanup(sm.tables, sm.config.TimeLimit, sm.config.SizeLimitBytes, sm.stats)
+		cleanUpPerformed, numOfDeletedKeys, numOfKeysToDelete, err := doCleanup(sm.tables, sm.config.TimeLimit, sm.config.SizeLimitBytes, sm.stats, sm.config.DeletionBatchSize)
+		metricGcCleanUpPerformed.Set(boolToFloat(cleanUpPerformed))
+		metricGcDeletedNumberOfKeys.Set(numOfDeletedKeys)
+		metricGcNumberOfKeysToDelete.Set(numOfKeysToDelete)
 		metricGcRunning.Set(0)
 		if err == nil {
 			metricGcSuccessCount.Inc()
@@ -97,7 +107,7 @@ func (sm *StoreManager) gcLoop() {
 			metricGcFailedCount.Inc()
 		}
 		metricGcLatency.Set(time.Since(before).Seconds())
-		glog.Infof("GC finished in %v with return %q.  Next run in %v", time.Since(before), err, sm.config.Freq)
+		glog.Infof("GC finished in %v with error '%v'.  Next run in %v", time.Since(before), err, sm.config.Freq)
 
 		var afterGCEnds = sm.refreshStats()
 		var deltaStats = getDeltaStats(beforeGCStats, afterGCEnds)
@@ -158,42 +168,58 @@ func (sm *StoreManager) refreshStats() *storeStats {
 	return sm.stats
 }
 
-func doCleanup(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int, stats *storeStats) (bool, error) {
+func doCleanup(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int, stats *storeStats, deletionBatchSize int) (bool, float64, float64, error) {
 	ok, minPartition, maxPartition, err := tables.GetMinAndMaxPartition()
 	if err != nil {
-		return false, fmt.Errorf("failed to get min partition : %s, max partition: %s, err:%v", minPartition, maxPartition, err)
+		return false, 0, 0, fmt.Errorf("failed to get min partition : %s, max partition: %s, err:%v", minPartition, maxPartition, err)
 	}
 	if !ok {
-		return false, nil
+		return false, 0, 0, nil
 	}
 
+	var totalNumOfDeletedKeys float64 = 0
+	var totalNumOfKeysToDelete float64 = 0
 	anyCleanupPerformed := false
 	if cleanUpTimeCondition(minPartition, maxPartition, timeLimit) || cleanUpFileSizeCondition(stats, sizeLimitBytes) {
 		partStart, partEnd, err := untyped.GetTimeRangeForPartition(minPartition)
 		glog.Infof("GC removing partition %q with data from %v to %v (err %v)", minPartition, partStart, partEnd, err)
-		var errMsgs []string
+		minPartitionAge := 0.0
+		minPartitionAge, err = untyped.GetAgeOfPartitionInHours(minPartition)
+		if err != nil {
+			metricAgeOfMinimumPartition.Set(minPartitionAge)
+		}
+
+		maxPartitionAge, err := untyped.GetAgeOfPartitionInHours(maxPartition)
+		if err != nil {
+			metricAgeOfMaximumPartition.Set(maxPartitionAge)
+		}
+
+		var errMessages []string
 		for _, tableName := range tables.GetTableNames() {
 			prefix := fmt.Sprintf("/%s/%s", tableName, minPartition)
 			start := time.Now()
-			err = tables.Db().DropPrefix([]byte(prefix))
+			err, numOfDeletedKeys, numOfKeysToDelete := untyped.DeleteKeysWithPrefix([]byte(prefix), tables.Db(), deletionBatchSize)
+			metricGcDeletedNumberOfKeysByTable.WithLabelValues(fmt.Sprintf("%v", tableName)).Set(numOfDeletedKeys)
+			totalNumOfDeletedKeys += numOfDeletedKeys
+			totalNumOfKeysToDelete += numOfKeysToDelete
 			elapsed := time.Since(start)
-			glog.Infof("Call to DropPrefix(%v) took %v and returned %v", prefix, elapsed, err)
+			glog.Infof("Call to DeleteKeysWithPrefix(%v) took %v and removed %f keys with error: %v", prefix, elapsed, numOfDeletedKeys, err)
 			if err != nil {
-				errMsgs = append(errMsgs, fmt.Sprintf("failed to cleanup with min key: %s, elapsed: %v,err: %v,", prefix, elapsed, err))
+				errMessages = append(errMessages, fmt.Sprintf("failed to cleanup with min key: %s, elapsed: %v,err: %v,", prefix, elapsed, err))
 			}
 			anyCleanupPerformed = true
 		}
 
-		if len(errMsgs) != 0 {
+		if len(errMessages) != 0 {
 			var errMsg string
-			for _, er := range errMsgs {
+			for _, er := range errMessages {
 				errMsg += er + ","
 			}
-			return false, fmt.Errorf(errMsg)
+			return false, totalNumOfDeletedKeys, totalNumOfKeysToDelete, fmt.Errorf(errMsg)
 		}
 	}
 
-	return anyCleanupPerformed, nil
+	return anyCleanupPerformed, totalNumOfDeletedKeys, totalNumOfKeysToDelete, nil
 }
 
 func cleanUpTimeCondition(minPartition string, maxPartition string, timeLimit time.Duration) bool {

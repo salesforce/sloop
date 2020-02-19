@@ -39,6 +39,7 @@ type SloopConfig struct {
 	MaxDiskMb                int           `json:"maxDiskMb"`
 	DebugPlaybackFile        string        `json:"debugPlaybackFile"`
 	DebugRecordFile          string        `json:"debugRecordFile"`
+	DeletionBatchSize        int           `json:"deletionBatchSize"`
 	UseMockBadger            bool          `json:"mockBadger"`
 	DisableStoreManager      bool          `json:"disableStoreManager"`
 	CleanupFrequency         time.Duration `json:"cleanupFrequency" validate:"min=1h,max=120h"`
@@ -80,6 +81,7 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.StringVar(&config.DefaultLookback, "default-lookback", "1h", "Default UX filter lookback")
 	fs.StringVar(&config.DefaultKind, "default-kind", "_all", "Default UX filter kind")
 	fs.StringVar(&config.DefaultNamespace, "default-namespace", "default", "Default UX filter namespace")
+	fs.IntVar(&config.DeletionBatchSize, "deletion-batch-size", 1000, "Size of batch for deletion")
 	fs.StringVar(&config.UseKubeContext, "context", "", "Use a specific kubernetes context")
 	fs.StringVar(&config.DisplayContext, "display-context", "", "Use this to override the display context.  When running in k8s the context is empty string.  This lets you override that (mainly useful if you are running many copies of sloop on different clusters) ")
 	fs.StringVar(&config.ApiServerHost, "apiserver-host", "", "Kubernetes API server endpoint")

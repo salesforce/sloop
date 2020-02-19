@@ -124,6 +124,7 @@ func RealMain() error {
 			SizeLimitBytes:     conf.MaxDiskMb * 1024 * 1024,
 			BadgerDiscardRatio: conf.BadgerDiscardRatio,
 			BadgerVLogGCFreq:   conf.BadgerVLogGCFreq,
+			DeletionBatchSize:  conf.DeletionBatchSize,
 		}
 		storemgr = storemanager.NewStoreManager(tables, storeCfg, fs)
 		storemgr.Start()
