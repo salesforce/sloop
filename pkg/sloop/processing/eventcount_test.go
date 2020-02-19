@@ -162,7 +162,6 @@ func Test_EventCountTable_Events_Added_After_TruncateTS(t *testing.T) {
 
 	// adding the first event which ends up adding the first partition
 	addEventCount(t, tables, eventPTime28August, timestamp28AugustStartTime, timestamp28AugustEndTime)
-
 	timestamp29AugustStartTime := "2019-08-29T21:24:55Z"
 	timestamp29AugustEndTime := "2019-08-29T23:27:55Z"
 	eventPTime29August, _ := ptypes.TimestampProto(time.Date(2019, 8, 29, 21, 24, 55, 6, time.UTC))
