@@ -9,8 +9,8 @@ There are four tables in Sloop to store data:
 
 1. Watch table
 1. Resources summary table
-1. Watch activity table
 1. Event count table
+1. Watch activity table
 
 ----
 
