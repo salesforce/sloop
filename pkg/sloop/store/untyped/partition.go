@@ -72,7 +72,6 @@ func GetAgeOfPartitionInHours(partitionId string) (float64, error) {
 
 func TestHookSetPartitionDuration(partDuration time.Duration) {
 	partitionDuration = partDuration
-	return true
 }
 
 func GetPartitionDuration() time.Duration {
