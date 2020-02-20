@@ -66,6 +66,10 @@ func RealMain() error {
 		BadgerVLogMaxEntries:     conf.BadgerVLogMaxEntries,
 		BadgerUseLSMOnlyOptions:  conf.BadgerUseLSMOnlyOptions,
 		BadgerEnableEventLogging: conf.BadgerEnableEventLogging,
+		BadgerNumOfCompactors:    conf.BadgerNumOfCompactors,
+		BadgerNumL0Tables:        conf.BadgerNumL0Tables,
+		BadgerNumL0TablesStall:   conf.BadgerNumL0TablesStall,
+		BadgerSyncWrites:         conf.BadgerSyncWrites,
 	}
 	db, err := untyped.OpenStore(factory, storeConfig)
 	if err != nil {

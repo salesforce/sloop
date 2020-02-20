@@ -25,6 +25,10 @@ type Config struct {
 	BadgerVLogMaxEntries     uint
 	BadgerUseLSMOnlyOptions  bool
 	BadgerEnableEventLogging bool
+	BadgerNumOfCompactors    int
+	BadgerNumL0Tables        int
+	BadgerNumL0TablesStall   int
+	BadgerSyncWrites         bool
 }
 
 func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error) {
@@ -60,6 +64,19 @@ func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error
 		opts = opts.WithValueLogMaxEntries(uint32(config.BadgerVLogMaxEntries))
 	}
 
+	if config.BadgerNumOfCompactors != 0 {
+		opts = opts.WithNumCompactors(config.BadgerNumOfCompactors)
+	}
+
+	if config.BadgerNumL0Tables != 0 {
+		opts = opts.WithNumLevelZeroTables(config.BadgerNumL0Tables)
+	}
+
+	if config.BadgerNumL0TablesStall != 0 {
+		opts = opts.WithNumLevelZeroTablesStall(config.BadgerNumL0TablesStall)
+	}
+
+	opts.WithSyncWrites(config.BadgerSyncWrites)
 	db, err := factory.Open(opts)
 	if err != nil {
 		return nil, fmt.Errorf("badger.OpenStore failed with: %v", err)

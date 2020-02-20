@@ -60,6 +60,10 @@ type SloopConfig struct {
 	BadgerVLogMaxEntries     uint          `json:"badgerVLogMaxEntries"`
 	BadgerUseLSMOnlyOptions  bool          `json:"badgerUseLSMOnlyOptions"`
 	BadgerEnableEventLogging bool          `json:"badgerEnableEventLogging"`
+	BadgerNumOfCompactors    int           `json:"badgerNumOfCompactors"`
+	BadgerNumL0Tables        int           `json:"badgerNumLevelZeroTables"`
+	BadgerNumL0TablesStall   int           `json:"badgerNumLevelZeroTables"`
+	BadgerSyncWrites         bool          `json:"badgerBadgerSyncWrites"`
 }
 
 func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
@@ -95,6 +99,10 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.UintVar(&config.BadgerVLogMaxEntries, "badger-vlog-max-entries", 0, "Max number of entries per value log files. 0 = use badger default")
 	fs.BoolVar(&config.BadgerUseLSMOnlyOptions, "badger-use-lsm-only-options", true, "Sets a higher valueThreshold so values would be collocated with LSM tree reducing vlog disk usage")
 	fs.BoolVar(&config.BadgerEnableEventLogging, "badger-enable-event-logging", false, "Turns on badger event logging")
+	fs.IntVar(&config.BadgerNumOfCompactors, "badger-number-of-compactors", 0, "Number of compactors for badger")
+	fs.IntVar(&config.BadgerNumL0Tables, "badger-number-of-level-zero-tables", 0, "Number of level zero tables for badger")
+	fs.IntVar(&config.BadgerNumL0TablesStall, "badger-number-of-zero-tables-stall", 0, "Number of Level 0 tables that once reached causes the DB to stall until compaction succeeds")
+	fs.BoolVar(&config.BadgerSyncWrites, "badger-sync-writes", true, "Sync Writes ensures writes are synced to disk if set to true")
 }
 
 // This will first check if a config file is specified on cmd line using a temporary flagSet
