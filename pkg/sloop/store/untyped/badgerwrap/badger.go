@@ -128,6 +128,14 @@ func (i *BadgerItem) KeyCopy(dst []byte) []byte {
 	return i.item.KeyCopy(dst)
 }
 
+func (i *BadgerItem) EstimatedSize() int64 {
+	return i.item.EstimatedSize()
+}
+
+func (i *BadgerItem) IsDeletedOrExpired() bool {
+	return i.item.IsDeletedOrExpired()
+}
+
 // Iterator
 
 func (i *BadgerIterator) Close() {

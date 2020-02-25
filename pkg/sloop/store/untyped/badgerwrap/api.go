@@ -69,9 +69,9 @@ type Item interface {
 	Value(fn func(val []byte) error) error
 	ValueCopy(dst []byte) ([]byte, error)
 	//	DiscardEarlierVersions() bool
-	//	EstimatedSize() int64
+	EstimatedSize() int64
 	//	ExpiresAt() uint64
-	//	IsDeletedOrExpired() bool
+	IsDeletedOrExpired() bool
 	KeyCopy(dst []byte) []byte
 	//	KeySize() int64
 	//	String() string

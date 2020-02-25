@@ -179,6 +179,14 @@ func (i *MockItem) ValueCopy(dst []byte) ([]byte, error) {
 	return newcopy, nil
 }
 
+func (i *MockItem) EstimatedSize() int64 {
+	return int64(len(i.key) + len(i.value))
+}
+
+func (i *MockItem) IsDeletedOrExpired() bool {
+	return false
+}
+
 func (i *MockItem) KeyCopy(dst []byte) []byte {
 	copy(dst, i.key)
 	newcopy := make([]byte, len(i.key))
