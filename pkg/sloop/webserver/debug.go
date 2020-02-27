@@ -14,13 +14,13 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"html/template"
 	"net/http"
 	"path"
 	"regexp"
-	"strings"
 )
 
 type keyView struct {
@@ -164,91 +164,101 @@ func listKeysHandler(tables typed.Tables) http.HandlerFunc {
 	}
 }
 
-type SloopKeyInfo struct {
-	TotalKeys     int64
-	EstimatedSize int64
+type sloopKeyInfo struct {
+	MinimumSize int64
+	MaximumSize int64
+	TotalKeys   int64
+	TotalSize   int64
+	AverageSize float64
 }
 
-type SloopKey struct {
+type sloopKey struct {
 	TableName   string
 	PartitionID string
 }
 
 type histogram struct {
-	HistogramMap map[SloopKey]*SloopKeyInfo
+	HistogramMap map[sloopKey]*sloopKeyInfo
 	TotalKeys    int
 	DeletedKeys  int
 }
 
-// returns IsDeletedExpired, TableName, PartitionId, EstimatedSize, error.
-func ParseSloopKey(item badgerwrap.Item) (bool, string, string, int64, error) {
+// returns IsDeletedExpired, TableName, PartitionId, TotalSize, error.
+func parseSloopKey(item badgerwrap.Item) (bool, string, string, int64, error) {
 	key := item.Key()
-	parts := strings.Split(string(key), "/")
-	if len(parts) != 7 {
-		return false, "", "", 0, fmt.Errorf("key should have 6 parts: %x", key)
-	}
-
-	if parts[0] != "" {
-		return false, "", "", 0, fmt.Errorf("key should start with /: %x", key)
+	err, parts := common.ParseKey(string(key))
+	if err != nil {
+		return false, "", "", 0, err
 	}
 
 	var isDeletedExpired = item.IsDeletedOrExpired()
 	var tableName = parts[1]
 	var partitionId = parts[2]
-	return isDeletedExpired, tableName, partitionId, item.EstimatedSize(), nil
+	var estimatedSize = item.EstimatedSize()
+	return isDeletedExpired, tableName, partitionId, estimatedSize, nil
 }
 
 func histogramHandler(tables typed.Tables) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
-
+		var result histogram
 		prefix := request.URL.Query().Get("prefix")
 		if len(prefix) > 0 {
-			fmt.Printf("Only choosing keys with prefix: \n%s", prefix)
-		}
 
-		var result histogram
-		err := tables.Db().View(func(txn badgerwrap.Txn) error {
-			iterOpt := badger.DefaultIteratorOptions
-			iterOpt.Prefix = []byte(prefix)
-			iterOpt.PrefetchValues = false
-			itr := txn.NewIterator(iterOpt)
-			defer itr.Close()
-
-			totalKeys := 0
-			isDeletedExpiredKeys := 0
-			var m = make(map[SloopKey]*SloopKeyInfo)
-			for itr.Rewind(); itr.Valid(); itr.Next() {
-				item := itr.Item()
-				isDeletedExpiredOrDiscarded, tableName, partitionId, size, err := ParseSloopKey(item)
-				if err != nil {
-					return errors.Wrapf(err, "failed to print information about key: %x",
-						item.Key())
-				}
-				totalKeys++
-
-				if isDeletedExpiredOrDiscarded == true {
-					isDeletedExpiredKeys++
-				}
-
-				if m[SloopKey{tableName, partitionId}] == nil {
-					m[SloopKey{tableName, partitionId}] = &SloopKeyInfo{1, size}
-				} else {
-					m[SloopKey{tableName, partitionId}].TotalKeys++
-					m[SloopKey{tableName, partitionId}].EstimatedSize += size
-				}
+			if prefix == "*" {
+				prefix = ""
 			}
 
-			result.TotalKeys = totalKeys
-			result.DeletedKeys = isDeletedExpiredKeys
-			result.HistogramMap = m
-			return nil
-		})
+			err := tables.Db().View(func(txn badgerwrap.Txn) error {
+				iterOpt := badger.DefaultIteratorOptions
+				iterOpt.Prefix = []byte(prefix)
+				iterOpt.PrefetchValues = false
+				itr := txn.NewIterator(iterOpt)
+				defer itr.Close()
 
-		if err != nil {
-			logWebError(err, "Could not get histogram", request, writer)
-			return
+				totalKeys := 0
+				totalDeletedExpiredKeys := 0
+				var sloopMap = make(map[sloopKey]*sloopKeyInfo)
+				for itr.Rewind(); itr.Valid(); itr.Next() {
+					item := itr.Item()
+					isDeletedExpiredOrDiscarded, tableName, partitionId, size, err := parseSloopKey(item)
+					if err != nil {
+						return errors.Wrapf(err, "failed to parse information about key: %x",
+							item.Key())
+					}
+					totalKeys++
+
+					if isDeletedExpiredOrDiscarded == true {
+						totalDeletedExpiredKeys++
+					}
+
+					sloopKey := sloopKey{tableName, partitionId}
+					if sloopMap[sloopKey] == nil {
+						sloopMap[sloopKey] = &sloopKeyInfo{size, size, 1, size, float64(size)}
+					} else {
+						sloopMap[sloopKey].TotalKeys++
+						sloopMap[sloopKey].TotalSize += size
+						sloopMap[sloopKey].AverageSize = float64(sloopMap[sloopKey].TotalSize/sloopMap[sloopKey].TotalKeys)
+						if size < sloopMap[sloopKey].MinimumSize {
+							sloopMap[sloopKey].MinimumSize = size
+						}
+
+						if size > sloopMap[sloopKey].MaximumSize {
+							sloopMap[sloopKey].MaximumSize = size
+						}
+					}
+				}
+
+				result.TotalKeys = totalKeys
+				result.DeletedKeys = totalDeletedExpiredKeys
+				result.HistogramMap = sloopMap
+				return nil
+			})
+
+			if err != nil {
+				logWebError(err, "Could not get histogram", request, writer)
+				return
+			}
 		}
-
 		writer.Header().Set("content-type", "text/html")
 
 		t, err := template.New(debugHistogramFile).ParseFiles(path.Join(webFiles, debugHistogramFile))

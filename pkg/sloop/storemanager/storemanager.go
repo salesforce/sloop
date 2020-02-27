@@ -12,6 +12,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/spf13/afero"
@@ -97,7 +98,7 @@ func (sm *StoreManager) gcLoop() {
 		before := time.Now()
 		metricGcRunning.Set(1)
 		cleanUpPerformed, numOfDeletedKeys, numOfKeysToDelete, err := doCleanup(sm.tables, sm.config.TimeLimit, sm.config.SizeLimitBytes, sm.stats, sm.config.DeletionBatchSize)
-		metricGcCleanUpPerformed.Set(boolToFloat(cleanUpPerformed))
+		metricGcCleanUpPerformed.Set(common.BoolToFloat(cleanUpPerformed))
 		metricGcDeletedNumberOfKeys.Set(numOfDeletedKeys)
 		metricGcNumberOfKeysToDelete.Set(numOfKeysToDelete)
 		metricGcRunning.Set(0)
@@ -177,23 +178,22 @@ func doCleanup(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int,
 		return false, 0, 0, nil
 	}
 
+	minPartitionAge, err := untyped.GetAgeOfPartitionInHours(minPartition)
+	if err == nil {
+		metricAgeOfMinimumPartition.Set(minPartitionAge)
+	}
+
+	maxPartitionAge, err := untyped.GetAgeOfPartitionInHours(maxPartition)
+	if err == nil {
+		metricAgeOfMaximumPartition.Set(maxPartitionAge)
+	}
+
 	var totalNumOfDeletedKeys float64 = 0
 	var totalNumOfKeysToDelete float64 = 0
 	anyCleanupPerformed := false
 	if cleanUpTimeCondition(minPartition, maxPartition, timeLimit) || cleanUpFileSizeCondition(stats, sizeLimitBytes) {
 		partStart, partEnd, err := untyped.GetTimeRangeForPartition(minPartition)
 		glog.Infof("GC removing partition %q with data from %v to %v (err %v)", minPartition, partStart, partEnd, err)
-		minPartitionAge := 0.0
-		minPartitionAge, err = untyped.GetAgeOfPartitionInHours(minPartition)
-		if err != nil {
-			metricAgeOfMinimumPartition.Set(minPartitionAge)
-		}
-
-		maxPartitionAge, err := untyped.GetAgeOfPartitionInHours(maxPartition)
-		if err != nil {
-			metricAgeOfMaximumPartition.Set(maxPartitionAge)
-		}
-
 		var errMessages []string
 		for _, tableName := range tables.GetTableNames() {
 			prefix := fmt.Sprintf("/%s/%s", tableName, minPartition)

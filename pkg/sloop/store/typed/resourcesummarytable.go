@@ -9,8 +9,8 @@ package typed
 
 import (
 	"fmt"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
-	"strings"
 	"time"
 )
 
@@ -44,13 +44,11 @@ func (*ResourceSummaryKey) TableName() string {
 }
 
 func (k *ResourceSummaryKey) Parse(key string) error {
-	parts := strings.Split(key, "/")
-	if len(parts) != 7 {
-		return fmt.Errorf("Key should have 6 parts: %v", key)
+	err, parts := common.ParseKey(key)
+	if err != nil {
+		return err
 	}
-	if parts[0] != "" {
-		return fmt.Errorf("Key should start with /: %v", key)
-	}
+
 	if parts[1] != k.TableName() {
 		return fmt.Errorf("Second part of key (%v) should be %v", key, k.TableName())
 	}

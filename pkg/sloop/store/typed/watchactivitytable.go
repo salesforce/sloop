@@ -10,8 +10,8 @@ package typed
 import (
 	"fmt"
 	"github.com/dgraph-io/badger/v2"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"strings"
 )
 
 // Key is /<partition>/<kind>/<namespace>/<name>
@@ -42,13 +42,11 @@ func (*WatchActivityKey) TableName() string {
 }
 
 func (k *WatchActivityKey) Parse(key string) error {
-	parts := strings.Split(key, "/")
-	if len(parts) != 7 {
-		return fmt.Errorf("Key should have 6 parts: %v", key)
+	err, parts := common.ParseKey(key)
+	if err != nil {
+		return err
 	}
-	if parts[0] != "" {
-		return fmt.Errorf("Key should start with /: %v", key)
-	}
+
 	if parts[1] != k.TableName() {
 		return fmt.Errorf("Second part of key (%v) should be %v", key, k.TableName())
 	}
