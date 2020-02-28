@@ -169,7 +169,7 @@ type sloopKeyInfo struct {
 	MaximumSize int64
 	TotalKeys   int64
 	TotalSize   int64
-	AverageSize float64
+	AverageSize int64
 }
 
 type sloopKey struct {
@@ -183,19 +183,17 @@ type histogram struct {
 	DeletedKeys  int
 }
 
-// returns IsDeletedExpired, TableName, PartitionId, TotalSize, error.
-func parseSloopKey(item badgerwrap.Item) (bool, string, string, int64, error) {
+// returns TableName, PartitionId, error.
+func parseSloopKey(item badgerwrap.Item) (string, string, error) {
 	key := item.Key()
 	err, parts := common.ParseKey(string(key))
 	if err != nil {
-		return false, "", "", 0, err
+		return "", "", err
 	}
 
-	var isDeletedExpired = item.IsDeletedOrExpired()
 	var tableName = parts[1]
 	var partitionId = parts[2]
-	var estimatedSize = item.EstimatedSize()
-	return isDeletedExpired, tableName, partitionId, estimatedSize, nil
+	return tableName, partitionId, nil
 }
 
 func histogramHandler(tables typed.Tables) http.HandlerFunc {
@@ -220,24 +218,25 @@ func histogramHandler(tables typed.Tables) http.HandlerFunc {
 				var sloopMap = make(map[sloopKey]*sloopKeyInfo)
 				for itr.Rewind(); itr.Valid(); itr.Next() {
 					item := itr.Item()
-					isDeletedExpiredOrDiscarded, tableName, partitionId, size, err := parseSloopKey(item)
+					tableName, partitionId, err := parseSloopKey(item)
 					if err != nil {
 						return errors.Wrapf(err, "failed to parse information about key: %x",
 							item.Key())
 					}
 					totalKeys++
 
-					if isDeletedExpiredOrDiscarded == true {
+					if item.IsDeletedOrExpired() {
 						totalDeletedExpiredKeys++
 					}
 
+					size := item.EstimatedSize()
 					sloopKey := sloopKey{tableName, partitionId}
 					if sloopMap[sloopKey] == nil {
-						sloopMap[sloopKey] = &sloopKeyInfo{size, size, 1, size, float64(size)}
+						sloopMap[sloopKey] = &sloopKeyInfo{size, size, 1, size, size}
 					} else {
 						sloopMap[sloopKey].TotalKeys++
 						sloopMap[sloopKey].TotalSize += size
-						sloopMap[sloopKey].AverageSize = float64(sloopMap[sloopKey].TotalSize/sloopMap[sloopKey].TotalKeys)
+						sloopMap[sloopKey].AverageSize = sloopMap[sloopKey].TotalSize / sloopMap[sloopKey].TotalKeys
 						if size < sloopMap[sloopKey].MinimumSize {
 							sloopMap[sloopKey].MinimumSize = size
 						}
