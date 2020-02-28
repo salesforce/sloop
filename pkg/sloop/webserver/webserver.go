@@ -40,6 +40,7 @@ import (
 const (
 	debugViewKeyTemplateFile      = "debugviewkey.html"
 	debugListKeysTemplateFile     = "debuglistkeys.html"
+	debugHistogramFile            = "debughistogram.html"
 	debugConfigTemplateFile       = "debugconfig.html"
 	debugTemplateFile             = "debug.html"
 	debugBadgerTablesTemplateFile = "debugtables.html"
@@ -176,6 +177,7 @@ func Run(config WebConfig, tables typed.Tables) error {
 	// Debug pages
 	server.mux.HandleFunc("/debug/", debugHandler())
 	server.mux.HandleFunc("/debug/listkeys/", listKeysHandler(tables))
+	server.mux.HandleFunc("/debug/histogram/", histogramHandler(tables))
 	server.mux.HandleFunc("/debug/tables/", debugBadgerTablesHandler(tables.Db()))
 	server.mux.HandleFunc("/debug/view/", viewKeyHandler(tables))
 	server.mux.HandleFunc("/debug/config/", configHandler(config.ConfigYaml))

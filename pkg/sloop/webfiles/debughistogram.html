@@ -1,0 +1,49 @@
+<!--
+Copyright (c) 2020, salesforce.com, inc.
+All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause
+For full license text, see LICENSE.txt file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+-->
+<html>
+<head>
+    <title>Sloop Keys Histogram</title>
+    <link rel='shortcut icon' type='image/x-icon' href='/webfiles/favicon.ico' />
+</head>
+<body>
+[ <a href="/">Home</a> ][ <a href="/debug/">Debug Menu</a> ]<br/>
+
+<h2>Sloop Keys Histogram</h2>
+
+<table bgcolor="#f5f5f5" width="500px"><tr><td style="padding: 20px">
+<form action="/debug/histogram/" method="get">
+
+    <label for="prefix">Prefix of keys to filter: </label><br><br>
+    <input type="text" name="prefix" id="prefix"><br><br>
+    <label> Enter * to get all keys histogram </label><br><br>
+    <label> Format of key is /tablename/partitionId/ </label><br><br><br>
+    <input type="submit">
+</form>
+</td></tr></table>
+<br/>
+
+<table border="1">
+    <tr><td>Total keys</td><td>{{.TotalKeys}}</td></tr>
+    <tr><td>Deleted Keys</td><td><pre>{{.DeletedKeys}}</pre></td></tr>
+</table>
+
+<br/>
+
+<b>Partitions List</b>:<br/>
+<br/>
+<table border="1">
+    <tr><td>Table</td><td>Partition ID</td><td>Number of Keys</td><td>Estimated Size</td><td>Minimum Size</td><td>Maximum Size</td><td>Average Size</td></tr>
+    {{range $key, $value := .HistogramMap}}
+        <tr><td>{{$key.TableName}}</td><td>{{$key.PartitionID}}</td><td>{{$value.TotalKeys}}</td><td>{{$value.TotalSize}}</td><td>{{$value.MinimumSize}}</td><td>{{$value.MaximumSize}}</td><td>{{$value.AverageSize}}</td></tr>
+    {{end}}
+</table>
+</body>
+
+<script src="/webfiles/filter.js"></script>
+<script>
+</script>
+</html>
