@@ -27,7 +27,6 @@ func Test_ParseKey_Start_Parts(t *testing.T) {
 	assert.Equal(t, fmt.Errorf("key should start with /: %v", keyWith2Parts), err)
 }
 
-
 func Test_ParseKey_Success(t *testing.T) {
 	keyWith2Parts := "/part1/part2/part3/part4/part5/part6"
 	err, parts := ParseKey(keyWith2Parts)

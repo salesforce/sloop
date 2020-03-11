@@ -70,6 +70,8 @@ func RealMain() error {
 		BadgerNumL0Tables:        conf.BadgerNumL0Tables,
 		BadgerNumL0TablesStall:   conf.BadgerNumL0TablesStall,
 		BadgerSyncWrites:         conf.BadgerSyncWrites,
+		BadgerLevelOneSize:       conf.BadgerLevelOneSize,
+		BadgerLevSizeMultiplier:  conf.BadgerLevSizeMultiplier,
 	}
 	db, err := untyped.OpenStore(factory, storeConfig)
 	if err != nil {
@@ -129,6 +131,7 @@ func RealMain() error {
 			BadgerDiscardRatio: conf.BadgerDiscardRatio,
 			BadgerVLogGCFreq:   conf.BadgerVLogGCFreq,
 			DeletionBatchSize:  conf.DeletionBatchSize,
+			GCThreshold:        conf.ThresholdForGC,
 		}
 		storemgr = storemanager.NewStoreManager(tables, storeCfg, fs)
 		storemgr.Start()

@@ -37,8 +37,9 @@ func Test_cleanUpFileSizeCondition_True(t *testing.T) {
 		DiskSizeBytes: 10,
 	}
 
-	flag := cleanUpFileSizeCondition(stats, 3)
+	flag, ratio := cleanUpFileSizeCondition(stats, 5, 1)
 	assert.True(t, flag)
+	assert.Equal(t, 0.5, ratio)
 }
 
 func Test_cleanUpFileSizeCondition_False(t *testing.T) {
@@ -46,8 +47,9 @@ func Test_cleanUpFileSizeCondition_False(t *testing.T) {
 		DiskSizeBytes: 10,
 	}
 
-	flag := cleanUpFileSizeCondition(stats, 100)
+	flag, ratio := cleanUpFileSizeCondition(stats, 100, 0.8)
 	assert.False(t, flag)
+	assert.Equal(t, 0.0, ratio)
 }
 
 func Test_cleanUpTimeCondition(t *testing.T) {
@@ -122,7 +124,7 @@ func Test_doCleanup_true(t *testing.T) {
 		DiskSizeBytes: 10,
 	}
 
-	flag, _, _, err := doCleanup(tables, time.Hour, 2, stats, 10)
+	flag, _, _, err := doCleanup(tables, time.Hour, 2, stats, 10, 1)
 	assert.True(t, flag)
 	assert.Nil(t, err)
 }
@@ -135,7 +137,25 @@ func Test_doCleanup_false(t *testing.T) {
 		DiskSizeBytes: 10,
 	}
 
-	flag, _, _, err := doCleanup(tables, time.Hour, 1000, stats, 10)
+	flag, _, _, err := doCleanup(tables, time.Hour, 1000, stats, 10, 1)
 	assert.False(t, flag)
 	assert.Nil(t, err)
+}
+
+func Test_getNumberOfKeysToDelete_Success(t *testing.T) {
+	db := help_get_db(t)
+	keysToDelete := getNumberOfKeysToDelete(db, 0.5)
+	assert.Equal(t, 2.0, keysToDelete)
+}
+
+func Test_getNumberOfKeysToDelete_Failure(t *testing.T) {
+	db := help_get_db(t)
+	keysToDelete := getNumberOfKeysToDelete(db, 0)
+	assert.Equal(t, 0.0, keysToDelete)
+}
+
+func Test_getNumberOfKeysToDelete_TestCeiling(t *testing.T) {
+	db := help_get_db(t)
+	keysToDelete := getNumberOfKeysToDelete(db, 0.33)
+	assert.Equal(t, 2.0, keysToDelete)
 }

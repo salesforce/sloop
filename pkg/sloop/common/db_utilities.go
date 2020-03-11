@@ -1,4 +1,4 @@
-package untyped
+package common
 
 import (
 	"github.com/dgraph-io/badger/v2"
@@ -71,4 +71,19 @@ func DeleteKeysWithPrefix(keyPrefix []byte, db badgerwrap.DB, deletionBatchSize 
 
 	return nil, float64(numOfKeysDeleted), float64(numOfKeysToDelete)
 
+}
+
+func GetTotalKeyCount(db badgerwrap.DB) uint64 {
+	var totalKeyCount uint64 = 0
+	_ = db.View(func(txn badgerwrap.Txn) error {
+		iterOpt := badger.DefaultIteratorOptions
+		iterOpt.PrefetchValues = false
+		it := txn.NewIterator(iterOpt)
+		defer it.Close()
+		for it.Rewind(); it.Valid(); it.Next() {
+			totalKeyCount++
+		}
+		return nil
+	})
+	return totalKeyCount
 }
