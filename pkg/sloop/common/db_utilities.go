@@ -25,7 +25,7 @@ func deleteKeys(db badgerwrap.DB, keysForDelete [][]byte) (error, int) {
 	return nil, deletedKeysInThisBatch
 }
 
-func DeleteKeysWithPrefix(keyPrefix []byte, db badgerwrap.DB, deletionBatchSize int) (error, float64, float64) {
+func DeleteKeysWithPrefix(keyPrefix []byte, db badgerwrap.DB, deletionBatchSize int) (error, int, int) {
 	numOfKeysToDelete := 0
 	numOfKeysDeleted := 0
 	keysLeftToDelete := true
@@ -60,7 +60,7 @@ func DeleteKeysWithPrefix(keyPrefix []byte, db badgerwrap.DB, deletionBatchSize 
 			numOfKeysToDelete += len(keysThisBatch)
 			numOfKeysDeleted += deletedKeysInThisBatch
 			if err != nil {
-				return err, float64(numOfKeysDeleted), float64(numOfKeysToDelete)
+				return err, numOfKeysDeleted, numOfKeysToDelete
 			}
 		}
 
@@ -69,7 +69,7 @@ func DeleteKeysWithPrefix(keyPrefix []byte, db badgerwrap.DB, deletionBatchSize 
 		}
 	}
 
-	return nil, float64(numOfKeysDeleted), float64(numOfKeysToDelete)
+	return nil, numOfKeysDeleted, numOfKeysToDelete
 
 }
 

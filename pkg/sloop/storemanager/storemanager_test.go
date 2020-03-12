@@ -145,17 +145,17 @@ func Test_doCleanup_false(t *testing.T) {
 func Test_getNumberOfKeysToDelete_Success(t *testing.T) {
 	db := help_get_db(t)
 	keysToDelete := getNumberOfKeysToDelete(db, 0.5)
-	assert.Equal(t, 2.0, keysToDelete)
+	assert.Equal(t, int64(2), keysToDelete)
 }
 
 func Test_getNumberOfKeysToDelete_Failure(t *testing.T) {
 	db := help_get_db(t)
 	keysToDelete := getNumberOfKeysToDelete(db, 0)
-	assert.Equal(t, 0.0, keysToDelete)
+	assert.Equal(t, int64(0), keysToDelete)
 }
 
 func Test_getNumberOfKeysToDelete_TestCeiling(t *testing.T) {
 	db := help_get_db(t)
 	keysToDelete := getNumberOfKeysToDelete(db, 0.33)
-	assert.Equal(t, 2.0, keysToDelete)
+	assert.Equal(t, int64(2), keysToDelete)
 }
