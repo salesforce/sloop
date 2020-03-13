@@ -1,4 +1,4 @@
-package untyped
+package common
 
 import (
 	"github.com/dgraph-io/badger/v2"
@@ -14,8 +14,8 @@ func Test_Db_Utilities_DeleteKeysWithPrefix_DeleteAllKeys(t *testing.T) {
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix(commonPrefix))
 	err, numOfDeletedKeys, numOfKeysToDelete := DeleteKeysWithPrefix([]byte(commonPrefix), db, 10)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(4), numOfDeletedKeys)
-	assert.Equal(t, float64(4), numOfKeysToDelete)
+	assert.Equal(t, 4, numOfDeletedKeys)
+	assert.Equal(t, 4, numOfKeysToDelete)
 }
 
 func Test_Db_Utilities_DeleteKeysWithPrefix_DeleteNoKeys(t *testing.T) {
@@ -23,8 +23,8 @@ func Test_Db_Utilities_DeleteKeysWithPrefix_DeleteNoKeys(t *testing.T) {
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix(commonPrefix))
 	err, numOfDeletedKeys, numOfKeysToDelete := DeleteKeysWithPrefix([]byte(commonPrefix+"random"), db, 10)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(0), numOfDeletedKeys)
-	assert.Equal(t, float64(0), numOfKeysToDelete)
+	assert.Equal(t, 0, numOfDeletedKeys)
+	assert.Equal(t, 0, numOfKeysToDelete)
 }
 
 func Test_Db_Utilities_DeleteKeysWithPrefix_DeleteSomeKeys(t *testing.T) {
@@ -33,8 +33,25 @@ func Test_Db_Utilities_DeleteKeysWithPrefix_DeleteSomeKeys(t *testing.T) {
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix("randomStuff"+commonPrefix))
 	err, numOfDeletedKeys, numOfKeysToDelete := DeleteKeysWithPrefix([]byte(commonPrefix), db, 10)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(4), numOfDeletedKeys)
-	assert.Equal(t, float64(4), numOfKeysToDelete)
+	assert.Equal(t, 4, numOfDeletedKeys)
+	assert.Equal(t, 4, numOfKeysToDelete)
+}
+
+func Test_Db_Utilities_GetTotalKeyCount_SomeKeys(t *testing.T) {
+	db := helper_get_db(t)
+	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix(commonPrefix))
+	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix("randomStuff"+commonPrefix))
+	numberOfKeys := GetTotalKeyCount(db)
+
+	// expected count is 8 as each call to helper_add_keys_to_db adds keys in 4 tables
+	expectedNumberOfKeys := 8
+	assert.Equal(t, uint64(expectedNumberOfKeys), numberOfKeys)
+}
+
+func Test_Db_Utilities_GetTotalKeyCount_NoKeys(t *testing.T) {
+	db := helper_get_db(t)
+	numberOfKeys := GetTotalKeyCount(db)
+	assert.Equal(t, uint64(0), numberOfKeys)
 }
 
 func helper_get_db(t *testing.T) badgerwrap.DB {

@@ -51,10 +51,13 @@ type SloopConfig struct {
 	DisplayContext           string        `json:"displayContext"`
 	ApiServerHost            string        `json:"apiServerHost"`
 	WatchCrds                bool          `json:"watchCrds"`
+	ThresholdForGC           float64       `json:"threshold for GC"`
 	RestoreDatabaseFile      string        `json:"restoreDatabaseFile"`
 	BadgerDiscardRatio       float64       `json:"badgerDiscardRatio"`
 	BadgerVLogGCFreq         time.Duration `json:"badgerVLogGCFreq"`
 	BadgerMaxTableSize       int64         `json:"badgerMaxTableSize"`
+	BadgerLevelOneSize       int64         `json:"badgerLevelOneSize"`
+	BadgerLevSizeMultiplier  int           `json:"badgerLevSizeMultiplier"`
 	BadgerKeepL0InMemory     bool          `json:"badgerKeepL0InMemory"`
 	BadgerVLogFileSize       int64         `json:"badgerVLogFileSize"`
 	BadgerVLogMaxEntries     uint          `json:"badgerVLogMaxEntries"`
@@ -92,8 +95,11 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.BoolVar(&config.WatchCrds, "watch-crds", true, "Watch for activity for CRDs")
 	fs.StringVar(&config.RestoreDatabaseFile, "restore-database-file", "", "Restore database from backup file into current context.")
 	fs.Float64Var(&config.BadgerDiscardRatio, "badger-discard-ratio", 0.1, "Badger value log GC uses this value to decide if it wants to compact a vlog file.  Smaller values free more disk space but use more computing resources")
+	fs.Float64Var(&config.ThresholdForGC, "gc-threshold", 0.8, "Threshold for GC to start garbage collecting")
 	fs.DurationVar(&config.BadgerVLogGCFreq, "badger-vlog-gc-freq", time.Minute*1, "Frequency of running badger's ValueLogGC")
 	fs.Int64Var(&config.BadgerMaxTableSize, "badger-max-table-size", 0, "Max LSM table size in bytes.  0 = use badger default")
+	fs.Int64Var(&config.BadgerLevelOneSize, "badger-level-one-size", 0, "The maximum total size for Level 1.  0 = use badger default")
+	fs.IntVar(&config.BadgerLevSizeMultiplier, "badger-level-size-multiplier", 0, "The ratio between the maximum sizes of contiguous levels in the LSM.  0 = use badger default")
 	fs.BoolVar(&config.BadgerKeepL0InMemory, "badger-keep-l0-in-memory", true, "Keeps all level 0 tables in memory for faster writes and compactions")
 	fs.Int64Var(&config.BadgerVLogFileSize, "badger-vlog-file-size", 0, "Max size in bytes per value log file. 0 = use badger default")
 	fs.UintVar(&config.BadgerVLogMaxEntries, "badger-vlog-max-entries", 0, "Max number of entries per value log files. 0 = use badger default")

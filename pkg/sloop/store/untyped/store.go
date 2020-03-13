@@ -29,6 +29,8 @@ type Config struct {
 	BadgerNumL0Tables        int
 	BadgerNumL0TablesStall   int
 	BadgerSyncWrites         bool
+	BadgerLevelOneSize       int64
+	BadgerLevSizeMultiplier  int
 }
 
 func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error) {
@@ -76,7 +78,16 @@ func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error
 		opts = opts.WithNumLevelZeroTablesStall(config.BadgerNumL0TablesStall)
 	}
 
-	opts.WithSyncWrites(config.BadgerSyncWrites)
+	if config.BadgerLevelOneSize != 0 {
+		opts = opts.WithLevelOneSize(config.BadgerLevelOneSize)
+	}
+
+	if config.BadgerLevSizeMultiplier != 0 {
+		opts = opts.WithLevelSizeMultiplier(config.BadgerLevSizeMultiplier)
+	}
+
+	opts = opts.WithSyncWrites(config.BadgerSyncWrites)
+
 	db, err := factory.Open(opts)
 	if err != nil {
 		return nil, fmt.Errorf("badger.OpenStore failed with: %v", err)

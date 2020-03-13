@@ -1,4 +1,4 @@
-package untyped
+package common
 
 import (
 	"github.com/dgraph-io/badger/v2"
@@ -25,7 +25,7 @@ func deleteKeys(db badgerwrap.DB, keysForDelete [][]byte) (error, int) {
 	return nil, deletedKeysInThisBatch
 }
 
-func DeleteKeysWithPrefix(keyPrefix []byte, db badgerwrap.DB, deletionBatchSize int) (error, float64, float64) {
+func DeleteKeysWithPrefix(keyPrefix []byte, db badgerwrap.DB, deletionBatchSize int) (error, int, int) {
 	numOfKeysToDelete := 0
 	numOfKeysDeleted := 0
 	keysLeftToDelete := true
@@ -60,7 +60,7 @@ func DeleteKeysWithPrefix(keyPrefix []byte, db badgerwrap.DB, deletionBatchSize 
 			numOfKeysToDelete += len(keysThisBatch)
 			numOfKeysDeleted += deletedKeysInThisBatch
 			if err != nil {
-				return err, float64(numOfKeysDeleted), float64(numOfKeysToDelete)
+				return err, numOfKeysDeleted, numOfKeysToDelete
 			}
 		}
 
@@ -69,6 +69,21 @@ func DeleteKeysWithPrefix(keyPrefix []byte, db badgerwrap.DB, deletionBatchSize 
 		}
 	}
 
-	return nil, float64(numOfKeysDeleted), float64(numOfKeysToDelete)
+	return nil, numOfKeysDeleted, numOfKeysToDelete
 
+}
+
+func GetTotalKeyCount(db badgerwrap.DB) uint64 {
+	var totalKeyCount uint64 = 0
+	_ = db.View(func(txn badgerwrap.Txn) error {
+		iterOpt := badger.DefaultIteratorOptions
+		iterOpt.PrefetchValues = false
+		it := txn.NewIterator(iterOpt)
+		defer it.Close()
+		for it.Rewind(); it.Valid(); it.Next() {
+			totalKeyCount++
+		}
+		return nil
+	})
+	return totalKeyCount
 }

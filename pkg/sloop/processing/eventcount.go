@@ -107,6 +107,11 @@ func storeMinutes(tables typed.Tables, txn badgerwrap.Txn, minToCount map[int64]
 				return errors.Wrap(err, "Could not get event record")
 			}
 
+			// some event records were being returned with nil MapMinToEvents, this was causing runtime exception. Adding a TODO to investigate why these kind of records exist.
+			if eventRecord == nil || eventRecord.MapMinToEvents == nil {
+				return errors.Wrap(err, "Either retrieved event record  is nil or its  MapMinToEvents is nil")
+			}
+
 			if _, ok := eventRecord.MapMinToEvents[unixTime]; !ok {
 				eventRecord.MapMinToEvents[unixTime] = &typed.EventCounts{MapReasonToCount: make(map[string]int32)}
 			}
