@@ -219,14 +219,11 @@ func doCleanup(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int,
 		minPartition = untyped.GetPartitionId(minPartitionStartTime)
 
 		minPartitionAge, err := untyped.GetAgeOfPartitionInHours(minPartition)
-		if err == nil {
-			metricAgeOfMinimumPartition.Set(minPartitionAge)
+		if err != nil || minPartitionAge < 0 {
+			return false, totalNumOfDeletedKeys, totalNumOfKeysToDelete, fmt.Errorf("minimun partition age: %f cannot be less than zero", minPartitionAge)
 		}
 
-		if minPartitionAge < 0 {
-			return false, totalNumOfDeletedKeys, totalNumOfKeysToDelete, fmt.Errorf("minimun partition age cannot be less than zero")
-		}
-
+		metricAgeOfMinimumPartition.Set(minPartitionAge)
 		if len(errMessages) != 0 {
 			var errMsg string
 			for _, er := range errMessages {
@@ -258,6 +255,8 @@ func doCleanup(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int,
 }
 
 func deletePartition(minPartition string, tables typed.Tables, deletionBatchSize int) (int, int, []string) {
+	totalNumOfDeletedKeysforPrefix := 0
+	totalNumOfKeysToDeleteForPrefix := 0
 	numOfDeletedKeysforPrefix := 0
 	numOfKeysToDeleteForPrefix := 0
 
@@ -274,9 +273,12 @@ func deletePartition(minPartition string, tables typed.Tables, deletionBatchSize
 		if err != nil {
 			errMessages = append(errMessages, fmt.Sprintf("failed to cleanup with min key: %s, elapsed: %v,err: %v,", prefix, elapsed, err))
 		}
+
+		totalNumOfDeletedKeysforPrefix += numOfDeletedKeysforPrefix
+		totalNumOfKeysToDeleteForPrefix += numOfKeysToDeleteForPrefix
 	}
 
-	return numOfDeletedKeysforPrefix, numOfKeysToDeleteForPrefix, errMessages
+	return totalNumOfDeletedKeysforPrefix, totalNumOfKeysToDeleteForPrefix, errMessages
 }
 
 func cleanUpTimeCondition(minPartition string, maxPartition string, timeLimit time.Duration) bool {
@@ -323,7 +325,7 @@ func getNumberOfKeysToDelete(db badgerwrap.DB, garbageCollectionRatio float64) i
 
 	if garbageCollectionRatio <= 0 || garbageCollectionRatio > 1 {
 		// print float here and below
-		glog.V(2).Infof("Garbage collection ratio out of bounds. Unexpected ratio: %v", uint64(garbageCollectionRatio))
+		glog.V(2).Infof("Garbage collection ratio out of bounds. Unexpected ratio: %f", garbageCollectionRatio)
 		return 0
 	}
 
