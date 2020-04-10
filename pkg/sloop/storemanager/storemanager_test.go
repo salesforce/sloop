@@ -37,9 +37,12 @@ func Test_cleanUpFileSizeCondition_True(t *testing.T) {
 		DiskSizeBytes: 10,
 	}
 
-	flag, ratio := cleanUpFileSizeCondition(stats, 5, 1)
+	flag := cleanUpFileSizeCondition(stats, 5, 1, true, 1000)
 	assert.True(t, flag)
-	assert.Equal(t, 0.5, ratio)
+
+	flag = cleanUpFileSizeCondition(stats, 5, 1, false, 0)
+	assert.True(t, flag)
+
 }
 
 func Test_cleanUpFileSizeCondition_False(t *testing.T) {
@@ -47,9 +50,11 @@ func Test_cleanUpFileSizeCondition_False(t *testing.T) {
 		DiskSizeBytes: 10,
 	}
 
-	flag, ratio := cleanUpFileSizeCondition(stats, 100, 0.8)
+	flag := cleanUpFileSizeCondition(stats, 100, 0.8, true, 0)
 	assert.False(t, flag)
-	assert.Equal(t, 0.0, ratio)
+
+	flag = cleanUpFileSizeCondition(stats, 100, 0.8, false, 0)
+	assert.False(t, flag)
 }
 
 func Test_cleanUpTimeCondition(t *testing.T) {
@@ -77,7 +82,7 @@ func help_get_db(t *testing.T) badgerwrap.DB {
 	key1 := typed.NewWatchTableKey(partitionId, someKind+"a", someNamespace, someName, someTs).String()
 	key2 := typed.NewResourceSummaryKey(someTs, someKind+"b", someNamespace, someName, someUid).String()
 	key3 := typed.NewEventCountKey(someTs, someKind+"c", someNamespace, someName, someUid).String()
-	key4 := typed.NewWatchActivityKey(untyped.GetPartitionId(someTs), someKind+"d", someNamespace, someName, someUid).String()
+	key4 := typed.NewWatchActivityKey(partitionId, someKind+"d", someNamespace, someName, someUid).String()
 
 	wtval := &typed.KubeWatchResult{Kind: someKind}
 	rtval := &typed.ResourceSummary{DeletedAtEnd: false}
@@ -124,7 +129,7 @@ func Test_doCleanup_true(t *testing.T) {
 		DiskSizeBytes: 10,
 	}
 
-	flag, _, _, err := doCleanup(tables, time.Hour, 2, stats, 10, 1)
+	flag, _, _, err := doCleanup(tables, time.Hour, 2, stats, 10, 1, false)
 	assert.True(t, flag)
 	assert.Nil(t, err)
 }
@@ -137,7 +142,7 @@ func Test_doCleanup_false(t *testing.T) {
 		DiskSizeBytes: 10,
 	}
 
-	flag, _, _, err := doCleanup(tables, time.Hour, 1000, stats, 10, 1)
+	flag, _, _, err := doCleanup(tables, time.Hour, 1000, stats, 10, 1, false)
 	assert.False(t, flag)
 	assert.Nil(t, err)
 }
@@ -145,17 +150,17 @@ func Test_doCleanup_false(t *testing.T) {
 func Test_getNumberOfKeysToDelete_Success(t *testing.T) {
 	db := help_get_db(t)
 	keysToDelete := getNumberOfKeysToDelete(db, 0.5)
-	assert.Equal(t, int64(2), keysToDelete)
+	assert.Equal(t, uint64(2), keysToDelete)
 }
 
 func Test_getNumberOfKeysToDelete_Failure(t *testing.T) {
 	db := help_get_db(t)
 	keysToDelete := getNumberOfKeysToDelete(db, 0)
-	assert.Equal(t, int64(0), keysToDelete)
+	assert.Equal(t, uint64(0), keysToDelete)
 }
 
 func Test_getNumberOfKeysToDelete_TestCeiling(t *testing.T) {
 	db := help_get_db(t)
 	keysToDelete := getNumberOfKeysToDelete(db, 0.33)
-	assert.Equal(t, int64(2), keysToDelete)
+	assert.Equal(t, uint64(2), keysToDelete)
 }

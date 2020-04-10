@@ -10,7 +10,7 @@ require (
 	github.com/coreos/bbolt v1.3.1-coreos.6 // indirect
 	github.com/coreos/etcd v3.3.15+incompatible // indirect
 	github.com/dgraph-io/badger v1.6.0
-	github.com/dgraph-io/badger/v2 v2.0.0
+	github.com/dgraph-io/badger/v2 v2.0.2
 	github.com/dgryski/go-farm v0.0.0-20191112170834-c2139c5d712b // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/gogo/protobuf v1.3.1

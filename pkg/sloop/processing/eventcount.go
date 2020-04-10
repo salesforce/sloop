@@ -50,26 +50,22 @@ func updateEventCountTable(
 
 	// Truncate long-lived events to available partitions
 	// This avoids filling in data that will go beyond the current time range
-
-	// Default truncate as computedLastTs -1 * PartitionDuration.
-	// Essentially only allowing events in 1 partition by default. This scenario will only be hit for first event on new sloop with no data.
-	truncateTs := computedLastTs.Add(-1 * untyped.GetPartitionDuration())
-
-	// If there is only one partition, use minPartitionStartTime to ensure we receive events
-	// in that partition.
-	// Otherwise add events to all partitions from MinPartitionEndTime to computedTs.
-	// This ensures no events are added to the very last partition which may get garbage collected soon.
-	if ok, minPartition, maxPartition := tables.EventCountTable().GetMinMaxPartitions(txn); ok {
-		if minPartitionStartTime, minPartitionEndTime, err := untyped.GetTimeRangeForPartition(minPartition); err == nil {
-			if minPartition == maxPartition {
-				truncateTs = minPartitionStartTime
-			} else {
-				truncateTs = minPartitionEndTime
-			}
-		}
+	ok, minPartition, maxPartition := tables.GetMinAndMaxPartitionWithTxn(txn)
+	if err != nil || !ok {
+		return err
 	}
 
-	computedFirstTs, computedLastTs, computedCount = adjustForMaxLookback(computedFirstTs, computedLastTs, computedCount, truncateTs)
+	_, minPartitionEndTime, err := untyped.GetTimeRangeForPartition(minPartition)
+	if err != nil && minPartition != "" {
+		return err
+	}
+
+	maxPartitionStartTime, maxPartitionEndTime, err := untyped.GetTimeRangeForPartition(maxPartition)
+	if err != nil && maxPartition != "" {
+		return err
+	}
+
+	computedFirstTs, computedLastTs, computedCount = adjustForAvailablePartitions(computedFirstTs, computedLastTs, computedCount, minPartitionEndTime, maxPartitionStartTime, maxPartitionEndTime)
 
 	eventCountByMinute := spreadOutEvents(computedFirstTs, computedLastTs, computedCount)
 
@@ -246,16 +242,41 @@ func computeEventsDiff(prevEventInfo *kubeextractor.EventInfo, newEventInfo *kub
 	return prevEventInfo.LastTimestamp, newEventInfo.LastTimestamp, newCount
 }
 
-// When you first bring up Sloop it can read in events that have been occurring for an extremely long time (many months)
-// We dont want to spread them out beyond the maxLookback because they can create huge transactions that fail and will
-// immediately kick in GC.
 // Returns a new firstTs, lastTs and Count
-func adjustForMaxLookback(firstTs time.Time, lastTs time.Time, count int, truncateTs time.Time) (time.Time, time.Time, int) {
-	if firstTs.After(truncateTs) {
-		return firstTs, lastTs, count
+func adjustForAvailablePartitions(firstTs time.Time, lastTs time.Time, count int, minPartitionEndTime time.Time, maxPartitionStartTime time.Time, maxPartitionEndTime time.Time) (time.Time, time.Time, int) {
+	beginTruncateTs := minPartitionEndTime
+	endTruncateTs := maxPartitionEndTime
+
+	// If begin and end are the same, there is only one partition.
+	// Allow event count to add to only this partition.
+	if beginTruncateTs == endTruncateTs {
+		beginTruncateTs = maxPartitionStartTime
 	}
+
+	// There is no overlap with begin and end, there is no event count to return
+	if lastTs.Before(beginTruncateTs) || firstTs.After(endTruncateTs) {
+		return beginTruncateTs, endTruncateTs, 0
+	}
+
 	totalSeconds := lastTs.Sub(firstTs).Seconds()
-	beforeSeconds := truncateTs.Sub(firstTs).Seconds()
-	pctEventsToKeep := (totalSeconds - beforeSeconds) / totalSeconds
-	return truncateTs, lastTs, int(float64(count) * pctEventsToKeep)
+	secondsToKeep := totalSeconds
+
+	// if firstTs is before beginTruncateTs. Truncate to beginTruncateTs.
+	// else set beginTruncateTs to firstTs
+	if firstTs.Before(beginTruncateTs) {
+		secondsToKeep = secondsToKeep - beginTruncateTs.Sub(firstTs).Seconds()
+	} else {
+		beginTruncateTs = firstTs
+	}
+
+	// if lastTs is after endTruncateTs. Truncate to endTruncateTs
+	// else set endTruncateTs to lastTs
+	if lastTs.After(endTruncateTs) {
+		secondsToKeep = secondsToKeep - lastTs.Sub(endTruncateTs).Seconds()
+	} else {
+		endTruncateTs = lastTs
+	}
+
+	pctEventsToKeep := secondsToKeep / totalSeconds
+	return beginTruncateTs, endTruncateTs, int(float64(count) * pctEventsToKeep)
 }

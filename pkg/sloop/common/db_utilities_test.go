@@ -41,16 +41,16 @@ func Test_Db_Utilities_GetTotalKeyCount_SomeKeys(t *testing.T) {
 	db := helper_get_db(t)
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix(commonPrefix))
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix("randomStuff"+commonPrefix))
-	numberOfKeys := GetTotalKeyCount(db)
 
-	// expected count is 8 as each call to helper_add_keys_to_db adds keys in 4 tables
-	expectedNumberOfKeys := 8
+	numberOfKeys := GetTotalKeyCount(db, []byte(commonPrefix))
+	// expected count is 4 as each call to helper_add_keys_to_db adds keys in 4 tables, only the common prefix ones would return
+	expectedNumberOfKeys := 4
 	assert.Equal(t, uint64(expectedNumberOfKeys), numberOfKeys)
 }
 
 func Test_Db_Utilities_GetTotalKeyCount_NoKeys(t *testing.T) {
 	db := helper_get_db(t)
-	numberOfKeys := GetTotalKeyCount(db)
+	numberOfKeys := GetTotalKeyCount(db, []byte(""))
 	assert.Equal(t, uint64(0), numberOfKeys)
 }
 

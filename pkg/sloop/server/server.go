@@ -132,6 +132,7 @@ func RealMain() error {
 			BadgerVLogGCFreq:   conf.BadgerVLogGCFreq,
 			DeletionBatchSize:  conf.DeletionBatchSize,
 			GCThreshold:        conf.ThresholdForGC,
+			EnableDeletePrefix: conf.EnableDeleteKeys,
 		}
 		storemgr = storemanager.NewStoreManager(tables, storeCfg, fs)
 		storemgr.Start()

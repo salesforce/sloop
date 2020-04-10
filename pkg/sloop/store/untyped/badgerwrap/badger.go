@@ -80,6 +80,10 @@ func (b *BadgerDb) Backup(w io.Writer, since uint64) (uint64, error) {
 	return b.db.Backup(w, since)
 }
 
+func (b *BadgerDb) Flatten(workers int) error {
+	return b.db.Flatten(workers)
+}
+
 func (b *BadgerDb) Load(r io.Reader, maxPendingWrites int) error {
 	return b.db.Load(r, maxPendingWrites)
 }

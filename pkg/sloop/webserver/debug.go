@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"path"
 	"regexp"
+	"strings"
 )
 
 type keyView struct {
@@ -123,23 +124,46 @@ func listKeysHandler(tables typed.Tables) http.HandlerFunc {
 		var keys []string
 
 		count := 0
+		totalCount := 0
+		var totalSize int64 = 0
 		err = tables.Db().View(func(txn badgerwrap.Txn) error {
-			keyPrefix := "/" + table + "/"
+			keyPrefix := ""
+			if table != "internal" {
+				keyPrefix = "/" + table + "/"
+			}
+
 			iterOpt := badger.DefaultIteratorOptions
 			iterOpt.Prefix = []byte(keyPrefix)
+			iterOpt.AllVersions = true
+			iterOpt.InternalAccess = true
 			itr := txn.NewIterator(iterOpt)
 			defer itr.Close()
 
-			for itr.Seek([]byte(keyPrefix)); itr.ValidForPrefix([]byte(keyPrefix)); itr.Next() {
+			for itr.Rewind(); itr.Valid(); itr.Next() {
+				totalCount++
 				thisKey := string(itr.Item().Key())
 				if keyRegEx.MatchString(thisKey) {
-					keys = append(keys, thisKey)
-					count += 1
-					if count >= maxRows {
-						glog.Infof("Reached max rows: %v", maxRows)
-						break
+					if table == "internal" {
+						if !strings.HasPrefix(thisKey, "/eventcount") && !strings.HasPrefix(thisKey, "/ressum") && !strings.HasPrefix(thisKey, "/watch") && !strings.HasPrefix(thisKey, "/watchactivity") {
+							keys = append(keys, thisKey)
+							count += 1
+							totalSize += itr.Item().EstimatedSize()
+							if count >= maxRows {
+								glog.Infof("Reached max rows: %v", maxRows)
+								break
+							}
+						}
+					} else {
+						keys = append(keys, thisKey)
+						count += 1
+						totalSize += itr.Item().EstimatedSize()
+						if count >= maxRows {
+							glog.Infof("Reached max rows: %v", maxRows)
+							break
+						}
 					}
 				}
+
 			}
 			return nil
 		})
@@ -155,8 +179,12 @@ func listKeysHandler(tables typed.Tables) http.HandlerFunc {
 			logWebError(err, "failed to parse template", request, writer)
 			return
 		}
-
-		err = t.ExecuteTemplate(writer, debugListKeysTemplateFile, keys)
+		var result keysData
+		result.Keys = keys
+		result.TotalKeys = totalCount
+		result.TotalSize = totalSize
+		result.KeysMatched = count
+		err = t.ExecuteTemplate(writer, debugListKeysTemplateFile, result)
 		if err != nil {
 			logWebError(err, "Template.ExecuteTemplate failed", request, writer)
 			return
@@ -172,28 +200,24 @@ type sloopKeyInfo struct {
 	AverageSize int64
 }
 
-type sloopKey struct {
-	TableName   string
-	PartitionID string
-}
-
 type histogram struct {
-	HistogramMap map[sloopKey]*sloopKeyInfo
-	TotalKeys    int
-	DeletedKeys  int
+	HistogramMap          map[common.SloopKey]*sloopKeyInfo
+	TotalKeys             int
+	TotalSloopKeys        int
+	TotalEstimatedSize    int64
+	DeletedKeys           int
+	TotalInternalKeys     int
+	TotalInternalKeysSize int64
+	TotalHeadKeys         int
+	TotalMoveKeys         int
+	TotalDiscardKeys      int
 }
 
-// returns TableName, PartitionId, error.
-func parseSloopKey(item badgerwrap.Item) (string, string, error) {
-	key := item.Key()
-	err, parts := common.ParseKey(string(key))
-	if err != nil {
-		return "", "", err
-	}
-
-	var tableName = parts[1]
-	var partitionId = parts[2]
-	return tableName, partitionId, nil
+type keysData struct {
+	Keys        []string
+	TotalKeys   int
+	TotalSize   int64
+	KeysMatched int
 }
 
 func histogramHandler(tables typed.Tables) http.HandlerFunc {
@@ -210,39 +234,62 @@ func histogramHandler(tables typed.Tables) http.HandlerFunc {
 				iterOpt := badger.DefaultIteratorOptions
 				iterOpt.Prefix = []byte(prefix)
 				iterOpt.PrefetchValues = false
+				iterOpt.AllVersions = true
+				iterOpt.InternalAccess = true
 				itr := txn.NewIterator(iterOpt)
 				defer itr.Close()
 
 				totalKeys := 0
+				var totalEstimatedSize int64 = 0
+				var totalInternalKeysSize int64 = 0
 				totalDeletedExpiredKeys := 0
-				var sloopMap = make(map[sloopKey]*sloopKeyInfo)
+				totalInternalKeys := 0
+				totalMoveKeys := 0
+				totalHeadKeys := 0
+				totalDiscardKeys := 0
+				totalSloopKeys := 0
+				var sloopMap = make(map[common.SloopKey]*sloopKeyInfo)
 				for itr.Rewind(); itr.Valid(); itr.Next() {
 					item := itr.Item()
-					tableName, partitionId, err := parseSloopKey(item)
-					if err != nil {
-						return errors.Wrapf(err, "failed to parse information about key: %x",
-							item.Key())
-					}
+					size := item.EstimatedSize()
+					totalEstimatedSize += size
 					totalKeys++
-
 					if item.IsDeletedOrExpired() {
 						totalDeletedExpiredKeys++
 					}
 
-					size := item.EstimatedSize()
-					sloopKey := sloopKey{tableName, partitionId}
-					if sloopMap[sloopKey] == nil {
-						sloopMap[sloopKey] = &sloopKeyInfo{size, size, 1, size, size}
+					if strings.HasPrefix(string(item.Key()), "!badger") {
+						totalInternalKeys++
+						totalInternalKeysSize += item.EstimatedSize()
+						if strings.HasPrefix(string(item.Key()), "!badger!head") {
+							totalHeadKeys++
+						} else if strings.HasPrefix(string(item.Key()), "!badger!move") {
+							totalMoveKeys++
+						} else if strings.HasPrefix(string(item.Key()), "!badger!discard") {
+							totalDiscardKeys++
+						}
 					} else {
-						sloopMap[sloopKey].TotalKeys++
-						sloopMap[sloopKey].TotalSize += size
-						sloopMap[sloopKey].AverageSize = sloopMap[sloopKey].TotalSize / sloopMap[sloopKey].TotalKeys
-						if size < sloopMap[sloopKey].MinimumSize {
-							sloopMap[sloopKey].MinimumSize = size
+						totalSloopKeys++
+						tableName, partitionId, err := common.ParseSloopKey(item)
+						if err != nil {
+							return errors.Wrapf(err, "failed to parse information about key: %x",
+								item.Key())
 						}
 
-						if size > sloopMap[sloopKey].MaximumSize {
-							sloopMap[sloopKey].MaximumSize = size
+						sloopKey := common.SloopKey{tableName, partitionId}
+						if sloopMap[sloopKey] == nil {
+							sloopMap[sloopKey] = &sloopKeyInfo{size, size, 1, size, size}
+						} else {
+							sloopMap[sloopKey].TotalKeys++
+							sloopMap[sloopKey].TotalSize += size
+							sloopMap[sloopKey].AverageSize = sloopMap[sloopKey].TotalSize / sloopMap[sloopKey].TotalKeys
+							if size < sloopMap[sloopKey].MinimumSize {
+								sloopMap[sloopKey].MinimumSize = size
+							}
+
+							if size > sloopMap[sloopKey].MaximumSize {
+								sloopMap[sloopKey].MaximumSize = size
+							}
 						}
 					}
 				}
@@ -250,6 +297,13 @@ func histogramHandler(tables typed.Tables) http.HandlerFunc {
 				result.TotalKeys = totalKeys
 				result.DeletedKeys = totalDeletedExpiredKeys
 				result.HistogramMap = sloopMap
+				result.TotalDiscardKeys = totalDiscardKeys
+				result.TotalEstimatedSize = totalEstimatedSize
+				result.TotalHeadKeys = totalHeadKeys
+				result.TotalInternalKeys = totalInternalKeys
+				result.TotalMoveKeys = totalMoveKeys
+				result.TotalInternalKeysSize = totalInternalKeysSize
+				result.TotalSloopKeys = totalSloopKeys
 				return nil
 			})
 
@@ -311,6 +365,7 @@ type badgerTableInfo struct {
 	RightKey string
 	KeyCount uint64
 	ID       uint64
+	Size     uint64
 }
 
 func debugBadgerTablesHandler(db badgerwrap.DB) http.HandlerFunc {
@@ -328,6 +383,7 @@ func debugBadgerTablesHandler(db badgerwrap.DB) http.HandlerFunc {
 				RightKey: string(table.Right),
 				KeyCount: table.KeyCount,
 				ID:       table.ID,
+				Size:     table.EstimatedSz,
 			}
 			data = append(data, thisTable)
 		}

@@ -67,6 +67,7 @@ type SloopConfig struct {
 	BadgerNumL0Tables        int           `json:"badgerNumLevelZeroTables"`
 	BadgerNumL0TablesStall   int           `json:"badgerNumLevelZeroTables"`
 	BadgerSyncWrites         bool          `json:"badgerBadgerSyncWrites"`
+	EnableDeleteKeys         bool          `json:"enableDeleteKeys"`
 }
 
 func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
@@ -94,7 +95,7 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.StringVar(&config.ApiServerHost, "apiserver-host", "", "Kubernetes API server endpoint")
 	fs.BoolVar(&config.WatchCrds, "watch-crds", true, "Watch for activity for CRDs")
 	fs.StringVar(&config.RestoreDatabaseFile, "restore-database-file", "", "Restore database from backup file into current context.")
-	fs.Float64Var(&config.BadgerDiscardRatio, "badger-discard-ratio", 0.1, "Badger value log GC uses this value to decide if it wants to compact a vlog file.  Smaller values free more disk space but use more computing resources")
+	fs.Float64Var(&config.BadgerDiscardRatio, "badger-discard-ratio", 0.99, "Badger value log GC uses this value to decide if it wants to compact a vlog file. The lower the value of discardRatio the higher the number of !badger!move keys. And thus more the number of !badger!move keys, the size on disk keeps on increasing over time.")
 	fs.Float64Var(&config.ThresholdForGC, "gc-threshold", 0.8, "Threshold for GC to start garbage collecting")
 	fs.DurationVar(&config.BadgerVLogGCFreq, "badger-vlog-gc-freq", time.Minute*1, "Frequency of running badger's ValueLogGC")
 	fs.Int64Var(&config.BadgerMaxTableSize, "badger-max-table-size", 0, "Max LSM table size in bytes.  0 = use badger default")
@@ -102,13 +103,14 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.IntVar(&config.BadgerLevSizeMultiplier, "badger-level-size-multiplier", 0, "The ratio between the maximum sizes of contiguous levels in the LSM.  0 = use badger default")
 	fs.BoolVar(&config.BadgerKeepL0InMemory, "badger-keep-l0-in-memory", true, "Keeps all level 0 tables in memory for faster writes and compactions")
 	fs.Int64Var(&config.BadgerVLogFileSize, "badger-vlog-file-size", 0, "Max size in bytes per value log file. 0 = use badger default")
-	fs.UintVar(&config.BadgerVLogMaxEntries, "badger-vlog-max-entries", 0, "Max number of entries per value log files. 0 = use badger default")
-	fs.BoolVar(&config.BadgerUseLSMOnlyOptions, "badger-use-lsm-only-options", true, "Sets a higher valueThreshold so values would be collocated with LSM tree reducing vlog disk usage")
-	fs.BoolVar(&config.BadgerEnableEventLogging, "badger-enable-event-logging", false, "Turns on badger event logging")
+	fs.UintVar(&config.BadgerVLogMaxEntries, "badger-vlog-max-entries", 200000, "Max number of entries per value log files. 0 = use badger default")
+	fs.BoolVar(&config.BadgerUseLSMOnlyOptions, "badger-use-lsm-only-options", false, "Sets a higher valueThreshold so values would be collocated with LSM tree reducing vlog disk usage")
+	fs.BoolVar(&config.BadgerEnableEventLogging, "badger-enable-event-logging", true, "Turns on badger event logging")
 	fs.IntVar(&config.BadgerNumOfCompactors, "badger-number-of-compactors", 0, "Number of compactors for badger")
 	fs.IntVar(&config.BadgerNumL0Tables, "badger-number-of-level-zero-tables", 0, "Number of level zero tables for badger")
 	fs.IntVar(&config.BadgerNumL0TablesStall, "badger-number-of-zero-tables-stall", 0, "Number of Level 0 tables that once reached causes the DB to stall until compaction succeeds")
 	fs.BoolVar(&config.BadgerSyncWrites, "badger-sync-writes", true, "Sync Writes ensures writes are synced to disk if set to true")
+	fs.BoolVar(&config.EnableDeleteKeys, "enable-delete-keys", false, "Use delete prefixes instead of dropPrefix for GC")
 }
 
 // This will first check if a config file is specified on cmd line using a temporary flagSet

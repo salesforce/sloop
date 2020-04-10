@@ -231,7 +231,9 @@ func addEventCount(t *testing.T, tables typed.Tables, timeStamp *timestamp.Times
 	involvedObject, err := kubeextractor.ExtractInvolvedObject(watchRec.Payload)
 	assert.Nil(t, err)
 
+	metadata := &kubeextractor.KubeMetadata{Name: "someName", Namespace: "someNamespace"}
 	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
+		updateKubeWatchTable(tables, txn, &watchRec, metadata, true)
 		// For dedupe to work we need a record written to the watch table
 		err2 := updateEventCountTable(tables, txn, &watchRec, &resourceMetadata, &involvedObject, someMaxLookback)
 		if err2 != nil {
@@ -397,18 +399,4 @@ func Test_computeEventsDiff_PartiallyOverlapping(t *testing.T) {
 	assert.Equal(t, 1, count)
 	assert.Equal(t, someEventTs3, t1)
 	assert.Equal(t, someEventTs4, t2)
-}
-
-func Test_adjustForMaxLookback_ShortEventNoChange(t *testing.T) {
-	first, last, count := adjustForMaxLookback(someEventTs3, someEventTs4, 100, someEventTs1)
-	assert.Equal(t, someEventTs3, first)
-	assert.Equal(t, someEventTs4, last)
-	assert.Equal(t, 100, count)
-}
-
-func Test_adjustForMaxLookback_LongEventGetsTruncated(t *testing.T) {
-	first, last, count := adjustForMaxLookback(someEventTs1, someEventTs4, 1000, someEventTs3)
-	assert.Equal(t, someEventTs3, first)
-	assert.Equal(t, someEventTs4, last)
-	assert.Equal(t, 333, count)
 }
