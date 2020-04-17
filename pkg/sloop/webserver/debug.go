@@ -270,7 +270,7 @@ func histogramHandler(tables typed.Tables) http.HandlerFunc {
 						}
 					} else {
 						totalSloopKeys++
-						tableName, partitionId, err := common.ParseSloopKey(item)
+						tableName, partitionId, err := common.GetPartitionIDAndTableName(item)
 						if err != nil {
 							return errors.Wrapf(err, "failed to parse information about key: %x",
 								item.Key())

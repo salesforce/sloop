@@ -147,20 +147,58 @@ func Test_doCleanup_false(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_getNumberOfKeysToDelete_Success(t *testing.T) {
+func Test_getPartitionsToDelete(t *testing.T) {
 	db := help_get_db(t)
-	keysToDelete := getNumberOfKeysToDelete(db, 0.5)
+	tables := typed.NewTableList(db)
+
+	partitionsToDelete, _ := getPartitionsToDelete(tables, time.Hour, 2, 10, 0.9)
+	assert.Equal(t, len(partitionsToDelete), 1)
+
+	partitionsToDelete, _ = getPartitionsToDelete(tables, time.Hour, 20, 10, 0.9)
+	assert.Equal(t, len(partitionsToDelete), 0)
+}
+
+func Test_getGarbageCollectionRatio(t *testing.T) {
+	ratio := getGarbageCollectionRatio(1000, 900, 0.9)
+	assert.Equal(t, 0.19, ratio)
+
+	ratio = getGarbageCollectionRatio(1000, 900, 1)
+	assert.Equal(t, 0.1, ratio)
+
+	ratio = getGarbageCollectionRatio(900, 1000, 0.9)
+	assert.Equal(t, 0.0, ratio)
+}
+
+func Test_hasFilesOnDiskExceededThreshold(t *testing.T) {
+	hasExceeded := hasFilesOnDiskExceededThreshold(1000, 1000, 0.9)
+	assert.True(t, hasExceeded)
+
+	hasExceeded = hasFilesOnDiskExceededThreshold(1100, 1000, 1)
+	assert.True(t, hasExceeded)
+
+	hasExceeded = hasFilesOnDiskExceededThreshold(900, 1000, 0.9)
+	assert.False(t, hasExceeded)
+}
+
+func Test_getNumberOfKeysToDelete(t *testing.T) {
+	numKeysToDelete := getNumberOfKeysToDelete(0, 1000)
+	assert.Equal(t, uint64(0), numKeysToDelete)
+
+	numKeysToDelete = getNumberOfKeysToDelete(0.1, 1000)
+	assert.Equal(t, uint64(100), numKeysToDelete)
+}
+
+func Test_getNumberOfKeysToDelete_Success(t *testing.T) {
+	keysToDelete := getNumberOfKeysToDelete(0.5, 4)
 	assert.Equal(t, uint64(2), keysToDelete)
 }
 
 func Test_getNumberOfKeysToDelete_Failure(t *testing.T) {
-	db := help_get_db(t)
-	keysToDelete := getNumberOfKeysToDelete(db, 0)
+	keysToDelete := getNumberOfKeysToDelete(0, 4)
 	assert.Equal(t, uint64(0), keysToDelete)
 }
 
 func Test_getNumberOfKeysToDelete_TestCeiling(t *testing.T) {
-	db := help_get_db(t)
-	keysToDelete := getNumberOfKeysToDelete(db, 0.33)
+	keysToDelete := getNumberOfKeysToDelete(0.33, 4)
 	assert.Equal(t, uint64(2), keysToDelete)
 }

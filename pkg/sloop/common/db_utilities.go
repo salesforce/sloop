@@ -4,10 +4,11 @@ import (
 	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/glog"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
+	"sort"
 )
 
-func deleteKeys(db badgerwrap.DB, keysForDelete [][]byte) (error, int) {
-	deletedKeysInThisBatch := 0
+func deleteKeys(db badgerwrap.DB, keysForDelete [][]byte) (error, uint64) {
+	var deletedKeysInThisBatch uint64 = 0
 	err := db.Update(func(txn badgerwrap.Txn) error {
 		for _, key := range keysForDelete {
 			err := txn.Delete(key)
@@ -27,13 +28,12 @@ func deleteKeys(db badgerwrap.DB, keysForDelete [][]byte) (error, int) {
 }
 
 // deletes the keys with a given prefix
-func DeleteKeysWithPrefix(keyPrefix []byte, db badgerwrap.DB, deletionBatchSize int) (error, int, int) {
+func DeleteKeysWithPrefix(keyPrefix string, db badgerwrap.DB, deletionBatchSize int, numOfKeysToDelete uint64) (error, uint64, uint64) {
 
 	// as deletion does not lock db there is a possibility that the keys for a given prefix are added while old ones are deleted. In this case it can get into a race condition.
-	// In order to avoid this, count of existing keys is taken which match the given prefix and deletion ends when this number of keys have been deleted
-	numOfKeysToDelete := int(GetTotalKeyCount(db, keyPrefix))
-	numOfKeysDeleted := 0
+	// In order to avoid this, count of existing keys is used which match the given prefix and deletion ends when this number of keys have been deleted
 
+	var numOfKeysDeleted uint64 = 0
 	for numOfKeysDeleted < numOfKeysToDelete {
 
 		keysThisBatch := make([][]byte, 0, deletionBatchSize)
@@ -41,12 +41,12 @@ func DeleteKeysWithPrefix(keyPrefix []byte, db badgerwrap.DB, deletionBatchSize 
 		// getting the keys to delete that have the given prefix
 		_ = db.View(func(txn badgerwrap.Txn) error {
 			iterOpt := badger.DefaultIteratorOptions
-			iterOpt.Prefix = keyPrefix
+			iterOpt.Prefix = []byte(keyPrefix)
 			iterOpt.PrefetchValues = false
 			it := txn.NewIterator(iterOpt)
 			defer it.Close()
 
-			for it.Rewind(); it.ValidForPrefix(keyPrefix); it.Next() {
+			for it.Rewind(); it.ValidForPrefix([]byte(keyPrefix)); it.Next() {
 				keyToDel := it.Item().KeyCopy(nil)
 				keysThisBatch = append(keysThisBatch, keyToDel)
 				if len(keysThisBatch) == deletionBatchSize {
@@ -94,7 +94,7 @@ type SloopKey struct {
 }
 
 // returns TableName, PartitionId, error.
-func ParseSloopKey(item badgerwrap.Item) (string, string, error) {
+func GetPartitionIDAndTableName(item badgerwrap.Item) (string, string, error) {
 	key := item.Key()
 	err, parts := ParseKey(string(key))
 	if err != nil {
@@ -106,34 +106,42 @@ func ParseSloopKey(item badgerwrap.Item) (string, string, error) {
 	return tableName, partitionId, nil
 }
 
+type PartitionInfo struct {
+	TotalKeyCount          uint64
+	TableNameToKeyCountMap map[string]uint64
+}
+
 // prints all the keys histogram. It can help debugging when needed.
 func PrintKeyHistogram(db badgerwrap.DB) {
-	keyHistogram := make(map[SloopKey]uint64)
-	_ = db.View(func(txn badgerwrap.Txn) error {
-		iterOpt := badger.DefaultIteratorOptions
-		iterOpt.PrefetchValues = false
-		it := txn.NewIterator(iterOpt)
-		defer it.Close()
-		for it.Rewind(); it.Valid(); it.Next() {
-			item := it.Item()
-			tableName, partitionId, err := ParseSloopKey(item)
-			if err != nil {
-				glog.Infof("failed to parse information about key: %x", item.Key())
-			}
+	partitionTableNameToKeyCountMap, totalKeyCount := GetPartitionsInfo(db)
+	glog.Infof("TotalkeyCount: %v", totalKeyCount)
 
-			sloopKey := SloopKey{tableName, partitionId}
-			keyHistogram[sloopKey]++
+	for partitionID, partitionInfo := range partitionTableNameToKeyCountMap {
+		for tableName, keyCount := range partitionInfo.TableNameToKeyCountMap {
+			glog.Infof("TableName: %v, PartitionId: %v, keyCount: %v", tableName, partitionID, keyCount)
 		}
-		return nil
-	})
-
-	for key, element := range keyHistogram {
-		glog.Infof("TableName: %v, PartitionId: %v, keyCount: %v", key.TableName, key.PartitionID, element)
 	}
 }
 
-func GetPartitions(db badgerwrap.DB) map[string]uint64 {
-	partitionHistogram := make(map[string]uint64)
+// Returns the sorted list of partitionIDs from the given partitions Info map
+func GetSortedPartitionIDs(partitionsInfoMap map[string]*PartitionInfo) []string {
+	var sortedListOfPartitionIds []string
+
+	for partitionID, _ := range partitionsInfoMap {
+		sortedListOfPartitionIds = append(sortedListOfPartitionIds, partitionID)
+	}
+
+	// Sorted numbered strings here is ok since they are all of the same length
+	sort.Strings(sortedListOfPartitionIds)
+	return sortedListOfPartitionIds
+}
+
+// Gets the Information for partitions to key Count Map
+// Returns Partitions to KeyCount Map, Partitions TableName to Key Count and total key count
+func GetPartitionsInfo(db badgerwrap.DB) (map[string]*PartitionInfo, uint64) {
+	var totalKeyCount uint64 = 0
+	partitionIDToPartitionInfoMap := make(map[string]*PartitionInfo)
+
 	_ = db.View(func(txn badgerwrap.Txn) error {
 		iterOpt := badger.DefaultIteratorOptions
 		iterOpt.PrefetchValues = false
@@ -141,14 +149,21 @@ func GetPartitions(db badgerwrap.DB) map[string]uint64 {
 		defer it.Close()
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
-			_, partitionId, err := ParseSloopKey(item)
+			tableName, partitionId, err := GetPartitionIDAndTableName(item)
 			if err != nil {
 				glog.Infof("failed to parse information about key: %x", item.Key())
 			}
-			partitionHistogram[partitionId]++
+			sloopKey := SloopKey{tableName, partitionId}
+			if partitionIDToPartitionInfoMap[sloopKey.PartitionID] == nil {
+				partitionIDToPartitionInfoMap[sloopKey.PartitionID] = &PartitionInfo{0, make(map[string]uint64)}
+			}
+
+			partitionIDToPartitionInfoMap[sloopKey.PartitionID].TotalKeyCount++
+			partitionIDToPartitionInfoMap[sloopKey.PartitionID].TableNameToKeyCountMap[sloopKey.TableName]++
+			totalKeyCount++
 		}
 		return nil
 	})
 
-	return partitionHistogram
+	return partitionIDToPartitionInfoMap, totalKeyCount
 }
