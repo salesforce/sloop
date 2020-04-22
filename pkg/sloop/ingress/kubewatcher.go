@@ -49,6 +49,13 @@ type kubeWatcherImpl struct {
 	currentContext  string
 }
 
+type crdGroupVersionResourceKind struct {
+	group    string
+	version  string
+	resource string
+	kind     string
+}
+
 var (
 	metricIngressKubewatchcount = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchcount"}, []string{"kind", "watchtype", "namespace"})
 	metricIngressKubewatchbytes = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchbytes"}, []string{"kind", "watchtype", "namespace"})
@@ -111,13 +118,11 @@ func (i *kubeWatcherImpl) startCustomInformers(masterURL string, kubeContext str
 
 	f := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynamicClient, i.resync, "", nil)
 	for _, crd := range crdList {
-		resource, _ := schema.ParseResourceArg(crd)
-		informer := f.ForResource(*resource)
+		resource := schema.GroupVersionResource{Group: crd.group, Version: crd.version, Resource: crd.resource}
+		resourceKind := crd.kind
 
-		resourceKind := fmt.Sprintf("%s.%s", resource.Resource, resource.Group)
-		if resource.Group == "" {
-			resourceKind = resource.Resource
-		}
+		informer := f.ForResource(resource)
+
 		informer.Informer().AddEventHandler(i.getEventHandlerForResource(resourceKind))
 
 		go func() {
@@ -130,7 +135,7 @@ func (i *kubeWatcherImpl) startCustomInformers(masterURL string, kubeContext str
 	return nil
 }
 
-func getCrdList(kubeCfg *rest.Config) ([]string, error) {
+func getCrdList(kubeCfg *rest.Config) ([]crdGroupVersionResourceKind, error) {
 	crdClient, err := clientset.NewForConfig(kubeCfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to instantiate client for querying CRDs")
@@ -142,11 +147,11 @@ func getCrdList(kubeCfg *rest.Config) ([]string, error) {
 	}
 
 	glog.Infof("Found %d CRD definitions", len(crdList.Items))
-	var resources []string
+	var resources []crdGroupVersionResourceKind
 	for _, crd := range crdList.Items {
-		resourceName := fmt.Sprintf("%s.%s.%s", crd.Spec.Names.Plural, crd.Spec.Version, crd.Spec.Group)
-		glog.V(5).Infof("CRD: %s, kind: %s, plural:%s, singular:%s, short names:%v", resourceName, crd.Spec.Names.Kind, crd.Spec.Names.Plural, crd.Spec.Names.Singular, crd.Spec.Names.ShortNames)
-		resources = append(resources, resourceName)
+		gvrk := crdGroupVersionResourceKind{group: crd.Spec.Group, version: crd.Spec.Version, resource: crd.Spec.Names.Plural, kind: crd.Spec.Names.Kind}
+		glog.V(5).Infof("CRD: group: %s, version: %s, kind: %s, plural:%s, singular:%s, short names:%v", crd.Spec.Group, crd.Spec.Version, crd.Spec.Names.Kind, crd.Spec.Names.Plural, crd.Spec.Names.Singular, crd.Spec.Names.ShortNames)
+		resources = append(resources, gvrk)
 	}
 	return resources, nil
 }
