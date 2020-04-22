@@ -139,32 +139,20 @@ func listKeysHandler(tables typed.Tables) http.HandlerFunc {
 			itr := txn.NewIterator(iterOpt)
 			defer itr.Close()
 
-			for itr.Rewind(); itr.Valid(); itr.Next() {
+			for itr.Rewind(); itr.ValidForPrefix([]byte(keyPrefix)); itr.Next() {
 				totalCount++
 				thisKey := string(itr.Item().Key())
 				if keyRegEx.MatchString(thisKey) {
-					if table == "internal" {
-						if !strings.HasPrefix(thisKey, "/eventcount") && !strings.HasPrefix(thisKey, "/ressum") && !strings.HasPrefix(thisKey, "/watch") && !strings.HasPrefix(thisKey, "/watchactivity") {
-							keys = append(keys, thisKey)
-							count += 1
-							totalSize += itr.Item().EstimatedSize()
-							if count >= maxRows {
-								glog.Infof("Reached max rows: %v", maxRows)
-								break
-							}
-						}
-					} else {
-						keys = append(keys, thisKey)
-						count += 1
-						totalSize += itr.Item().EstimatedSize()
-						if count >= maxRows {
-							glog.Infof("Reached max rows: %v", maxRows)
-							break
-						}
+					keys = append(keys, thisKey)
+					count += 1
+					totalSize += itr.Item().EstimatedSize()
+					if count >= maxRows {
+						glog.Infof("Number of rows : %v has reached max rows: %v", count, maxRows)
+						break
 					}
 				}
-
 			}
+
 			return nil
 		})
 		if err != nil {
@@ -270,13 +258,12 @@ func histogramHandler(tables typed.Tables) http.HandlerFunc {
 						}
 					} else {
 						totalSloopKeys++
-						tableName, partitionId, err := common.GetPartitionIDAndTableName(item)
+						sloopKey, err := common.GetSloopKey(item)
 						if err != nil {
 							return errors.Wrapf(err, "failed to parse information about key: %x",
 								item.Key())
 						}
 
-						sloopKey := common.SloopKey{tableName, partitionId}
 						if sloopMap[sloopKey] == nil {
 							sloopMap[sloopKey] = &sloopKeyInfo{size, size, 1, size, size}
 						} else {

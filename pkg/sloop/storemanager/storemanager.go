@@ -48,7 +48,7 @@ type Config struct {
 	BadgerVLogGCFreq   time.Duration
 	DeletionBatchSize  int
 	GCThreshold        float64
-	EnableDeletePrefix bool
+	EnableDeleteKeys   bool
 }
 
 type StoreManager struct {
@@ -101,7 +101,7 @@ func (sm *StoreManager) gcLoop() {
 		metricGcRunCount.Inc()
 		before := time.Now()
 		metricGcRunning.Set(1)
-		cleanUpPerformed, numOfDeletedKeys, numOfKeysToDelete, err := doCleanup(sm.tables, sm.config.TimeLimit, sm.config.SizeLimitBytes, sm.stats, sm.config.DeletionBatchSize, sm.config.GCThreshold, sm.config.EnableDeletePrefix)
+		cleanUpPerformed, numOfDeletedKeys, numOfKeysToDelete, err := doCleanup(sm.tables, sm.config.TimeLimit, sm.config.SizeLimitBytes, sm.stats, sm.config.DeletionBatchSize, sm.config.GCThreshold, sm.config.EnableDeleteKeys)
 		metricGcCleanUpPerformed.Set(common.BoolToFloat(cleanUpPerformed))
 		metricGcDeletedNumberOfKeys.Set(float64(numOfDeletedKeys))
 		metricGcNumberOfKeysToDelete.Set(float64(numOfKeysToDelete))
@@ -141,7 +141,7 @@ func (sm *StoreManager) vlogGcLoop() {
 			metricValueLogGcRunning.Set(0)
 			metricValueLogGcRunCount.Add(1)
 			metricValueLogGcLatency.Set(time.Since(before).Seconds())
-			glog.Infof("RunValueLogGC(%v) run took %v and returned %v", sm.config.BadgerDiscardRatio, time.Since(before), err)
+			glog.Infof("RunValueLogGC(%v) run took %v and returned '%q'", sm.config.BadgerDiscardRatio, time.Since(before), err)
 			if err != nil {
 				break
 			}

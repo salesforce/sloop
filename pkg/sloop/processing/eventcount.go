@@ -51,8 +51,8 @@ func updateEventCountTable(
 	// Truncate long-lived events to available partitions
 	// This avoids filling in data that will go beyond the current time range
 	ok, minPartition, maxPartition := tables.GetMinAndMaxPartitionWithTxn(txn)
-	if err != nil || !ok {
-		return err
+	if !ok {
+		return errors.Wrap(err, "There was an error in GetMinAndMaxPartitionWithTxn")
 	}
 
 	_, minPartitionEndTime, err := untyped.GetTimeRangeForPartition(minPartition)
