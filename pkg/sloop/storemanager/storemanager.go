@@ -141,7 +141,7 @@ func (sm *StoreManager) vlogGcLoop() {
 			metricValueLogGcRunning.Set(0)
 			metricValueLogGcRunCount.Add(1)
 			metricValueLogGcLatency.Set(time.Since(before).Seconds())
-			glog.Infof("RunValueLogGC(%v) run took %v and returned '%q'", sm.config.BadgerDiscardRatio, time.Since(before), err)
+			glog.Infof("RunValueLogGC(%v) run took %v and returned '%v'", sm.config.BadgerDiscardRatio, time.Since(before), err)
 			if err != nil {
 				break
 			}
@@ -211,7 +211,7 @@ func doCleanup(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int,
 	return anyCleanupPerformed, totalNumOfDeletedKeys, totalNumOfKeysToDelete, nil
 }
 
-func getAndSetMinAndMaxPartitions(tables typed.Tables) (bool, string, string) {
+func getMinAndMaxPartitionsAndSetMetrics(tables typed.Tables) (bool, string, string) {
 	ok, minPartition, maxPartition, err := tables.GetMinAndMaxPartition()
 	if err != nil {
 		glog.Errorf("failed to get min partition : %s, max partition: %s, err:%v", minPartition, maxPartition, err)
@@ -252,7 +252,7 @@ func getPartitionsToDeleteWhenSizeConditionHasBeenMet(sizeLimitBytes int, diskSi
 
 func getPartitionsToDelete(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int, diskSizeBytes int64, gcThreshold float64) ([]string, map[string]*common.PartitionInfo) {
 
-	ok, minPartition, maxPartition := getAndSetMinAndMaxPartitions(tables)
+	ok, minPartition, maxPartition := getMinAndMaxPartitionsAndSetMetrics(tables)
 	if !ok {
 		return nil, nil
 	}

@@ -29,6 +29,7 @@ func Test_Db_Utilities_DeleteKeysWithPrefix_DeleteNoKeys(t *testing.T) {
 
 func Test_Db_Utilities_DeleteKeysWithPrefix_DeleteSomeKeys(t *testing.T) {
 	db := helper_get_db(t)
+	// DB has 8 keys
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix(commonPrefix))
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix("randomStuff"+commonPrefix))
 	err, numOfDeletedKeys, numOfKeysToDelete := DeleteKeysWithPrefix(commonPrefix, db, 10, 4)
@@ -73,7 +74,7 @@ func Test_Db_Utilities_GetTotalKeyCount_SomeKeys(t *testing.T) {
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix(commonPrefix))
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix("randomStuff"+commonPrefix))
 
-	numberOfKeys := GetTotalKeyCount(db, []byte(commonPrefix))
+	numberOfKeys := GetTotalKeyCount(db, commonPrefix)
 	// expected count is 4 as each call to helper_add_keys_to_db adds keys in 4 tables, only the common prefix ones would return
 	expectedNumberOfKeys := 4
 	assert.Equal(t, uint64(expectedNumberOfKeys), numberOfKeys)
@@ -81,6 +82,6 @@ func Test_Db_Utilities_GetTotalKeyCount_SomeKeys(t *testing.T) {
 
 func Test_Db_Utilities_GetTotalKeyCount_NoKeys(t *testing.T) {
 	db := helper_get_db(t)
-	numberOfKeys := GetTotalKeyCount(db, []byte(""))
+	numberOfKeys := GetTotalKeyCount(db, "")
 	assert.Equal(t, uint64(0), numberOfKeys)
 }

@@ -10,6 +10,7 @@ package untyped
 import (
 	"fmt"
 	badger "github.com/dgraph-io/badger/v2"
+	"github.com/dgraph-io/badger/v2/options"
 	"github.com/golang/glog"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"os"
@@ -31,6 +32,7 @@ type Config struct {
 	BadgerSyncWrites         bool
 	BadgerLevelOneSize       int64
 	BadgerLevSizeMultiplier  int
+	BadgerVLogFileIOMapping  bool
 }
 
 func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error) {
@@ -86,6 +88,10 @@ func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error
 
 	if config.BadgerLevSizeMultiplier != 0 {
 		opts = opts.WithLevelSizeMultiplier(config.BadgerLevSizeMultiplier)
+	}
+
+	if config.BadgerVLogFileIOMapping {
+		opts = opts.WithValueLogLoadingMode(options.FileIO)
 	}
 
 	opts = opts.WithSyncWrites(config.BadgerSyncWrites)

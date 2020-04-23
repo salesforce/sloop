@@ -56,12 +56,12 @@ func updateEventCountTable(
 	}
 
 	_, minPartitionEndTime, err := untyped.GetTimeRangeForPartition(minPartition)
-	if err != nil && minPartition != "" {
+	if err != nil {
 		return err
 	}
 
 	maxPartitionStartTime, maxPartitionEndTime, err := untyped.GetTimeRangeForPartition(maxPartition)
-	if err != nil && maxPartition != "" {
+	if err != nil {
 		return err
 	}
 

@@ -2,6 +2,7 @@ package common
 
 import (
 	"github.com/dgraph-io/badger/v2"
+	"github.com/golang/glog"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 )
 
@@ -44,6 +45,7 @@ func DeleteKeysWithPrefix(keyPrefix string, db badgerwrap.DB, deletionBatchSize 
 			it := txn.NewIterator(iterOpt)
 			defer it.Close()
 
+			// TODO: Investigate if Seek() can be used instead of rewind
 			for it.Rewind(); it.ValidForPrefix([]byte(keyPrefix)) || it.ValidForPrefix([]byte("!badger!move"+keyPrefix)); it.Next() {
 				keyToDel := it.Item().KeyCopy(nil)
 				keysThisBatch = append(keysThisBatch, keyToDel)
@@ -60,6 +62,7 @@ func DeleteKeysWithPrefix(keyPrefix string, db badgerwrap.DB, deletionBatchSize 
 			err, deletedKeysInThisBatch := deleteKeys(db, keysThisBatch)
 			numOfKeysDeleted += deletedKeysInThisBatch
 			if err != nil {
+				glog.Errorf("Error encountered while deleting keys with prefix: '%v', numberOfKeysDeleted: '%v' numOfKeysToDelete: '%v'", keyPrefix, numOfKeysDeleted, numOfKeysToDelete)
 				return err, numOfKeysDeleted, numOfKeysToDelete
 			}
 		}
@@ -68,17 +71,18 @@ func DeleteKeysWithPrefix(keyPrefix string, db badgerwrap.DB, deletionBatchSize 
 }
 
 // returns the number of keys in DB with given prefix. If prefix is not provided it gives count of all keys
-func GetTotalKeyCount(db badgerwrap.DB, keyPrefix []byte) uint64 {
+func GetTotalKeyCount(db badgerwrap.DB, keyPrefix string) uint64 {
 	var totalKeyCount uint64 = 0
+	keyPrefixToMatch := []byte(keyPrefix)
 	_ = db.View(func(txn badgerwrap.Txn) error {
 		iterOpt := badger.DefaultIteratorOptions
 		iterOpt.PrefetchValues = false
-		if len(keyPrefix) != 0 {
-			iterOpt.Prefix = keyPrefix
+		if len(keyPrefixToMatch) != 0 {
+			iterOpt.Prefix = keyPrefixToMatch
 		}
 		it := txn.NewIterator(iterOpt)
 		defer it.Close()
-		for it.Rewind(); it.ValidForPrefix(keyPrefix); it.Next() {
+		for it.Rewind(); it.ValidForPrefix(keyPrefixToMatch); it.Next() {
 			totalKeyCount++
 		}
 		return nil

@@ -33,11 +33,11 @@ type PartitionInfo struct {
 // prints all the keys histogram. It can help debugging when needed.
 func PrintKeyHistogram(db badgerwrap.DB) {
 	partitionTableNameToKeyCountMap, totalKeyCount := GetPartitionsInfo(db)
-	glog.Infof("TotalkeyCount: %v", totalKeyCount)
+	glog.V(2).Infof("TotalkeyCount: %v", totalKeyCount)
 
 	for partitionID, partitionInfo := range partitionTableNameToKeyCountMap {
 		for tableName, keyCount := range partitionInfo.TableNameToKeyCountMap {
-			glog.Infof("TableName: %v, PartitionId: %v, keyCount: %v", tableName, partitionID, keyCount)
+			glog.V(2).Infof("TableName: %v, PartitionId: %v, keyCount: %v", tableName, partitionID, keyCount)
 		}
 	}
 }
@@ -70,7 +70,8 @@ func GetPartitionsInfo(db badgerwrap.DB) (map[string]*PartitionInfo, uint64) {
 			item := it.Item()
 			sloopKey, err := GetSloopKey(item)
 			if err != nil {
-				glog.Infof("failed to parse information about key: %x", item.Key())
+				glog.Errorf("failed to parse information about key: %x", item.Key())
+				continue
 			}
 			if partitionIDToPartitionInfoMap[sloopKey.PartitionID] == nil {
 				partitionIDToPartitionInfoMap[sloopKey.PartitionID] = &PartitionInfo{0, make(map[string]uint64)}

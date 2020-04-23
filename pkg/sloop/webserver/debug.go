@@ -139,6 +139,7 @@ func listKeysHandler(tables typed.Tables) http.HandlerFunc {
 			itr := txn.NewIterator(iterOpt)
 			defer itr.Close()
 
+			// TODO: Investigate if Seek() can be used instead of rewind
 			for itr.Rewind(); itr.ValidForPrefix([]byte(keyPrefix)); itr.Next() {
 				totalCount++
 				thisKey := string(itr.Item().Key())

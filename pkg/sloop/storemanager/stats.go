@@ -61,7 +61,7 @@ func generateStats(storeRoot string, db badgerwrap.DB, fs *afero.Afero) *storeSt
 	ret.DiskLsmBytes = int64(extByteCount[sstExt])
 	ret.DiskVlogFileCount = extFileCount[vlogExt]
 	ret.DiskVlogBytes = int64(extByteCount[vlogExt])
-	ret.TotalKeyCount = common.GetTotalKeyCount(db, []byte{})
+	ret.TotalKeyCount = common.GetTotalKeyCount(db, "")
 	tables := db.Tables(true)
 	for _, table := range tables {
 		glog.V(2).Infof("BadgerDB TABLE id=%v keycount=%v level=%v left=%q right=%q", table.ID, table.KeyCount, table.Level, string(table.Left), string(table.Right))
