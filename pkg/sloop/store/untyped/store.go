@@ -10,6 +10,7 @@ package untyped
 import (
 	"fmt"
 	badger "github.com/dgraph-io/badger/v2"
+	"github.com/dgraph-io/badger/v2/options"
 	"github.com/golang/glog"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"os"
@@ -31,6 +32,7 @@ type Config struct {
 	BadgerSyncWrites         bool
 	BadgerLevelOneSize       int64
 	BadgerLevSizeMultiplier  int
+	BadgerVLogFileIOMapping  bool
 }
 
 func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error) {
@@ -78,6 +80,8 @@ func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error
 		opts = opts.WithNumLevelZeroTablesStall(config.BadgerNumL0TablesStall)
 	}
 
+	opts.WithSyncWrites(config.BadgerSyncWrites)
+
 	if config.BadgerLevelOneSize != 0 {
 		opts = opts.WithLevelOneSize(config.BadgerLevelOneSize)
 	}
@@ -86,13 +90,21 @@ func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error
 		opts = opts.WithLevelSizeMultiplier(config.BadgerLevSizeMultiplier)
 	}
 
+	if config.BadgerVLogFileIOMapping {
+		opts = opts.WithValueLogLoadingMode(options.FileIO)
+	}
+
 	opts = opts.WithSyncWrites(config.BadgerSyncWrites)
+
+	// https://github.com/dgraph-io/badger/issues/1228
+	opts = opts.WithNumVersionsToKeep(0)
 
 	db, err := factory.Open(opts)
 	if err != nil {
 		return nil, fmt.Errorf("badger.OpenStore failed with: %v", err)
 	}
 
+	db.Flatten(5)
 	glog.Infof("BadgerDB Options: %+v", opts)
 
 	partitionDuration = config.ConfigPartitionDuration

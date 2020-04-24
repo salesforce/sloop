@@ -231,7 +231,9 @@ func addEventCount(t *testing.T, tables typed.Tables, timeStamp *timestamp.Times
 	involvedObject, err := kubeextractor.ExtractInvolvedObject(watchRec.Payload)
 	assert.Nil(t, err)
 
+	metadata := &kubeextractor.KubeMetadata{Name: "someName", Namespace: "someNamespace"}
 	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
+		updateKubeWatchTable(tables, txn, &watchRec, metadata, true)
 		// For dedupe to work we need a record written to the watch table
 		err2 := updateEventCountTable(tables, txn, &watchRec, &resourceMetadata, &involvedObject, someMaxLookback)
 		if err2 != nil {
@@ -399,16 +401,102 @@ func Test_computeEventsDiff_PartiallyOverlapping(t *testing.T) {
 	assert.Equal(t, someEventTs4, t2)
 }
 
-func Test_adjustForMaxLookback_ShortEventNoChange(t *testing.T) {
-	first, last, count := adjustForMaxLookback(someEventTs3, someEventTs4, 100, someEventTs1)
-	assert.Equal(t, someEventTs3, first)
-	assert.Equal(t, someEventTs4, last)
-	assert.Equal(t, 100, count)
+func Test_adjustForAvailablePartitions_NonOverlapping(t *testing.T) {
+	//func adjustForAvailablePartitions(firstTs time.Time, lastTs time.Time, count int, minPartitionEndTime time.Time, maxPartitionStartTime time.Time, maxPartitionEndTime time.Time)
+
+	// No Overlap, EventCountEndTime is before minPartitionEndTime
+	var eventCountStartTime = someEventTs1
+	var eventCountEndTime = eventCountStartTime.Add(1 * time.Hour)
+	var minPartitionEndTime = eventCountStartTime.Add(10 * time.Hour)
+	var maxPartitionEndTime = eventCountStartTime.Add(12 * time.Hour)
+	var maxPartitionStartTime = maxPartitionEndTime.Add(-1 * time.Hour)
+
+	beginTS, endTS, count := adjustForAvailablePartitions(eventCountStartTime, eventCountEndTime, 100, minPartitionEndTime, maxPartitionStartTime, maxPartitionEndTime)
+	assert.Equal(t, 0, count)
+	assert.Equal(t, minPartitionEndTime, beginTS)
+	assert.Equal(t, maxPartitionEndTime, endTS)
+
+	// No Overlap, EventCountStartTime is after maxPartitionEndTime
+	eventCountStartTime = someEventTs1
+	eventCountEndTime = eventCountStartTime.Add(1 * time.Hour)
+	minPartitionEndTime = eventCountStartTime.Add(-10 * time.Hour)
+	maxPartitionEndTime = eventCountStartTime.Add(-12 * time.Hour)
+	maxPartitionStartTime = maxPartitionEndTime.Add(-1 * time.Hour)
+	beginTS, endTS, count = adjustForAvailablePartitions(eventCountStartTime, eventCountEndTime, 100, minPartitionEndTime, maxPartitionStartTime, maxPartitionEndTime)
+	assert.Equal(t, 0, count)
+	assert.Equal(t, minPartitionEndTime, beginTS)
+	assert.Equal(t, maxPartitionEndTime, endTS)
 }
 
-func Test_adjustForMaxLookback_LongEventGetsTruncated(t *testing.T) {
-	first, last, count := adjustForMaxLookback(someEventTs1, someEventTs4, 1000, someEventTs3)
-	assert.Equal(t, someEventTs3, first)
-	assert.Equal(t, someEventTs4, last)
-	assert.Equal(t, 333, count)
+func Test_adjustForAvailablePartitions_Overlapping(t *testing.T) {
+
+	// Overlap, EventCountStartTime is before minPartitionEndTime and EventCountEndTime is after maxPartitionEndTime
+	eventCountStartTime := someEventTs1
+	eventCountEndTime := eventCountStartTime.Add(10 * time.Hour)
+	minPartitionEndTime := eventCountStartTime.Add(3 * time.Hour)
+	maxPartitionEndTime := eventCountStartTime.Add(5 * time.Hour)
+	maxPartitionStartTime := maxPartitionEndTime.Add(-1 * time.Hour)
+	beginTS, endTS, count := adjustForAvailablePartitions(eventCountStartTime, eventCountEndTime, 100, minPartitionEndTime, maxPartitionStartTime, maxPartitionEndTime)
+	assert.Equal(t, 20, count)
+	assert.Equal(t, minPartitionEndTime, beginTS)
+	assert.Equal(t, maxPartitionEndTime, endTS)
+
+	// Overlap, EventCountStartTime is between minPartitionEndTime and maxPartition and also EventCountEndTime is after maxPartitionEndTime
+	eventCountStartTime = someEventTs1
+	eventCountEndTime = eventCountStartTime.Add(10 * time.Hour)
+	minPartitionEndTime = eventCountStartTime.Add(-3 * time.Hour)
+	maxPartitionEndTime = eventCountStartTime.Add(5 * time.Hour)
+	maxPartitionStartTime = maxPartitionEndTime.Add(-1 * time.Hour)
+	beginTS, endTS, count = adjustForAvailablePartitions(eventCountStartTime, eventCountEndTime, 100, minPartitionEndTime, maxPartitionStartTime, maxPartitionEndTime)
+	assert.Equal(t, 50, count)
+	assert.Equal(t, eventCountStartTime, beginTS)
+	assert.Equal(t, maxPartitionEndTime, endTS)
+
+	// Overlap, EventCountStartTime is before minPartitionEndTime but EventCountEndTime is between minPartitionEndTime and maxPartitionEndTime
+	eventCountStartTime = someEventTs1
+	eventCountEndTime = eventCountStartTime.Add(10 * time.Hour)
+	minPartitionEndTime = eventCountStartTime.Add(2 * time.Hour)
+	maxPartitionEndTime = eventCountStartTime.Add(15 * time.Hour)
+	maxPartitionStartTime = maxPartitionEndTime.Add(-1 * time.Hour)
+	beginTS, endTS, count = adjustForAvailablePartitions(eventCountStartTime, eventCountEndTime, 100, minPartitionEndTime, maxPartitionStartTime, maxPartitionEndTime)
+	assert.Equal(t, 80, count)
+	assert.Equal(t, minPartitionEndTime, beginTS)
+	assert.Equal(t, eventCountEndTime, endTS)
+
+	// Overlap, Both EventCountStart and end time are between minPartitionEndTime and maxPartitionEndTime
+	eventCountStartTime = someEventTs1
+	eventCountEndTime = eventCountStartTime.Add(10 * time.Hour)
+	minPartitionEndTime = eventCountStartTime.Add(-2 * time.Hour)
+	maxPartitionEndTime = eventCountStartTime.Add(15 * time.Hour)
+	maxPartitionStartTime = maxPartitionEndTime.Add(-1 * time.Hour)
+	beginTS, endTS, count = adjustForAvailablePartitions(eventCountStartTime, eventCountEndTime, 100, minPartitionEndTime, maxPartitionStartTime, maxPartitionEndTime)
+	assert.Equal(t, 100, count)
+	assert.Equal(t, eventCountStartTime, beginTS)
+	assert.Equal(t, eventCountEndTime, endTS)
+
+	// Two extra cases to confirm that even count is spread on the last partition but when
+	// there is only one partition event count is spread to it.
+	// Overlap, EventCount Start and end are outside of min and max partitions.
+	// There are two partitions and event count is spread to only one
+	eventCountStartTime = someEventTs1
+	eventCountEndTime = eventCountStartTime.Add(10 * time.Hour)
+	minPartitionEndTime = eventCountStartTime.Add(3 * time.Hour)
+	maxPartitionEndTime = eventCountStartTime.Add(4 * time.Hour)
+	maxPartitionStartTime = maxPartitionEndTime.Add(-1 * time.Hour)
+	beginTS, endTS, count = adjustForAvailablePartitions(eventCountStartTime, eventCountEndTime, 100, minPartitionEndTime, maxPartitionStartTime, maxPartitionEndTime)
+	assert.Equal(t, 10, count)
+	assert.Equal(t, minPartitionEndTime, beginTS)
+	assert.Equal(t, maxPartitionEndTime, endTS)
+
+	// Overlap, EventCount Start and end are outside of min and max partitions.
+	// There is only one partitions and event count is still spread to it.
+	eventCountStartTime = someEventTs1
+	eventCountEndTime = eventCountStartTime.Add(10 * time.Hour)
+	minPartitionEndTime = eventCountStartTime.Add(3 * time.Hour)
+	maxPartitionEndTime = eventCountStartTime.Add(3 * time.Hour)
+	maxPartitionStartTime = maxPartitionEndTime.Add(-1 * time.Hour)
+	beginTS, endTS, count = adjustForAvailablePartitions(eventCountStartTime, eventCountEndTime, 100, minPartitionEndTime, maxPartitionStartTime, maxPartitionEndTime)
+	assert.Equal(t, 10, count)
+	assert.Equal(t, maxPartitionStartTime, beginTS)
+	assert.Equal(t, maxPartitionEndTime, endTS)
 }

@@ -22,6 +22,7 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
         <option value="ressum">ressum</option>
         <option value="eventcount">eventcount</option>
         <option value="watchactivity">watchactivity</option>
+        <option value="internal">internal</option>
     </select><br><br>
 
     <label for="keymatch">Key RegEx Filter:</label><br>
@@ -33,13 +34,19 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
     <input type="submit">
 </form>
 </td></tr></table>
-<br/>
+<br/><br/>
 
+<table border="1">
+    <tr><td>Total Keys Matched</td><td>{{.KeysMatched}}</td></tr>
+    <tr><td>Total Size of Matched Keys</td><td><pre>{{.TotalSize}}</pre></td></tr>
+    <tr><td>Total Keys Searched</td><td><pre>{{.TotalKeys}}</pre></td></tr>
+</table>
+<br/><br/><br/>
 <b>Key List</b>:<br/>
 <ol>
-{{range .}}
-  <li><a href='/debug/view?k={{.}}'>{{.}}</a>
-{{end}}
+    {{range $key, $value := .Keys}}
+        <li><a href='/debug/view?k={{.}}'>{{.}}</a>
+    {{end}}
 </ol>
 </body>
 

@@ -8,7 +8,6 @@
 package badgerwrap
 
 import (
-	"fmt"
 	"io"
 	"sort"
 	"strings"
@@ -79,10 +78,6 @@ func (b *MockDb) DropPrefix(prefix []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	if len(b.data) == 0 {
-		return fmt.Errorf("enable to delete prefix: %s from empty table", string(prefix))
-	}
-
 	for key, _ := range b.data {
 		exists := strings.HasPrefix(key, string(prefix))
 		if exists {
@@ -108,6 +103,10 @@ func (b *MockDb) Tables(withKeysCount bool) []badger.TableInfo {
 	return []badger.TableInfo{
 		{KeyCount: uint64(keyCount)},
 	}
+}
+
+func (b *MockDb) Flatten(workers int) error {
+	return nil
 }
 
 func (b *MockDb) Backup(w io.Writer, since uint64) (uint64, error) {

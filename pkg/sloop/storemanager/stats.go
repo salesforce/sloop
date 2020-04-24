@@ -5,6 +5,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/spf13/afero"
 	"os"
@@ -29,6 +30,7 @@ var (
 	metricCleanedBadgerLsmSizeMb     = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_delta_aftergc_badger_lsmsizemb"})
 	metricCleanedBadgerVLogFileCount = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_delta_aftergc_badger_vlogfilecount"})
 	metricCleanedBadgerVLogSizeMb    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_delta_aftergc_badger_vlogsizemb"})
+	metricTotalKeysCount             = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_total_key_count"})
 )
 
 type storeStats struct {
@@ -40,6 +42,7 @@ type storeStats struct {
 	DiskVlogFileCount int
 	LevelToKeyCount   map[int]uint64
 	LevelToTableCount map[int]int
+	TotalKeyCount     uint64
 }
 
 func generateStats(storeRoot string, db badgerwrap.DB, fs *afero.Afero) *storeStats {
@@ -58,7 +61,7 @@ func generateStats(storeRoot string, db badgerwrap.DB, fs *afero.Afero) *storeSt
 	ret.DiskLsmBytes = int64(extByteCount[sstExt])
 	ret.DiskVlogFileCount = extFileCount[vlogExt]
 	ret.DiskVlogBytes = int64(extByteCount[vlogExt])
-
+	ret.TotalKeyCount = common.GetTotalKeyCount(db, "")
 	tables := db.Tables(true)
 	for _, table := range tables {
 		glog.V(2).Infof("BadgerDB TABLE id=%v keycount=%v level=%v left=%q right=%q", table.ID, table.KeyCount, table.Level, string(table.Left), string(table.Right))
@@ -77,6 +80,9 @@ func getDirSizeRecursive(root string, fs *afero.Afero) (uint64, map[string]int, 
 	var extByteCount = make(map[string]uint64)
 
 	err := fs.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if info == nil {
+			return err
+		}
 		if !info.IsDir() {
 			totalSize += uint64(info.Size())
 			ext := filepath.Ext(path)
@@ -104,6 +110,7 @@ func emitMetrics(stats *storeStats) {
 	metricBadgerLsmSizeMb.Set(float64(stats.DiskLsmBytes / 1024 / 1024))
 	metricBadgerVLogFileCount.Set(float64(stats.DiskVlogFileCount))
 	metricBadgerVLogSizeMb.Set(float64(stats.DiskVlogBytes / 1024 / 1024))
+	metricTotalKeysCount.Set(float64(stats.TotalKeyCount))
 }
 
 func emitGCMetrics(stats *storeStats) {

@@ -29,7 +29,7 @@ type DB interface {
 	Tables(withKeysCount bool) []badger.TableInfo
 	Backup(w io.Writer, since uint64) (uint64, error)
 	//	DropAll() error
-	//	Flatten(workers int) error
+	Flatten(workers int) error
 	//	GetMergeOperator(key []byte, f MergeFunc, dur time.Duration) *MergeOperator
 	//	GetSequence(key []byte, bandwidth uint64) (*Sequence, error)
 	//	KeySplits(prefix []byte) []string

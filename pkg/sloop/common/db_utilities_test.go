@@ -12,46 +12,30 @@ var commonPrefix = "/commonprefix/001546405200/"
 func Test_Db_Utilities_DeleteKeysWithPrefix_DeleteAllKeys(t *testing.T) {
 	db := helper_get_db(t)
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix(commonPrefix))
-	err, numOfDeletedKeys, numOfKeysToDelete := DeleteKeysWithPrefix([]byte(commonPrefix), db, 10)
+	err, numOfDeletedKeys, numOfKeysToDelete := DeleteKeysWithPrefix(commonPrefix, db, 10, 4)
 	assert.Nil(t, err)
-	assert.Equal(t, 4, numOfDeletedKeys)
-	assert.Equal(t, 4, numOfKeysToDelete)
+	assert.Equal(t, uint64(4), numOfDeletedKeys)
+	assert.Equal(t, uint64(4), numOfKeysToDelete)
 }
 
 func Test_Db_Utilities_DeleteKeysWithPrefix_DeleteNoKeys(t *testing.T) {
 	db := helper_get_db(t)
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix(commonPrefix))
-	err, numOfDeletedKeys, numOfKeysToDelete := DeleteKeysWithPrefix([]byte(commonPrefix+"random"), db, 10)
+	err, numOfDeletedKeys, numOfKeysToDelete := DeleteKeysWithPrefix(commonPrefix+"random", db, 10, 0)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, numOfDeletedKeys)
-	assert.Equal(t, 0, numOfKeysToDelete)
+	assert.Equal(t, uint64(0), numOfDeletedKeys)
+	assert.Equal(t, uint64(0), numOfKeysToDelete)
 }
 
 func Test_Db_Utilities_DeleteKeysWithPrefix_DeleteSomeKeys(t *testing.T) {
 	db := helper_get_db(t)
+	// DB has 8 keys
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix(commonPrefix))
 	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix("randomStuff"+commonPrefix))
-	err, numOfDeletedKeys, numOfKeysToDelete := DeleteKeysWithPrefix([]byte(commonPrefix), db, 10)
+	err, numOfDeletedKeys, numOfKeysToDelete := DeleteKeysWithPrefix(commonPrefix, db, 10, 4)
 	assert.Nil(t, err)
-	assert.Equal(t, 4, numOfDeletedKeys)
-	assert.Equal(t, 4, numOfKeysToDelete)
-}
-
-func Test_Db_Utilities_GetTotalKeyCount_SomeKeys(t *testing.T) {
-	db := helper_get_db(t)
-	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix(commonPrefix))
-	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix("randomStuff"+commonPrefix))
-	numberOfKeys := GetTotalKeyCount(db)
-
-	// expected count is 8 as each call to helper_add_keys_to_db adds keys in 4 tables
-	expectedNumberOfKeys := 8
-	assert.Equal(t, uint64(expectedNumberOfKeys), numberOfKeys)
-}
-
-func Test_Db_Utilities_GetTotalKeyCount_NoKeys(t *testing.T) {
-	db := helper_get_db(t)
-	numberOfKeys := GetTotalKeyCount(db)
-	assert.Equal(t, uint64(0), numberOfKeys)
+	assert.Equal(t, uint64(4), numOfDeletedKeys)
+	assert.Equal(t, uint64(4), numOfKeysToDelete)
 }
 
 func helper_get_db(t *testing.T) badgerwrap.DB {
@@ -83,4 +67,21 @@ func helper_testKeys_with_common_prefix(prefix string) []string {
 		prefix + "Pod/user-t/sync-123/sam-partition-testdata",
 		prefix + "Pod/user-w/sync-123/sam-partition-test",
 	}
+}
+
+func Test_Db_Utilities_GetTotalKeyCount_SomeKeys(t *testing.T) {
+	db := helper_get_db(t)
+	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix(commonPrefix))
+	helper_add_keys_to_db(t, db, helper_testKeys_with_common_prefix("randomStuff"+commonPrefix))
+
+	numberOfKeys := GetTotalKeyCount(db, commonPrefix)
+	// expected count is 4 as each call to helper_add_keys_to_db adds keys in 4 tables, only the common prefix ones would return
+	expectedNumberOfKeys := 4
+	assert.Equal(t, uint64(expectedNumberOfKeys), numberOfKeys)
+}
+
+func Test_Db_Utilities_GetTotalKeyCount_NoKeys(t *testing.T) {
+	db := helper_get_db(t)
+	numberOfKeys := GetTotalKeyCount(db, "")
+	assert.Equal(t, uint64(0), numberOfKeys)
 }
