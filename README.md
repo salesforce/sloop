@@ -109,7 +109,7 @@ Apart from these flags some other values can be tweaked to fit in the memory con
 
 - Memory consumption max limit: 1GB
 ``` 
-               // 0.5<<20 (524288 bytes = 1 Mb)               
+               // 0.5<<20 (524288 bytes = 0.5 Mb)               
                "badger-max-table-size=524288",
                "badger-number-of-compactors=1",
                "badger-number-of-level-zero-tables=1",
