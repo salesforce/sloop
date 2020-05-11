@@ -97,6 +97,42 @@ To download a backup of the database, navigate to http://localhost:8080/data/bac
 
 To restore from a backup, start `sloop` with the `-restore-database-file` flag set to the backup file downloaded in the previous step. When restoring, you may also wish to set the `-disable-kube-watch=true` flag to stop new writes from occurring and/or the `-context` flag to restore the database into a different context.
 
+## Memory Consumption
+
+Sloop's memory usage can be managed by tweaking several options:
+- `badger-use-lsm-only-options` If this flag is set to true, values would be collocated with the LSM tree, with value log largely acting as a write-ahead log only. Recommended value for memory constrained environments: false
+- `badger-keep-l0-in-memory` When this flag is set to true, Level 0 tables are kept in memory. This leads to better performance in writes as well as compactions. Recommended value for memory constrained environments: false
+- `badger-sync-writes` When SyncWrites is true all writes are synced to disk. Setting this to false would achieve better performance, but may cause data loss in case of crash. Recommended value for memory constrained environments: false
+- `badger-vlog-fileIO-mapping` TableLoadingMode indicates which file loading mode should be used for the LSM tree data files. Setting to true would not load the value in memory map. Recommended value for memory constrained environments: true
+
+Apart from these flags some other values can be tweaked to fit in the memory constraints. Following are some examples of setups.
+
+- Memory consumption max limit: 1GB
+``` 
+               // 0.5<<20 (524288 bytes = 0.5 Mb)               
+               "badger-max-table-size=524288",
+               "badger-number-of-compactors=1",
+               "badger-number-of-level-zero-tables=1",
+               "badger-number-of-zero-tables-stall=2",
+```
+- Memory consumption max limit: 2GB
+``` 
+               // 16<<20 (16777216 bytes = 16 Mb)              
+               "badger-max-table-size=16777216",
+               "badger-number-of-compactors=1",
+               "badger-number-of-level-zero-tables=1",
+               "badger-number-of-zero-tables-stall=2",
+```
+- Memory consumption max limit: 5GB
+``` 
+               // 32<<20 (33554432 bytes = 32 Mb)             
+               "badger-max-table-size=33554432",
+               "badger-number-of-compactors=1",
+               "badger-number-of-level-zero-tables=2",
+               "badger-number-of-zero-tables-stall=3",
+```
+
+Apart from the above settings, max-disk-mb and max-look-back can be tweaked according to input data and memory constraints.  
 ## Contributing
 
 Refer to [CONTRIBUTING.md](CONTRIBUTING.md)<br>
