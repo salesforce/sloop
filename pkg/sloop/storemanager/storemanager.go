@@ -26,6 +26,7 @@ var (
 	metricGcSuccessCount               = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_success_count"})
 	metricGcFailedCount                = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_gc_failed_count"})
 	metricGcLatency                    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_latency_sec"})
+	metricDropPrefixLatency            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_drop_prefix_sec"})
 	metricGcRunning                    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_running"})
 	metricGcCleanUpPerformed           = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_cleanup_performed"})
 	metricGcDeletedNumberOfKeys        = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_deleted_num_of_keys"})
@@ -310,11 +311,14 @@ func deletePartition(minPartition string, tables typed.Tables, deletionBatchSize
 			err, numOfDeletedKeysForPrefix, numOfKeysToDeleteForPrefix = common.DeleteKeysWithPrefix(prefix, tables.Db(), deletionBatchSize, numberOfKeysToRemove)
 			metricGcDeletedNumberOfKeysByTable.WithLabelValues(fmt.Sprintf("%v", tableName)).Set(float64(numOfDeletedKeysForPrefix))
 		} else {
+
+			beforeDropPrefix := time.Now()
 			err = tables.Db().DropPrefix([]byte(prefix))
 
 			// !badger!move keys for the given prefix should also be cleaned up. For details: https://github.com/dgraph-io/badger/issues/1288
 			err = tables.Db().DropPrefix([]byte("!badger!move" + prefix))
 
+			metricDropPrefixLatency.Set(time.Since(beforeDropPrefix).Seconds())
 			// there will be same deletions for dropPrefix as the tables are locked when prefixes are dropped
 			numOfDeletedKeysForPrefix = numberOfKeysToRemove
 			numOfKeysToDeleteForPrefix = numberOfKeysToRemove

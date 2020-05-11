@@ -132,6 +132,7 @@ Apart from these flags some other values can be tweaked to fit in the memory con
                "badger-number-of-zero-tables-stall=3",
 ```
 
+Apart from the above settings, max-disk-mb and max-look-back can be tweaked according to input data and memory constraints.  
 ## Contributing
 
 Refer to [CONTRIBUTING.md](CONTRIBUTING.md)<br>
