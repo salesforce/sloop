@@ -11,7 +11,7 @@ builds:
       - darwin
     goarch:
       - amd64
-      
+
 dockers:
   - goos: linux
     goarch: amd64
@@ -22,8 +22,8 @@ dockers:
     extra_files:
       - pkg/sloop/webfiles
     image_templates:
-      - "salesforce/sloop:latest"
-      - "salesforce/sloop:{{ .Tag }}"
+      - "sridhav/sloop:latest"
+      - "sridhav/sloop:{{ .Tag }}"
     dockerfile: Dockerfile
     build_flag_templates:
       - "--pull"
