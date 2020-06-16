@@ -13,12 +13,11 @@ run:
 linux:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install -ldflags "-s" -installsuffix cgo -v ./pkg/...
 
-docker:
-	docker build . -t sloop
+docker-snapshot:
+	goreleaser release --snapshot --rm-dist
 
-docker-push: docker
-	docker tag sloop:latest sloopimage/sloop:latest
-	docker push sloopimage/sloop:latest
+docker:
+	goreleaser release --rm-dist --skip-publish
 
 generate:
 	go generate ./pkg/...
