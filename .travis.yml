@@ -1,5 +1,10 @@
 language: go
 
+branches:
+  except:
+    - master
+  only:
+    - release
 go:
   - 1.13.x
 
@@ -7,13 +12,15 @@ services:
   - docker
 
 script:
-  - make
+  - go test ./...
+  - curl -sfL https://git.io/goreleaser | sh -s -- check
 
 before_deploy:
-  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - test -n "$TRAVIS_TAG" && docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
 
 deploy:
   provider: script
-  script:  make docker-push
+  skip_cleanup: true
+  script: curl -sfL https://git.io/goreleaser | sh -s -- release --rm-dist --skip-publish && docker push "$TRAVIS_REPO_SLUG"
   on:
-    branch: master
+    tags: true

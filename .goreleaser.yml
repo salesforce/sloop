@@ -1,0 +1,46 @@
+project_name: sloop
+builds:
+  - id: sloop
+    main: ./pkg/sloop/main.go
+    binary: sloop
+    flags:
+      - -ldflags=-s
+      - -installsuffix=cgo
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+dockers:
+  - goos: linux
+    goarch: amd64
+    builds:
+      - sloop
+    binaries:
+      - sloop
+    extra_files:
+      - pkg/sloop/webfiles
+    image_templates:
+      - "salesforce/sloop:latest"
+      - "salesforce/sloop:{{ .Tag }}"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.name={{.ProjectName}}-captain"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: desc
+  filters:
+    exclude:
+      - typo
+      - fix
+      - '^docs:'
+      - '^test:'
+      - Merge pull request
+      - Merge branch
