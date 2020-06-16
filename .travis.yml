@@ -1,8 +1,5 @@
 language: go
 
-branches:
-  only:
-    - master
 go:
   - 1.13.x
 
