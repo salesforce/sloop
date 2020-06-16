@@ -11,6 +11,7 @@ builds:
       - darwin
     goarch:
       - amd64
+      
 dockers:
   - goos: linux
     goarch: amd64
