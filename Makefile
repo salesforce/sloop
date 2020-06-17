@@ -39,3 +39,11 @@ protobuf:
 cover:
 	go test ./pkg/... -coverprofile=coverage.out
 	go tool cover -html=coverage.out
+
+release:
+	@if [ ! -z "$(GITHUB_TOKEN)" ];then \
+    	curl -sfL https://git.io/goreleaser | sh -s -- release --rm-dist;\
+  	else \
+  	  	curl -sfL https://git.io/goreleaser | sh -s -- release --rm-dist --skip-publish && \
+        docker push "$TRAVIS_REPO_SLUG";\
+  	fi
