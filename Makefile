@@ -13,12 +13,16 @@ run:
 linux:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install -ldflags "-s" -installsuffix cgo -v ./pkg/...
 
-docker:
-	docker build . -t sloop
+goreleaser:
+	 @if [ ! -f "$(GOPATH)/bin/goreleaser" ];then \
+   		curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh -s -- -b "$(GOPATH)/bin/"; \
+   	 fi
 
-docker-push: docker
-	docker tag sloop:latest sloopimage/sloop:latest
-	docker push sloopimage/sloop:latest
+docker-snapshot: goreleaser
+	$(GOPATH)/bin/goreleaser release --snapshot --rm-dist
+
+docker: goreleaser
+	$(GOPATH)/bin/goreleaser release --rm-dist --skip-publish
 
 generate:
 	go generate ./pkg/...
