@@ -7,7 +7,7 @@ services:
   - docker
 
 script:
-  - go test ./...
+  - make
 
 before_deploy:
   - test -n "$TRAVIS_TAG" && echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
