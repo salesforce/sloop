@@ -8,8 +8,7 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
   name: {{ .Values.name }}
 rules:
-  - 
-    apiGroups: 
+  - apiGroups: 
       - ""
     resources: 
       - configmaps
@@ -27,8 +26,7 @@ rules:
     verbs: 
       - list
       - watch
-  - 
-    apiGroups: 
+  - apiGroups: 
       - batch
     resources: 
       - cronjobs
@@ -36,8 +34,7 @@ rules:
     verbs: 
       - list
       - watch
-  - 
-    apiGroups: 
+  - apiGroups: 
       - extensions
       - apps
     resources: 
@@ -48,16 +45,14 @@ rules:
     verbs: 
       - list
       - watch
-  - 
-    apiGroups: 
+  - apiGroups: 
       - autoscaling
     resources: 
       - horizontalpodautoscalers
     verbs: 
       - list
       - watch
-  - 
-    apiGroups: 
+  - apiGroups: 
       - extensions
       - networking.k8s.io
     resources: 
@@ -65,24 +60,21 @@ rules:
     verbs: 
       - list
       - watch
-  - 
-    apiGroups: 
+  - apiGroups: 
       - policy
     resources: 
       - poddisruptionbudgets
     verbs: 
       - list
       - watch
-  - 
-    apiGroups: 
+  - apiGroups: 
       - storage.k8s.io
     resources: 
       - storageclasses
     verbs: 
       - list
       - watch
-  - 
-    apiGroups: 
+  - apiGroups: 
       - autoscaling.k8s.io
     resources: 
       - verticalpodautoscalers
