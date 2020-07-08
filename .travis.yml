@@ -10,10 +10,12 @@ script:
   - make
 
 before_deploy:
-  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - test -n "$TRAVIS_TAG" && echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
 deploy:
   provider: script
-  script:  make docker-push
+  skip_cleanup: true
+  script:
+    - make release
   on:
-    branch: master
+    tags: true
