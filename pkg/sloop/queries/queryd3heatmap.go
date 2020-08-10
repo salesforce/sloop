@@ -22,6 +22,7 @@ import (
 )
 
 const EmptyPartition = ""
+const minBucketWidth = time.Minute
 
 type rawData struct {
 	Events        map[typed.EventCountKey]*typed.ResourceEventCounts
@@ -72,13 +73,14 @@ func EventHeatMap3Query(params url.Values, t typed.Tables, queryStartTime time.T
 	if err != nil {
 		return []byte{}, fmt.Errorf("compute event bucket width failed with error: %v", err)
 	}
-	if eventBucketWidth < time.Minute {
-		return []byte{}, fmt.Errorf("event bucket width cannot be less than one minute")
+
+	if eventBucketWidth < minBucketWidth {
+		return []byte{}, fmt.Errorf("event bucket width cannot be less than %v", time.Duration.String(minBucketWidth))
 	}
 
 	// add the event counts in as overlay
 	var mapResSumKeyToOverlay map[typed.ResourceSummaryKey][]Overlay
-	mapResSumKeyToOverlay, err = eventCountsToOverlayMapBucketed(rawRows.Events, eventBucketWidth)
+	mapResSumKeyToOverlay, err = eventCountsToOverlayMap(rawRows.Events, eventBucketWidth)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -306,7 +308,7 @@ func eventCountRowToD3GanttOverlayBucketed(key typed.EventCountKey, value *typed
 	return *refResSumKey, overlays, nil
 }
 
-func eventCountsToOverlayMapBucketed(events map[typed.EventCountKey]*typed.ResourceEventCounts, bucketWidth time.Duration) (map[typed.ResourceSummaryKey][]Overlay, error) {
+func eventCountsToOverlayMap(events map[typed.EventCountKey]*typed.ResourceEventCounts, bucketWidth time.Duration) (map[typed.ResourceSummaryKey][]Overlay, error) {
 	retMap := map[typed.ResourceSummaryKey][]Overlay{}
 
 	for key, value := range events {
