@@ -145,6 +145,7 @@ func RealMain() error {
 	}
 
 	webConfig := webserver.WebConfig{
+		BindAddress:      conf.BindAddress,
 		Port:             conf.Port,
 		WebFilesPath:     conf.WebFilesPath,
 		ConfigYaml:       conf.ToYaml(),

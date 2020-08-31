@@ -81,8 +81,8 @@ func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.Ku
 func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interface) {
 	i.informerFactory = informers.NewSharedInformerFactory(kubeclient, i.resync)
 
-	i.informerFactory.Apps().V1beta1().Deployments().Informer().AddEventHandler(i.getEventHandlerForResource("Deployment"))
-	i.informerFactory.Apps().V1beta1().StatefulSets().Informer().AddEventHandler(i.getEventHandlerForResource("StatefulSet"))
+	i.informerFactory.Apps().V1().Deployments().Informer().AddEventHandler(i.getEventHandlerForResource("Deployment"))
+	i.informerFactory.Apps().V1().StatefulSets().Informer().AddEventHandler(i.getEventHandlerForResource("StatefulSet"))
 	i.informerFactory.Core().V1().ConfigMaps().Informer().AddEventHandler(i.getEventHandlerForResource("ConfigMap"))
 	i.informerFactory.Core().V1().Endpoints().Informer().AddEventHandler(i.getEventHandlerForResource("Endpoint"))
 	i.informerFactory.Core().V1().Namespaces().Informer().AddEventHandler(i.getEventHandlerForResource("Namespace"))

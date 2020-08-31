@@ -33,6 +33,7 @@ type SloopConfig struct {
 	DisableKubeWatcher       bool          `json:"disableKubeWatch"`
 	KubeWatchResyncInterval  time.Duration `json:"kubeWatchResyncInterval"`
 	WebFilesPath             string        `json:"webfilesPath"`
+	BindAddress              string        `json:"bindIp"`
 	Port                     int           `json:"port"`
 	StoreRoot                string        `json:"storeRoot"`
 	MaxLookback              time.Duration `json:"maxLookBack"`
@@ -77,6 +78,7 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.DurationVar(&config.KubeWatchResyncInterval, "kube-watch-resync-interval", 30*time.Minute,
 		"OPTIONAL: Kubernetes watch resync interval")
 	fs.StringVar(&config.WebFilesPath, "web-files-path", "./pkg/sloop/webfiles", "Path to web files")
+	fs.StringVar(&config.BindAddress, "bind-address", "", "Web server bind ip address.")
 	fs.IntVar(&config.Port, "port", 8080, "Web server port")
 	fs.StringVar(&config.StoreRoot, "store-root", "./data", "Path to store history data")
 	fs.DurationVar(&config.MaxLookback, "max-look-back", time.Duration(14*24)*time.Hour, "Max history data to keep")

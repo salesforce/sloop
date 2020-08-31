@@ -49,6 +49,7 @@ const (
 )
 
 type WebConfig struct {
+	BindAddress      string
 	Port             int
 	WebFilesPath     string
 	DefaultNamespace string
@@ -191,15 +192,18 @@ func Run(config WebConfig, tables typed.Tables) error {
 	server.mux.Handle("/metrics", promhttp.Handler())
 	server.mux.HandleFunc("/", indexHandler(config))
 
-	addr := fmt.Sprintf(":%v", config.Port)
+	addr := fmt.Sprintf("%v:%v", config.BindAddress, config.Port)
 
 	h := &http.Server{
 		Addr:     addr,
 		Handler:  traceWrapper(glogWrapper(server)),
 		ErrorLog: log.New(os.Stdout, "http: ", log.LstdFlags),
 	}
-
-	glog.Infof("Listening on http://localhost%v", addr)
+	if config.BindAddress != "" {
+		glog.Infof("Listening on http://%v", addr)
+	} else {
+		glog.Infof("Listening on http://localhost%v", addr)
+	}
 
 	stop := make(chan os.Signal, 1)
 
