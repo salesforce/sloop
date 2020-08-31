@@ -33,7 +33,7 @@ type SloopConfig struct {
 	DisableKubeWatcher       bool          `json:"disableKubeWatch"`
 	KubeWatchResyncInterval  time.Duration `json:"kubeWatchResyncInterval"`
 	WebFilesPath             string        `json:"webfilesPath"`
-	BindAddress              string        `json:"bindIp"`
+	BindAddress              string        `json:"bindAddress"`
 	Port                     int           `json:"port"`
 	StoreRoot                string        `json:"storeRoot"`
 	MaxLookback              time.Duration `json:"maxLookBack"`
