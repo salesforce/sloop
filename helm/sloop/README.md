@@ -1,4 +1,4 @@
-#Helm with tiller installation instructions
+# Helm with tiller installation instructions
 1. `cd ./helm`
 1. `helm install ./sloop`
 
