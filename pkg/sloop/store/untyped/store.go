@@ -95,7 +95,7 @@ func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error
 		opts = opts.WithValueLogLoadingMode(options.FileIO)
 	}
 
-	opts.Truncate = config.BadgerVLogTruncate
+	opts = opts.WithTruncate(config.BadgerVLogTruncate)
 
 	opts = opts.WithSyncWrites(config.BadgerSyncWrites)
 
