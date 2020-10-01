@@ -44,14 +44,14 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
         <h2>Viewing range {{.ClickTime}} +/- {{.PlusMinusTime}}</h2>
         <table id="resource_event_table">
             <tr>
-                <th>Left Payload</th>
-                <th>Right Payload</th>
+                <th @click="sort('leftPayload')">Left Payload</th>
+                <th @click="sort('rightPayload')">Right Payload</th>
                 <th>Payload Link</th>
                 <th @click="sort('payloadTime')">PayloadTime &#x21C5</th>
             </tr>
             <tr v-for="res in sortedResPayloads">
-                <td><input type="radio" :value="res.payload" :id="res.payloadKey" v-model="leftPayload" v-on:change="doDiff();"/></td>
-                <td><input type="radio" :value="res.payload" :id="res.payloadKey" v-model="rightPayload" v-on:change="doDiff();"/></td>
+                <td class="table_class"><div>${res.leftPayload}</div><input type="radio" :value="res.payload" :id="res.payloadKey" v-model="leftPayload" v-on:change="doDiff();"/></td>
+                <td class="table_class"><div>${res.rightPayload}</div><input type="radio" :value="res.payload" :id="res.payloadKey" v-model="rightPayload" v-on:change="doDiff();"/></td>
                 <td><a :href ="res.origValue | get_payload_url" target="_blank">Details</a></td>
                 <td>${ res.payloadTime | get_formatted_time}</td>
             </tr>
@@ -59,7 +59,91 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
         <div id="diffoutput"> </div>
     </div>
     <script>
-    function diffUsingJS(leftText, rightText, viewType) {
+        new Vue({
+            el: '#resource_payload',
+            delimiters: ['${', '}'],
+            data: {
+                resPayload: [],
+                currentSortBy: 'payloadTime',
+                currentSortDirection: 'asc',
+                startTime: '',
+                leftPayload: undefined,
+                rightPayload: undefined,
+                count: 0
+            },
+            filters: {
+                get_formatted_time(unixnano_time) {
+                    return new Date(unixnano_time / 1000000).toISOString().split('T').join(' ');
+                },
+                get_payload_url(value) {
+                    return "/debug/view/?k=" + value.payloadKey;
+                }
+            },
+            mounted() {
+                NProgress.configure({
+                    easing: 'ease',
+                    minimum: 0.3,
+                    parent: '#resource_payload'
+                });
+
+                axios.interceptors.request.use(config => {
+                    NProgress.start();
+                    return config;
+                });
+
+                axios.interceptors.response.use(response => {
+                    NProgress.done();
+                    return response;
+                });
+
+                axios
+                    .get('{{.PayloadUrl}}')
+                    .then(response => {
+                        if (response.data) {
+                            this.resPayload = response.data.map(function (val) {
+                                return {
+                                    payloadTime: val.payloadTime,
+                                    payloadKey: val.payloadKey,
+                                    payload: val.payload,
+                                    leftPayload: '',
+                                    rightPayload: '',
+                                    origValue: val,
+                                };
+                            });
+                        } else {
+                            console.log("No payloads found for period")
+                        }
+                    })
+            },
+            methods: {
+                sort: function (sortBy) {
+                    if (sortBy === this.currentSortBy) {
+                        this.currentSortDirection = (this.currentSortDirection === 'asc') ? 'desc' : 'asc';
+                    }
+                    this.currentSortBy = sortBy;
+                },
+                pretty: function (value) {
+                    return JSON.stringify(JSON.parse(value), null, 2);
+                },
+                doDiff: function () {
+                    if (this.leftPayload != undefined && this.rightPayload != undefined) {
+                        diffUsingJS(this.pretty(this.leftPayload), this.pretty(this.rightPayload), 1);
+                    }
+                }
+            },
+            computed: {
+                sortedResPayloads: function () {
+                    return this.resPayload.sort((a, b) => {
+                        let direction = (this.currentSortDirection === 'asc') ? 1 : -1;
+                        if (a[this.currentSortBy] < b[this.currentSortBy]) return -1 * direction;
+                        if (a[this.currentSortBy] > b[this.currentSortBy]) return direction;
+                        return 0;
+                    });
+                }
+            }
+        })
+
+        function diffUsingJS(leftText, rightText, viewType) {
         "use strict";
         var byId = function (id) {
                 return document.getElementById(id);
@@ -82,89 +166,7 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
             contextSize: contextSize,
             viewType: viewType
         }));
-    }
-
-    new Vue({
-        el: '#resource_payload',
-        delimiters: ['${', '}'],
-        data: {
-            resPayload: [],
-            currentSortBy: 'payloadTime',
-            currentSortDirection: 'asc',
-            startTime: '',
-            leftPayload: undefined,
-            rightPayload: undefined,
-            count: 0
-        },
-        filters: {
-            get_formatted_time(unixnano_time) {
-                return new Date(unixnano_time / 1000000).toISOString().split('T').join(' ');
-            },
-            get_payload_url(value) {
-                return "/debug/view/?k=" + value.payloadKey;
-            }
-        },
-        mounted() {
-            NProgress.configure({
-                easing: 'ease',
-                minimum: 0.3,
-                parent: '#resource_payload'
-            });
-
-            axios.interceptors.request.use(config => {
-                NProgress.start();
-                return config;
-            });
-
-            axios.interceptors.response.use(response => {
-                NProgress.done();
-                return response;
-            });
-
-            axios
-                .get('{{.PayloadUrl}}')
-                .then(response => {
-                    if (response.data) {
-                        this.resPayload = response.data.map(function (val) {
-                            return {
-                                payloadTime: val.payloadTime,
-                                payloadKey: val.payloadKey,
-                                payload: val.payload,
-                                origValue: val,
-                            };
-                        });
-                    } else {
-                        console.log("No payloads found for period")
-                    }
-                })
-        },
-        methods: {
-            sort: function (sortBy) {
-                if (sortBy === this.currentSortBy) {
-                    this.currentSortDirection = (this.currentSortDirection === 'asc') ? 'desc' : 'asc';
-                }
-                this.currentSortBy = sortBy;
-            },
-            pretty: function (value) {
-                return JSON.stringify(JSON.parse(value), null, 2);
-            },
-            doDiff: function () {
-                if (this.leftPayload != undefined && this.rightPayload != undefined) {
-                    diffUsingJS(this.pretty(this.leftPayload), this.pretty(this.rightPayload), 1);
-                }
-            }
-        },
-        computed: {
-            sortedResPayloads: function () {
-                return this.resPayload.sort((a, b) => {
-                    let direction = (this.currentSortDirection === 'asc') ? 1 : -1;
-                    if (a[this.currentSortBy] < b[this.currentSortBy]) return -1 * direction;
-                    if (a[this.currentSortBy] > b[this.currentSortBy]) return direction;
-                    return 0;
-                });
-            }
-        }
-    });
+    };
 </script>
 
 <div id="resource_events">
