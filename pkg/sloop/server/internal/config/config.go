@@ -69,6 +69,7 @@ type SloopConfig struct {
 	BadgerNumL0TablesStall   int           `json:"badgerNumLevelZeroTables"`
 	BadgerSyncWrites         bool          `json:"badgerSyncWrites"`
 	BadgerVLogFileIOMapping  bool          `json:"badgerVLogFileIOMapping"`
+	BadgerVLogTruncate       bool          `json:"badgerVLogTruncate"`
 	EnableDeleteKeys         bool          `json:"enableDeleteKeys"`
 }
 
@@ -115,6 +116,7 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.BoolVar(&config.BadgerSyncWrites, "badger-sync-writes", true, "Sync Writes ensures writes are synced to disk if set to true")
 	fs.BoolVar(&config.EnableDeleteKeys, "enable-delete-keys", false, "Use delete prefixes instead of dropPrefix for GC")
 	fs.BoolVar(&config.BadgerVLogFileIOMapping, "badger-vlog-fileIO-mapping", false, "Indicates which file loading mode should be used for the value log data, in memory constrained environments the value is recommended to be true")
+	fs.BoolVar(&config.BadgerVLogTruncate, "badger-vlog-truncate", true, "Truncate value log if badger db offset is different from badger db size")
 }
 
 // This will first check if a config file is specified on cmd line using a temporary flagSet

@@ -73,6 +73,7 @@ func RealMain() error {
 		BadgerLevelOneSize:       conf.BadgerLevelOneSize,
 		BadgerLevSizeMultiplier:  conf.BadgerLevSizeMultiplier,
 		BadgerVLogFileIOMapping:  conf.BadgerVLogFileIOMapping,
+		BadgerVLogTruncate:       conf.BadgerVLogTruncate,
 	}
 	db, err := untyped.OpenStore(factory, storeConfig)
 	if err != nil {
