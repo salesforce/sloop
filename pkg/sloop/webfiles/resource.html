@@ -59,6 +59,30 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
         <div id="diffoutput"> </div>
     </div>
     <script>
+        function diffUsingJS(leftText, rightText, viewType) {
+            "use strict";
+            var byId = function (id) {
+                    return document.getElementById(id);
+                },
+                base = difflib.stringAsLines(leftText),
+                newtxt = difflib.stringAsLines(rightText),
+                sm = new difflib.SequenceMatcher(base, newtxt),
+                opcodes = sm.get_opcodes(),
+                diffoutputdiv = byId("diffoutput"),
+                contextSize = "";
+            diffoutputdiv.innerHTML = "";
+            contextSize = contextSize || null;
+
+            diffoutputdiv.appendChild(diffview.buildView({
+                baseTextLines: base,
+                newTextLines: newtxt,
+                opcodes: opcodes,
+                baseTextName: "Left Payload",
+                newTextName: "Right Payload",
+                contextSize: contextSize,
+                viewType: viewType
+            }));
+        }
         new Vue({
             el: '#resource_payload',
             delimiters: ['${', '}'],
@@ -141,32 +165,7 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
                     });
                 }
             }
-        })
-
-        function diffUsingJS(leftText, rightText, viewType) {
-        "use strict";
-        var byId = function (id) {
-                return document.getElementById(id);
-            },
-            base = difflib.stringAsLines(leftText),
-            newtxt = difflib.stringAsLines(rightText),
-            sm = new difflib.SequenceMatcher(base, newtxt),
-            opcodes = sm.get_opcodes(),
-            diffoutputdiv = byId("diffoutput"),
-            contextSize = "";
-        diffoutputdiv.innerHTML = "";
-        contextSize = contextSize || null;
-
-        diffoutputdiv.appendChild(diffview.buildView({
-            baseTextLines: base,
-            newTextLines: newtxt,
-            opcodes: opcodes,
-            baseTextName: "Left Payload",
-            newTextName: "Right Payload",
-            contextSize: contextSize,
-            viewType: viewType
-        }));
-    };
+        });
 </script>
 
 <div id="resource_events">
