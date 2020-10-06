@@ -44,14 +44,14 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
         <h2>Viewing range {{.ClickTime}} +/- {{.PlusMinusTime}}</h2>
         <table id="resource_event_table">
             <tr>
-                <th>Left Payload</th>
-                <th>Right Payload</th>
+                <th @click="sort('leftPayload')">Left Payload</th>
+                <th @click="sort('rightPayload')">Right Payload</th>
                 <th>Payload Link</th>
                 <th @click="sort('payloadTime')">PayloadTime &#x21C5</th>
             </tr>
             <tr v-for="res in sortedResPayloads">
-                <td><input type="radio" :value="res.payload" :id="res.payloadKey" v-model="leftPayload" v-on:change="doDiff();"/></td>
-                <td><input type="radio" :value="res.payload" :id="res.payloadKey" v-model="rightPayload" v-on:change="doDiff();"/></td>
+                <td>${res.leftPayload}<input type="radio" :value="res.payload" :id="res.payloadKey" v-model="leftPayload" v-on:change="doDiff();"/></td>
+                <td>${res.rightPayload}<input type="radio" :value="res.payload" :id="res.payloadKey" v-model="rightPayload" v-on:change="doDiff();"/></td>
                 <td><a :href ="res.origValue | get_payload_url" target="_blank">Details</a></td>
                 <td>${ res.payloadTime | get_formatted_time}</td>
             </tr>
@@ -130,6 +130,8 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
                                 payloadTime: val.payloadTime,
                                 payloadKey: val.payloadKey,
                                 payload: val.payload,
+                                leftPayload:'',
+                                rightPayload:'',
                                 origValue: val,
                             };
                         });
