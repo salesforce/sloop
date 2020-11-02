@@ -13,7 +13,8 @@ import (
 	"io/ioutil"
 	"os"
 	"time"
-
+	"encoding/json"
+	"strings"
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -136,10 +137,10 @@ func Init() *SloopConfig {
 	}
 	if configFilename != "" {
 		newConfig = loadFromFile(configFilename)
+	} else{
+		registerFlags(flag.CommandLine, newConfig)
+		flag.Parse()
 	}
-
-	registerFlags(flag.CommandLine, newConfig)
-	flag.Parse()
 	// Set this to the correct value in case we got it from envVar
 	newConfig.ConfigFile = configFilename
 	return newConfig
@@ -172,16 +173,31 @@ func (c *SloopConfig) Validate() error {
 }
 
 func loadFromFile(filename string) *SloopConfig {
-	yamlFile, err := ioutil.ReadFile(filename)
-	if err != nil {
-		panic(fmt.Sprintf("failed to read %v. %v", filename, err))
+	if strings.Contains(filename,".yaml") {
+		yamlFile, err := ioutil.ReadFile(filename)
+		if err != nil {
+			panic(fmt.Sprintf("failed to read %v. %v", filename, err))
+		}
+		var config SloopConfig
+		err = yaml.Unmarshal(yamlFile, &config)
+		if err != nil {
+			panic(fmt.Sprintf("failed to unmarshal %v. %v", filename, err))
+		}
+		return &config
+	}else{
+		jsonFile, err := ioutil.ReadFile(filename)
+		if err != nil {
+			panic(fmt.Sprintf("failed to read %v. %v", filename, err))
+		}
+		var config SloopConfig
+		err = json.Unmarshal(jsonFile, &config)
+		if err != nil {
+			panic(fmt.Sprintf("failed to unmarshal %v. %v", filename, err))
+		}
+		return &config
+
 	}
-	var config SloopConfig
-	err = yaml.Unmarshal(yamlFile, &config)
-	if err != nil {
-		panic(fmt.Sprintf("failed to unmarshal %v. %v", filename, err))
-	}
-	return &config
+
 }
 
 // Pre-parse flags and return config filename without side-effects
