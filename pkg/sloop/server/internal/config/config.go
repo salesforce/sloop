@@ -182,8 +182,10 @@ func loadFromFile(filename string) (*SloopConfig, error) {
 
 	if strings.Contains(filename, ".yaml") {
 		err = yaml.Unmarshal(configFile, &config)
-	} else {
+	} else if strings.Contains(filename, ".json"){
 		err = json.Unmarshal(configFile, &config)
+	} else {
+		panic(fmt.Sprintf("incorrect file format %v. Use json or yaml file type. ", filename))
 	}
 
 	if err != nil {
