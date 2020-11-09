@@ -19,7 +19,7 @@
 	"keepMinorNodeUpdates": false,
 	"defaultNamespace": "default",
 	"defaultKind": "Pod",
-	"defaultLookback": "12h",
+	"defaultLookback": "6h",
 	"context": "",
 	"displayContext": "",
 	"apiServerHost": "",

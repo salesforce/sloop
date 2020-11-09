@@ -1,50 +1,46 @@
 package config
 
 import (
-	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"testing"
 	"encoding/json"
 	"github.com/ghodss/yaml"
+	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"path/filepath"
+	"testing"
 )
 
-func Test_loadFromJSONFile(t *testing.T) {
+func Test_loadFromJSONFile_Success(t *testing.T) {
 	var expectedconfig SloopConfig
-	configfilename:="testconfig.json"
+	configfilename, _ := filepath.Abs("../testFiles/testconfig.json")
 	configFile, err := ioutil.ReadFile(configfilename)
 	err = json.Unmarshal(configFile, &expectedconfig)
-	assert.Nil(t,err)
+	assert.Nil(t, err)
 
-	out_config,err := loadFromFile(configfilename)
+	out_config, err := loadFromFile(configfilename)
 
-	assert.Nil(t,err)
-	assert.Equal(t,out_config,&expectedconfig)
+	assert.Nil(t, err)
+	assert.Equal(t, out_config, &expectedconfig)
 }
 
-func Test_loadFromYAMLFile(t *testing.T) {
+func Test_loadFromYAMLFile_Success(t *testing.T) {
 	var expectedconfig SloopConfig
-	configfilename:="testconfig.yaml"
+	configfilename, _ := filepath.Abs("../testFiles/testconfig.yaml")
 	configFile, err := ioutil.ReadFile(configfilename)
 	err = yaml.Unmarshal(configFile, &expectedconfig)
-	assert.Nil(t,err)
+	assert.Nil(t, err)
 
-	out_config,err := loadFromFile(configfilename)
+	out_config, err := loadFromFile(configfilename)
 
-	assert.Nil(t,err)
-	assert.Equal(t,out_config,&expectedconfig)
+	assert.Nil(t, err)
+	assert.Equal(t, out_config, &expectedconfig)
 }
 
-func Test_loadFromTxtFile(t *testing.T) {
-	configfilename:="testconfig.txt"
-	_,err := loadFromFile(configfilename)
-
-	assert.Nil(t,err)
-
+func Test_loadFromTxtFile_shouldPanic(t *testing.T) {
+	configfilename, _ := filepath.Abs("../testFiles/testconfig.txt")
+	assert.Panics(t, func() { loadFromFile(configfilename) }, "The code did not panic")
 }
-func Test_loadFromNoFile(t *testing.T) {
-	configfilename:="config.json"
-	_,err := loadFromFile(configfilename)
 
-	assert.Nil(t,err)
-
+func Test_loadFromNoFile_shouldPanic(t *testing.T) {
+	configfilename := "config.json"
+	assert.Panics(t, func() { loadFromFile(configfilename) }, "The code did not panic")
 }

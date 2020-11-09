@@ -17,7 +17,7 @@
 	"disableStoreManager": false,
 	"cleanupFrequency": 1800000000000,
 	"keepMinorNodeUpdates": false,
-	"defaultNamespace": "default",
+	"defaultNamespace": "test",
 	"defaultKind": "Pod",
 	"defaultLookback": "12h",
 	"context": "",
