@@ -41,6 +41,6 @@ func Test_loadFromTxtFile_shouldPanic(t *testing.T) {
 }
 
 func Test_loadFromNoFile_shouldPanic(t *testing.T) {
-	configfilename := "config.json"
+	configfilename, _ := filepath.Abs("../testconfig.json")
 	assert.Panics(t, func() { loadFromFile(configfilename) }, "The code did not panic")
 }
