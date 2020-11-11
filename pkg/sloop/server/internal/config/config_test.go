@@ -17,7 +17,6 @@ func Test_loadFromJSONFile_Success(t *testing.T) {
 	assert.Nil(t, err)
 
 	out_config := loadFromFile(configfilename)
-
 	assert.Equal(t, out_config, &expectedconfig)
 }
 
