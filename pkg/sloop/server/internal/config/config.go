@@ -136,7 +136,7 @@ func Init() *SloopConfig {
 		glog.Infof("Config env: %s", configFilename)
 	}
 	if configFilename != "" {
-		newConfig, _ = loadFromFile(configFilename)
+		newConfig = loadFromFile(configFilename)
 	} else {
 		registerFlags(flag.CommandLine, newConfig)
 		flag.Parse()
@@ -172,7 +172,7 @@ func (c *SloopConfig) Validate() error {
 	return nil
 }
 
-func loadFromFile(filename string) (*SloopConfig, error) {
+func loadFromFile(filename string) *SloopConfig {
 	var config SloopConfig
 
 	configFile, err := ioutil.ReadFile(filename)
@@ -191,7 +191,7 @@ func loadFromFile(filename string) (*SloopConfig, error) {
 	if err != nil {
 		panic(fmt.Sprintf("failed to unmarshal %v. %v", filename, err))
 	}
-	return &config, nil
+	return &config
 
 }
 

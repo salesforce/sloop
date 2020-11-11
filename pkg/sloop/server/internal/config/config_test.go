@@ -16,9 +16,8 @@ func Test_loadFromJSONFile_Success(t *testing.T) {
 	err = json.Unmarshal(configFile, &expectedconfig)
 	assert.Nil(t, err)
 
-	out_config, err := loadFromFile(configfilename)
+	out_config := loadFromFile(configfilename)
 
-	assert.Nil(t, err)
 	assert.Equal(t, out_config, &expectedconfig)
 }
 
@@ -29,9 +28,7 @@ func Test_loadFromYAMLFile_Success(t *testing.T) {
 	err = yaml.Unmarshal(configFile, &expectedconfig)
 	assert.Nil(t, err)
 
-	out_config, err := loadFromFile(configfilename)
-
-	assert.Nil(t, err)
+	out_config := loadFromFile(configfilename)
 	assert.Equal(t, out_config, &expectedconfig)
 }
 
