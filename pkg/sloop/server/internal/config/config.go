@@ -8,15 +8,16 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"time"
-
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"io/ioutil"
+	"os"
+	"strings"
+	"time"
 
 	"github.com/salesforce/sloop/pkg/sloop/webserver"
 )
@@ -136,10 +137,10 @@ func Init() *SloopConfig {
 	}
 	if configFilename != "" {
 		newConfig = loadFromFile(configFilename)
+	} else {
+		registerFlags(flag.CommandLine, newConfig)
+		flag.Parse()
 	}
-
-	registerFlags(flag.CommandLine, newConfig)
-	flag.Parse()
 	// Set this to the correct value in case we got it from envVar
 	newConfig.ConfigFile = configFilename
 	return newConfig
@@ -172,16 +173,26 @@ func (c *SloopConfig) Validate() error {
 }
 
 func loadFromFile(filename string) *SloopConfig {
-	yamlFile, err := ioutil.ReadFile(filename)
+	var config SloopConfig
+
+	configFile, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(fmt.Sprintf("failed to read %v. %v", filename, err))
 	}
-	var config SloopConfig
-	err = yaml.Unmarshal(yamlFile, &config)
+
+	if strings.Contains(filename, ".yaml") {
+		err = yaml.Unmarshal(configFile, &config)
+	} else if strings.Contains(filename, ".json") {
+		err = json.Unmarshal(configFile, &config)
+	} else {
+		panic(fmt.Sprintf("incorrect file format %v. Use json or yaml file type. ", filename))
+	}
+
 	if err != nil {
 		panic(fmt.Sprintf("failed to unmarshal %v. %v", filename, err))
 	}
 	return &config
+
 }
 
 // Pre-parse flags and return config filename without side-effects
