@@ -8,7 +8,7 @@ webfilesPath: "./pkg/sloop/webfiles"
 bindAddress: ''
 port: 8080
 storeRoot: "./data"
-maxLookBack: 1209600000000000
+maxLookBack: 1109600000000000
 maxDiskMb: 32768
 debugPlaybackFile: ''
 debugRecordFile: ''
@@ -24,20 +24,20 @@ context: ''
 displayContext: ''
 apiServerHost: ''
 watchCrds: true
-threshold for GC: 0.8
+threshold for GC: 0.75
 restoreDatabaseFile: ''
-badgerDiscardRatio: 0.99
+badgerDiscardRatio: 0.80
 badgerVLogGCFreq: 60000000000
 badgerMaxTableSize: 0
 badgerLevelOneSize: 0
 badgerLevSizeMultiplier: 0
 badgerKeepL0InMemory: true
 badgerVLogFileSize: 0
-badgerVLogMaxEntries: 200000
+badgerVLogMaxEntries: 150000
 badgerUseLSMOnlyOptions: true
 badgerEnableEventLogging: false
 badgerNumOfCompactors: 0
 badgerSyncWrites: true
-badgerVLogFileIOMapping: false
+badgerVLogFileIOMapping: true
 badgerVLogTruncate: true
 enableDeleteKeys: false
