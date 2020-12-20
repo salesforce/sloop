@@ -8,9 +8,7 @@
 package webserver
 
 import (
-	"html/template"
 	"net/http"
-	"path"
 )
 
 type indexData struct {
@@ -23,12 +21,11 @@ type indexData struct {
 
 func indexHandler(config WebConfig) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
-		t, err := template.New(indexTemplateFile).ParseFiles(path.Join(webFiles, indexTemplateFile))
+		indexTemplate, err := GetTemplate("index.html")
 		if err != nil {
 			logWebError(err, "Template.New failed", request, writer)
 			return
 		}
-
 		data := indexData{}
 		data.DefaultLookback = config.DefaultLookback
 		data.DefaultNamespace = config.DefaultNamespace
@@ -40,7 +37,7 @@ func indexHandler(config WebConfig) http.HandlerFunc {
 			return
 		}
 
-		err = t.ExecuteTemplate(writer, indexTemplateFile, data)
+		err = indexTemplate.Execute(writer, data)
 		if err != nil {
 			logWebError(err, "Template.ExecuteTemplate failed", request, writer)
 			return

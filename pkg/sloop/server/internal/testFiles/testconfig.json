@@ -4,7 +4,7 @@
 	"resourceLinks": null,
 	"disableKubeWatch": true,
 	"kubeWatchResyncInterval": 1800000000000,
-	"webfilesPath": "./pkg/sloop/webfiles",
+	"webfilesPath": "./pkg/sloop/webserver/webfiles",
 	"bindAddress": "",
 	"port": 8080,
 	"storeRoot": "./data",

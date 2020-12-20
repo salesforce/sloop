@@ -11,7 +11,6 @@ import (
 	"context"
 	"expvar"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"mime"
 	"net/http"
@@ -35,17 +34,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"golang.org/x/net/trace"
-)
-
-const (
-	debugViewKeyTemplateFile      = "debugviewkey.html"
-	debugListKeysTemplateFile     = "debuglistkeys.html"
-	debugHistogramFile            = "debughistogram.html"
-	debugConfigTemplateFile       = "debugconfig.html"
-	debugTemplateFile             = "debug.html"
-	debugBadgerTablesTemplateFile = "debugtables.html"
-	indexTemplateFile             = "index.html"
-	resourceTemplateFile          = "resource.html"
 )
 
 type WebConfig struct {
@@ -96,8 +84,8 @@ func webFileHandler(w http.ResponseWriter, r *http.Request) {
 		logWebError(nil, "Not allowed", r, w)
 		return
 	}
-	fullPath := path.Join(webFiles, fixedUrl)
-	data, err := ioutil.ReadFile(fullPath)
+	fullPath := path.Join("webfiles/", fixedUrl)
+	data, err := ReadWebfile(fullPath)
 	if err != nil {
 		logWebError(err, "Error reading web file: "+fixedUrl, r, w)
 		return

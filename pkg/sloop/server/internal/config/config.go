@@ -79,7 +79,7 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.BoolVar(&config.DisableKubeWatcher, "disable-kube-watch", false, "Turn off kubernetes watch")
 	fs.DurationVar(&config.KubeWatchResyncInterval, "kube-watch-resync-interval", 30*time.Minute,
 		"OPTIONAL: Kubernetes watch resync interval")
-	fs.StringVar(&config.WebFilesPath, "web-files-path", "./pkg/sloop/webfiles", "Path to web files")
+	fs.StringVar(&config.WebFilesPath, "web-files-path", "./pkg/sloop/webserver/webfiles", "Path to web files")
 	fs.StringVar(&config.BindAddress, "bind-address", "", "Web server bind ip address.")
 	fs.IntVar(&config.Port, "port", 8080, "Web server port")
 	fs.StringVar(&config.StoreRoot, "store-root", "./data", "Path to store history data")
