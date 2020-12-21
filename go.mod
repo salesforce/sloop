@@ -16,7 +16,6 @@ require (
 	github.com/googleapis/gnostic v0.3.1 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/imdario/mergo v0.3.8 // indirect
-	github.com/jteeuwen/go-bindata v3.0.7+incompatible // indirect
 	github.com/nsf/jsondiff v0.0.0-20190712045011-8443391ee9b6
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.2.1
