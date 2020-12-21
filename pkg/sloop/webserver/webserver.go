@@ -36,6 +36,16 @@ import (
 	"golang.org/x/net/trace"
 )
 
+const (
+	debugViewKeyTemplateFile      = "debugviewkey.html"
+	debugListKeysTemplateFile     = "debuglistkeys.html"
+	debugHistogramFile            = "debughistogram.html"
+	debugConfigTemplateFile       = "debugconfig.html"
+	debugTemplateFile             = "debug.html"
+	debugBadgerTablesTemplateFile = "debugtables.html"
+	indexTemplateFile             = "index.html"
+	resourceTemplateFile          = "resource.html"
+)
 type WebConfig struct {
 	BindAddress      string
 	Port             int

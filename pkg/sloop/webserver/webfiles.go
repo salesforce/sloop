@@ -12,6 +12,7 @@ import (
 const (
 	prefix = "webfiles/"
 )
+
 // go-bindata -o bindata.go webfiles
 // ReadWebfile is a function which finds the webfiles that have been predefined and converted to binary format.
 // sample input : filepath= "webfiles/index.html"

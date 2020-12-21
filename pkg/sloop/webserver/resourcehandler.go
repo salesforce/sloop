@@ -54,7 +54,7 @@ func runTextTemplate(templateStr string, data interface{}) (string, error) {
 
 func resourceHandler(resLinks []ResourceLinkTemplate) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
-		resourceTemplate, err := GetTemplate("resource.html")
+		resourceTemplate, err := GetTemplate(resourceTemplateFile)
 		if err != nil {
 			logWebError(err, "Template.New failed", request, writer)
 			return
