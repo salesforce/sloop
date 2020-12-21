@@ -20,15 +20,16 @@ func ReadWebfile(filepath string) ([]byte, error) {
 	if !strings.HasPrefix(filepath, prefix) {
 		return []byte{}, fmt.Errorf("Webfile %v is invalid.  Must start with %v",filepath, prefix)
 	}
-	files := AssetNames()
-	//if file exists in binary form
-	if sort.SearchStrings(files,filepath)!=0 {
-		return Asset(filepath)
-	}
-	//else simply read the file and return
+
 	data, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		return nil, err
+		files := AssetNames()
+		//if file exists in binary form
+		if sort.SearchStrings(files, filepath) != 0 {
+			return Asset(filepath)
+		}else {
+			return nil, err
+		}
 	}
 	return data, err
 
