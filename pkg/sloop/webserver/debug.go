@@ -96,11 +96,6 @@ func viewKeyHandler(tables typed.Tables) http.HandlerFunc {
 		}
 		data.Payload = template.HTML(string(prettyJson))
 
-		//t, err := template.New(debugViewKeyTemplateFile).ParseFiles(path.Join(webFiles, debugViewKeyTemplateFile))
-		//if err != nil {
-		//	logWebError(err, "failed to parse template", request, writer)
-		//	return
-		//}
 		debugviewkeyTemplate, err := GetTemplate("debugviewkey.html")
 		if err != nil {
 			logWebError(err, "failed to parse template", request, writer)
@@ -306,7 +301,10 @@ func histogramHandler(tables typed.Tables) http.HandlerFunc {
 		writer.Header().Set("content-type", "text/html")
 
 		debugHistogramTemplate, err := GetTemplate("debughistogram.html")
-
+		if err != nil {
+			logWebError(err, "failed to parse histogram template", request, writer)
+			return
+		}
 		err = debugHistogramTemplate.Execute(writer, result)
 		if err != nil {
 			logWebError(err, "Template.ExecuteTemplate failed", request, writer)
@@ -318,6 +316,10 @@ func histogramHandler(tables typed.Tables) http.HandlerFunc {
 func configHandler(config string) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		debugConfigTemplate, err := GetTemplate("debugconfig.html")
+		if err != nil {
+			logWebError(err, "failed to parse template", request, writer)
+			return
+		}
 		err = debugConfigTemplate.Execute(writer, config)
 		if err != nil {
 			logWebError(err, "Template.ExecuteTemplate failed", request, writer)
@@ -329,6 +331,10 @@ func configHandler(config string) http.HandlerFunc {
 func debugHandler() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		debugTemplate, err := GetTemplate("debug.html")
+		if err != nil {
+			logWebError(err, "failed to parse template", request, writer)
+			return
+		}
 		err = debugTemplate.Execute(writer,nil)
 		if err != nil {
 			logWebError(err, "Template.ExecuteTemplate failed", request, writer)
@@ -350,6 +356,10 @@ type badgerTableInfo struct {
 func debugBadgerTablesHandler(db badgerwrap.DB) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		debugBadgerTablesTemplate, err := GetTemplate("debugtables.html")
+		if err != nil {
+			logWebError(err, "failed to parse template", request, writer)
+			return
+		}
 		data := []badgerTableInfo{}
 		for _, table := range db.Tables(true) {
 			thisTable := badgerTableInfo{
