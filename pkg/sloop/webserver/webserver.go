@@ -11,6 +11,7 @@ import (
 	"context"
 	"expvar"
 	"fmt"
+	"github.com/spf13/afero"
 	"log"
 	"mime"
 	"net/http"
@@ -95,7 +96,7 @@ func webFileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fullPath := path.Join("webfiles/", fixedUrl)
-	data, err := ReadWebfile(fullPath)
+	data, err := readWebfile(fullPath,nil, afero.NewOsFs())
 	if err != nil {
 		logWebError(err, "Error reading web file: "+fixedUrl, r, w)
 		return

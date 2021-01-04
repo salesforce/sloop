@@ -6,7 +6,6 @@ RUN curl -o /aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com
 
 FROM gcr.io/distroless/base
 COPY sloop /sloop
-COPY pkg/sloop/webserver/webfiles /pkg/sloop/webserver/webfiles
 COPY --from=build /aws-iam-authenticator /aws-iam-authenticator
 ENV PATH="/:${PATH}"
 CMD ["/sloop"]
