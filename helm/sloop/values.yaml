@@ -15,6 +15,7 @@ resources: {}
 service:
   port: 80
   targetPort: 8080
+  type: ClusterIP
 ## Configure extra options for liveness and readiness probes
 livenessProbe:
   enabled: true
@@ -30,3 +31,8 @@ readinessProbe:
   timeoutSeconds: 5
   failureThreshold: 3
   successThreshold: 1
+ingress:
+ enabled: false
+ host: sloop.example.com
+ annotations: {}
+ tls: {}
