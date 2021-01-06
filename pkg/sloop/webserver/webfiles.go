@@ -2,14 +2,12 @@ package webserver
 
 import (
 	"fmt"
-	"html/template"
-	"io/ioutil"
-	"path"
-	"strings"
-	"sort"
-	"github.com/spf13/afero"
-
 	_ "github.com/jteeuwen/go-bindata"
+	"github.com/spf13/afero"
+	"html/template"
+	"path"
+	"sort"
+	"strings"
 )
 
 const (
@@ -19,12 +17,11 @@ const (
 // go-bindata -o bindata.go webfiles
 // ReadWebfile is a function which finds the webfiles that have been predefined and converted to binary format.
 // sample input : filepath= "webfiles/index.html"
-func readWebfile(filepath string, _, fs afero.Fs) ([]byte, error) {
+func readWebfile(filepath string, _ , fs *afero.Afero) ([]byte, error) {
 	if !strings.HasPrefix(filepath, prefix) {
 		return []byte{}, fmt.Errorf("Webfile %v is invalid.  Must start with %v",filepath, prefix)
 	}
-	//d1, err := fs.
-	data, err := ioutil.ReadFile(filepath)
+	data, err := fs.ReadFile(filepath)
 	if err != nil {
 		files := AssetNames()
 		//if file exists in binary form
@@ -43,8 +40,8 @@ func readWebfile(filepath string, _, fs afero.Fs) ([]byte, error) {
 // Get Template function creates a new template of the webfile passed as a string after first reading the file by
 // calling ReadWebfile ().
 func getTemplate(templateName string, _ []byte) (*template.Template, error) {
-	fs := afero.NewOsFs()
-	data, err := readWebfile((path.Join(prefix, templateName)),nil, fs)
+	fs := afero.Afero{Fs: afero.NewOsFs()}
+	data, err := readWebfile((path.Join(prefix, templateName)),nil, &fs)
 	if err != nil {
 		return nil, err
 	}
