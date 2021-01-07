@@ -392,19 +392,19 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"webfiles/debug.html": webfilesDebugHtml,
-	"webfiles/debugconfig.html": webfilesDebugconfigHtml,
+	"webfiles/debug.html":          webfilesDebugHtml,
+	"webfiles/debugconfig.html":    webfilesDebugconfigHtml,
 	"webfiles/debughistogram.html": webfilesDebughistogramHtml,
-	"webfiles/debuglistkeys.html": webfilesDebuglistkeysHtml,
-	"webfiles/debugtables.html": webfilesDebugtablesHtml,
-	"webfiles/debugviewkey.html": webfilesDebugviewkeyHtml,
-	"webfiles/favicon.ico": webfilesFaviconIco,
-	"webfiles/filter.js": webfilesFilterJs,
-	"webfiles/index.html": webfilesIndexHtml,
-	"webfiles/resource.css": webfilesResourceCss,
-	"webfiles/resource.html": webfilesResourceHtml,
-	"webfiles/sloop.css": webfilesSloopCss,
-	"webfiles/sloop_ui.js": webfilesSloop_uiJs,
+	"webfiles/debuglistkeys.html":  webfilesDebuglistkeysHtml,
+	"webfiles/debugtables.html":    webfilesDebugtablesHtml,
+	"webfiles/debugviewkey.html":   webfilesDebugviewkeyHtml,
+	"webfiles/favicon.ico":         webfilesFaviconIco,
+	"webfiles/filter.js":           webfilesFilterJs,
+	"webfiles/index.html":          webfilesIndexHtml,
+	"webfiles/resource.css":        webfilesResourceCss,
+	"webfiles/resource.html":       webfilesResourceHtml,
+	"webfiles/sloop.css":           webfilesSloopCss,
+	"webfiles/sloop_ui.js":         webfilesSloop_uiJs,
 }
 
 // AssetDir returns the file names below a certain
@@ -446,21 +446,22 @@ type bintree struct {
 	Func     func() (*asset, error)
 	Children map[string]*bintree
 }
+
 var _bintree = &bintree{nil, map[string]*bintree{
 	"webfiles": &bintree{nil, map[string]*bintree{
-		"debug.html": &bintree{webfilesDebugHtml, map[string]*bintree{}},
-		"debugconfig.html": &bintree{webfilesDebugconfigHtml, map[string]*bintree{}},
+		"debug.html":          &bintree{webfilesDebugHtml, map[string]*bintree{}},
+		"debugconfig.html":    &bintree{webfilesDebugconfigHtml, map[string]*bintree{}},
 		"debughistogram.html": &bintree{webfilesDebughistogramHtml, map[string]*bintree{}},
-		"debuglistkeys.html": &bintree{webfilesDebuglistkeysHtml, map[string]*bintree{}},
-		"debugtables.html": &bintree{webfilesDebugtablesHtml, map[string]*bintree{}},
-		"debugviewkey.html": &bintree{webfilesDebugviewkeyHtml, map[string]*bintree{}},
-		"favicon.ico": &bintree{webfilesFaviconIco, map[string]*bintree{}},
-		"filter.js": &bintree{webfilesFilterJs, map[string]*bintree{}},
-		"index.html": &bintree{webfilesIndexHtml, map[string]*bintree{}},
-		"resource.css": &bintree{webfilesResourceCss, map[string]*bintree{}},
-		"resource.html": &bintree{webfilesResourceHtml, map[string]*bintree{}},
-		"sloop.css": &bintree{webfilesSloopCss, map[string]*bintree{}},
-		"sloop_ui.js": &bintree{webfilesSloop_uiJs, map[string]*bintree{}},
+		"debuglistkeys.html":  &bintree{webfilesDebuglistkeysHtml, map[string]*bintree{}},
+		"debugtables.html":    &bintree{webfilesDebugtablesHtml, map[string]*bintree{}},
+		"debugviewkey.html":   &bintree{webfilesDebugviewkeyHtml, map[string]*bintree{}},
+		"favicon.ico":         &bintree{webfilesFaviconIco, map[string]*bintree{}},
+		"filter.js":           &bintree{webfilesFilterJs, map[string]*bintree{}},
+		"index.html":          &bintree{webfilesIndexHtml, map[string]*bintree{}},
+		"resource.css":        &bintree{webfilesResourceCss, map[string]*bintree{}},
+		"resource.html":       &bintree{webfilesResourceHtml, map[string]*bintree{}},
+		"sloop.css":           &bintree{webfilesSloopCss, map[string]*bintree{}},
+		"sloop_ui.js":         &bintree{webfilesSloop_uiJs, map[string]*bintree{}},
 	}},
 }}
 
@@ -510,4 +511,3 @@ func _filePath(dir, name string) string {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
 	return filepath.Join(append([]string{dir}, strings.Split(cannonicalName, "/")...)...)
 }
-

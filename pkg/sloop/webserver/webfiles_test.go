@@ -7,36 +7,37 @@ import (
 	"path"
 	"testing"
 )
+
 const (
 	defaultFileMode = os.FileMode(0755)
-	someContents1 = "contents abcd"
-	filePath = "webfiles/index.html"
+	someContents1   = "contents abcd"
+	filePath        = "webfiles/index.html"
 )
 
 func Test_BindataReadWebfile_True(t *testing.T) {
 	expectedOutput, err := Asset(filePath)
-	assert.Nil(t,err)
+	assert.Nil(t, err)
 
-	actualOutput, _ := readWebfile(filePath,nil,&afero.Afero{afero.NewMemMapFs()})
-	assert.Equal(t,actualOutput,expectedOutput)
+	actualOutput, _ := readWebfile(filePath, nil, &afero.Afero{afero.NewMemMapFs()})
+	assert.Equal(t, actualOutput, expectedOutput)
 }
 
-func Test_LocalReadWebfile_True(t *testing.T){
+func Test_LocalReadWebfile_True(t *testing.T) {
 	notExpectedOutput, _ := Asset(filePath)
 
 	fs := &afero.Afero{afero.NewMemMapFs()}
-	writeFile(t,fs, filePath,someContents1)
+	writeFile(t, fs, filePath, someContents1)
 
-	actualOutput,_ :=readWebfile("webfiles/index.html",nil,fs)
+	actualOutput, _ := readWebfile("webfiles/index.html", nil, fs)
 
-	assert.NotEqual(t,notExpectedOutput,actualOutput)
+	assert.NotEqual(t, notExpectedOutput, actualOutput)
 
 }
 
 func Test_FilenotinReqdFormat_False(t *testing.T) {
-	filePath :="index.html"
-	_, err := readWebfile(filePath,nil,&afero.Afero{afero.NewMemMapFs()})
-	assert.Errorf(t,err,"Webfile %v is invalid.  Must start with %v",filePath,prefix)
+	filePath := "index.html"
+	_, err := readWebfile(filePath, nil, &afero.Afero{afero.NewMemMapFs()})
+	assert.Errorf(t, err, "Webfile %v is invalid.  Must start with %v", filePath, prefix)
 }
 
 func writeFile(t *testing.T, fs *afero.Afero, filePath string, content string) {
@@ -45,7 +46,3 @@ func writeFile(t *testing.T, fs *afero.Afero, filePath string, content string) {
 	err = fs.WriteFile(filePath, []byte(content), defaultFileMode)
 	assert.Nil(t, err)
 }
-
-
-
-
