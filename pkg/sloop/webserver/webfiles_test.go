@@ -19,7 +19,7 @@ func Test_BindataReadWebfile_True(t *testing.T) {
 	assert.Nil(t, err)
 
 	actualOutput, _ := readWebfile(filePath, nil, &afero.Afero{afero.NewMemMapFs()})
-	assert.Equal(t, actualOutput, expectedOutput)
+	assert.Equal(t, expectedOutput, actualOutput)
 }
 
 func Test_LocalReadWebfile_True(t *testing.T) {
