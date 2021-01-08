@@ -32,7 +32,7 @@ func Test_LocalReadWebfile_True(t *testing.T) {
 	actualOutput, _ := readWebfile(filePath, fs)
 
 	assert.NotEqual(t, notExpectedOutput, actualOutput)
-	assert.Equal(t, someContents1, actualOutput)
+	assert.Equal(t, []uint8(someContents1), actualOutput)
 }
 
 func Test_FilenotinReqdFormat_False(t *testing.T) {
