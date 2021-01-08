@@ -28,10 +28,10 @@ func Test_LocalReadWebfile_True(t *testing.T) {
 	fs := &afero.Afero{afero.NewMemMapFs()}
 	writeFile(t, fs, filePath, someContents1)
 
-	actualOutput, _ := readWebfile("webfiles/index.html", nil, fs)
+	actualOutput, _ := readWebfile(filePath, nil, fs)
 
 	assert.NotEqual(t, notExpectedOutput, actualOutput)
-
+	assert.Equal(t, someContents1, actualOutput)
 }
 
 func Test_FilenotinReqdFormat_False(t *testing.T) {

@@ -96,7 +96,7 @@ func webFileHandler(w http.ResponseWriter, r *http.Request) {
 		logWebError(nil, "Not allowed", r, w)
 		return
 	}
-	fullPath := path.Join("webfiles/", fixedUrl)
+	fullPath := path.Join(prefix, fixedUrl)
 	data, err := readWebfile(fullPath, nil, &afero.Afero{afero.NewOsFs()})
 	if err != nil {
 		logWebError(err, "Error reading web file: "+fixedUrl, r, w)

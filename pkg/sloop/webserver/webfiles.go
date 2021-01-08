@@ -19,20 +19,19 @@ const (
 // sample input : filepath= "webfiles/index.html"
 func readWebfile(filepath string, _, fs *afero.Afero) ([]byte, error) {
 	if !strings.HasPrefix(filepath, prefix) {
-		return []byte{}, fmt.Errorf("Webfile %v is invalid.  Must start with %v", filepath, prefix)
+		return nil, fmt.Errorf("Webfile %v is invalid.  Must start with %v", filepath, prefix)
 	}
 	data, err := fs.ReadFile(filepath)
-	if err != nil {
-		files := AssetNames()
-		//if file exists in binary form
-		if sort.SearchStrings(files, filepath) != 0 {
-			return Asset(filepath)
-		} else {
-			return nil, err
-		}
+	if err == nil {
+		return data, err
 	}
-	return data, err
-
+	files := AssetNames()
+	//if file exists in binary form
+	if sort.SearchStrings(files, filepath) != 0 {
+		return Asset(filepath)
+	} else {
+		return nil, err
+	}
 }
 
 // Example input:
