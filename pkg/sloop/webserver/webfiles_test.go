@@ -12,7 +12,7 @@ const (
 	defaultFileMode = os.FileMode(0755)
 	someContents1   = "contents abcd"
 	filePath        = "webfiles/index.html"
-	errorString		= "Webfile %v is invalid.  Must start with %v"
+	errorString     = "Webfile %v is invalid.  Must start with %v"
 )
 
 func Test_BindataReadWebfile_True(t *testing.T) {
