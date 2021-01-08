@@ -17,7 +17,7 @@ const (
 // go-bindata -o bindata.go webfiles
 // ReadWebfile is a function which finds the webfiles that have been predefined and converted to binary format.
 // sample input : filepath= "webfiles/index.html"
-func readWebfile(filepath string, _, fs *afero.Afero) ([]byte, error) {
+func readWebfile(filepath string, fs *afero.Afero) ([]byte, error) {
 	if !strings.HasPrefix(filepath, prefix) {
 		return nil, fmt.Errorf("Webfile %v is invalid.  Must start with %v", filepath, prefix)
 	}
@@ -40,7 +40,7 @@ func readWebfile(filepath string, _, fs *afero.Afero) ([]byte, error) {
 // calling ReadWebfile ().
 func getTemplate(templateName string, _ []byte) (*template.Template, error) {
 	fs := afero.Afero{Fs: afero.NewOsFs()}
-	data, err := readWebfile((path.Join(prefix, templateName)), nil, &fs)
+	data, err := readWebfile((path.Join(prefix, templateName)), &fs)
 	if err != nil {
 		return nil, err
 	}
