@@ -12,6 +12,7 @@ const (
 	defaultFileMode = os.FileMode(0755)
 	someContents1   = "contents abcd"
 	filePath        = "webfiles/index.html"
+	errorString		= "Webfile %v is invalid.  Must start with %v"
 )
 
 func Test_BindataReadWebfile_True(t *testing.T) {
@@ -37,7 +38,7 @@ func Test_LocalReadWebfile_True(t *testing.T) {
 func Test_FilenotinReqdFormat_False(t *testing.T) {
 	filePath := "index.html"
 	_, err := readWebfile(filePath, nil, &afero.Afero{afero.NewMemMapFs()})
-	assert.Errorf(t, err, "Webfile %v is invalid.  Must start with %v", filePath, prefix)
+	assert.Errorf(t, err, errorString, filePath, prefix)
 }
 
 func writeFile(t *testing.T, fs *afero.Afero, filePath string, content string) {
