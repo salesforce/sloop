@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	prefix = "webfiles/"
+	prefix      = "webfiles/"
+	errorString = "Webfile %v is invalid.  Must start with %v"
 )
 
 // go-bindata -o bindata.go webfiles
@@ -19,7 +20,7 @@ const (
 // sample input : filepath= "webfiles/index.html"
 func readWebfile(filepath string, fs *afero.Afero) ([]byte, error) {
 	if !strings.HasPrefix(filepath, prefix) {
-		return nil, fmt.Errorf("Webfile %v is invalid.  Must start with %v", filepath, prefix)
+		return nil, fmt.Errorf(errorString, filepath, prefix)
 	}
 	data, err := fs.ReadFile(filepath)
 	if err == nil {
