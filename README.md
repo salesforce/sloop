@@ -71,7 +71,7 @@ Other makefile targets:
 To run from Docker you need to host mount your kubeconfig:
 
 ```shell script
-make docker
+make docker-snapshot
 docker run --rm -it -p 8080:8080 -v ~/.kube/:/kube/ -e KUBECONFIG=/kube/config sloop
 ```
 
