@@ -11,7 +11,7 @@ import (
 	"context"
 	"expvar"
 	"fmt"
-	"io/ioutil"
+	"github.com/spf13/afero"
 	"log"
 	"mime"
 	"net/http"
@@ -96,8 +96,8 @@ func webFileHandler(w http.ResponseWriter, r *http.Request) {
 		logWebError(nil, "Not allowed", r, w)
 		return
 	}
-	fullPath := path.Join(webFiles, fixedUrl)
-	data, err := ioutil.ReadFile(fullPath)
+	fullPath := path.Join(prefix, fixedUrl)
+	data, err := readWebfile(fullPath, &afero.Afero{afero.NewOsFs()})
 	if err != nil {
 		logWebError(err, "Error reading web file: "+fixedUrl, r, w)
 		return

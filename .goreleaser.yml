@@ -16,7 +16,7 @@ archives:
     builds:
       - sloop
     files:
-      - ./pkg/sloop/webfiles/**/*
+      - ./pkg/sloop/webserver/webfiles/**/*
 dockers:
   - goos: linux
     goarch: amd64
@@ -25,7 +25,7 @@ dockers:
     binaries:
       - sloop
     extra_files:
-      - pkg/sloop/webfiles
+      - pkg/sloop/webserver/webfiles
     image_templates:
       - "salesforce/sloop:latest"
       - "salesforce/sloop:{{ .Tag }}"

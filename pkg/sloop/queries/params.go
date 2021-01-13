@@ -8,7 +8,7 @@
 package queries
 
 // Parameters are shared between webserver and here
-// Keep this in sync with pkg/sloop/webfiles/filter.js
+// Keep this in sync with pkg/sloop/webserver/webfiles/filter.js
 const (
 	LookbackParam  = "lookback"
 	NamespaceParam = "namespace"

@@ -13,7 +13,6 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/queries"
 	"html/template"
 	"net/http"
-	"path"
 	"strings"
 	"time"
 )
@@ -55,12 +54,11 @@ func runTextTemplate(templateStr string, data interface{}) (string, error) {
 
 func resourceHandler(resLinks []ResourceLinkTemplate) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
-		t, err := template.New(resourceTemplateFile).ParseFiles(path.Join(webFiles, resourceTemplateFile))
+		resourceTemplate, err := getTemplate(resourceTemplateFile, _webfilesResourceHtml)
 		if err != nil {
 			logWebError(err, "Template.New failed", request, writer)
 			return
 		}
-
 		d := resourceData{}
 		d.Namespace = cleanStringFromParam(request, queries.NamespaceParam, "")
 		d.Name = cleanStringFromParam(request, queries.NameParam, "")
@@ -90,7 +88,7 @@ func resourceHandler(resLinks []ResourceLinkTemplate) http.HandlerFunc {
 		dataParams = fmt.Sprintf("?query=%v&namespace=%v&start_time=%v&end_time=%v&kind=%v&name=%v", "GetResPayload", d.Namespace, queryStart, queryEnd, d.Kind, d.Name)
 		d.PayloadUrl = "/data" + dataParams
 
-		err = t.ExecuteTemplate(writer, resourceTemplateFile, d)
+		err = resourceTemplate.Execute(writer, d)
 		if err != nil {
 			logWebError(err, "Template.ExecuteTemplate failed", request, writer)
 			return
