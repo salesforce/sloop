@@ -3,6 +3,7 @@ package webserver
 import (
 	"fmt"
 	_ "github.com/jteeuwen/go-bindata"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/spf13/afero"
 	"html/template"
 	"path"
@@ -27,7 +28,7 @@ func readWebfile(filepath string, fs *afero.Afero) ([]byte, error) {
 	}
 	files := AssetNames()
 	//if file exists in binary form
-	if contains(files, filepath) {
+	if common.Contains(files, filepath) {
 		return Asset(filepath)
 	} else {
 		return nil, err
@@ -50,13 +51,4 @@ func getTemplate(templateName string, _ []byte) (*template.Template, error) {
 		return nil, err
 	}
 	return newTemplate, nil
-}
-
-func contains(fileList []string, elem string) bool {
-	for _, str := range fileList {
-		if str == elem {
-			return true
-		}
-	}
-	return false
 }

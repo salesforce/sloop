@@ -12,10 +12,7 @@ const (
 	defaultFileMode = os.FileMode(0755)
 	someContents1   = "contents abcd"
 	filePath        = "webfiles/index.html"
-	filePath2       = "webfiles/sloop.css"
 )
-
-var files = []string{"webfiles/index.html", "webfiles/debug.html", "webfiles/filter.js", "webfiles/sloop.cs"}
 
 func Test_BindataReadWebfile_True(t *testing.T) {
 	expectedOutput, err := Asset(filePath)
@@ -48,16 +45,4 @@ func writeFile(t *testing.T, fs *afero.Afero, filePath string, content string) {
 	assert.Nil(t, err)
 	err = fs.WriteFile(filePath, []byte(content), defaultFileMode)
 	assert.Nil(t, err)
-}
-
-func Test_FileExistsInList_True(t *testing.T) {
-	expectedOutput := true
-	actualOutput := contains(files, filePath)
-	assert.Equal(t, expectedOutput, actualOutput)
-}
-
-func Test_FileExistsInList_False(t *testing.T) {
-	expectedOutput := false
-	actualOutput := contains(files, filePath2)
-	assert.Equal(t, expectedOutput, actualOutput)
 }
