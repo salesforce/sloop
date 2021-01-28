@@ -27,7 +27,7 @@ func readWebfile(filepath string, fs *afero.Afero) ([]byte, error) {
 	}
 	files := AssetNames()
 	//if file exists in binary form
-	if contains(files,filepath)  {
+	if contains(files, filepath) {
 		return Asset(filepath)
 	} else {
 		return nil, err
@@ -52,8 +52,8 @@ func getTemplate(templateName string, _ []byte) (*template.Template, error) {
 	return newTemplate, nil
 }
 
-func contains(list []string, elem string) bool {
-	for _,str := range list {
+func contains(fileList []string, elem string) bool {
+	for _, str := range fileList {
 		if str == elem {
 			return true
 		}
