@@ -3,10 +3,10 @@ package webserver
 import (
 	"fmt"
 	_ "github.com/jteeuwen/go-bindata"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/spf13/afero"
 	"html/template"
 	"path"
-	"sort"
 	"strings"
 )
 
@@ -28,7 +28,7 @@ func readWebfile(filepath string, fs *afero.Afero) ([]byte, error) {
 	}
 	files := AssetNames()
 	//if file exists in binary form
-	if sort.SearchStrings(files, filepath) != 0 {
+	if common.Contains(files, filepath) {
 		return Asset(filepath)
 	} else {
 		return nil, err

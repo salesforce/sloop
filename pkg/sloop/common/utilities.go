@@ -23,3 +23,12 @@ func ParseKey(key string) (error, []string) {
 
 	return nil, parts
 }
+
+func Contains(stringList []string, elem string) bool {
+	for _, str := range stringList {
+		if str == elem {
+			return true
+		}
+	}
+	return false
+}
