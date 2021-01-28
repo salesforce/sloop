@@ -6,7 +6,6 @@ import (
 	"github.com/spf13/afero"
 	"html/template"
 	"path"
-	"sort"
 	"strings"
 )
 
@@ -28,7 +27,7 @@ func readWebfile(filepath string, fs *afero.Afero) ([]byte, error) {
 	}
 	files := AssetNames()
 	//if file exists in binary form
-	if sort.SearchStrings(files, filepath) != 0 {
+	if contains(files,filepath)  {
 		return Asset(filepath)
 	} else {
 		return nil, err
@@ -51,4 +50,13 @@ func getTemplate(templateName string, _ []byte) (*template.Template, error) {
 		return nil, err
 	}
 	return newTemplate, nil
+}
+
+func contains(list []string, elem string) bool {
+	for _,str := range list {
+		if str == elem {
+			return true
+		}
+	}
+	return false
 }
