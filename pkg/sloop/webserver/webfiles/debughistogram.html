@@ -6,16 +6,19 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 -->
 <html>
 <head>
+    <script type="text/javascript">
+        document.write("<base href='/" + window.location.pathname.split('/')[1] + "/' />");
+    </script>
     <title>Sloop Keys Histogram</title>
-    <link rel='shortcut icon' type='image/x-icon' href='/webfiles/favicon.ico' />
+    <link rel='shortcut icon' type='image/x-icon' href='webfiles/favicon.ico' />
 </head>
 <body>
-[ <a href="/">Home</a> ][ <a href="/debug/">Debug Menu</a> ]<br/>
+[ <a href="/">Home</a> ][ <a href="debug/">Debug Menu</a> ]<br/>
 
 <h2>Sloop Keys Histogram</h2>
 
 <table bgcolor="#f5f5f5" width="500px"><tr><td style="padding: 20px">
-<form action="/debug/histogram/" method="get">
+<form action="debug/histogram/" method="get">
 
     <label for="prefix">Prefix of keys to filter: </label><br><br>
     <input type="text" name="prefix" id="prefix"><br><br>
@@ -50,7 +53,7 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 </table>
 </body>
 
-<script src="/webfiles/filter.js"></script>
+<script src="webfiles/filter.js"></script>
 <script>
 </script>
 </html>

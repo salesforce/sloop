@@ -23,6 +23,7 @@ require (
 	github.com/prometheus/procfs v0.0.8 // indirect
 	github.com/spf13/afero v1.2.2
 	github.com/stretchr/testify v1.4.0
+	github.com/gorilla/mux v1.8.0
 	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e
 	golang.org/x/oauth2 v0.0.0-20191202225959-858c2ad4c8b6 // indirect
 	golang.org/x/sys v0.0.0-20200413165638-669c56c373c4 // indirect

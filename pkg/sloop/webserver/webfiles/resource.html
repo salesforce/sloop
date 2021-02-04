@@ -8,9 +8,9 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <link rel='shortcut icon' type='image/x-icon' href='/webfiles/favicon.ico'/>
-    <link rel="stylesheet" type="text/css" href="/webfiles/sloop.css">
-    <link rel="stylesheet" type="text/css" href="/webfiles/resource.css">
+    <link rel='shortcut icon' type='image/x-icon' href='webfiles/favicon.ico'/>
+    <link rel="stylesheet" type="text/css" href="webfiles/sloop.css">
+    <link rel="stylesheet" type="text/css" href="webfiles/resource.css">
     <link rel="stylesheet" href="https://unpkg.com/nprogress@0.2.0/nprogress.css"  />
     <link rel="stylesheet" type="text/css" href="https://cemerick.github.io/jsdifflib/diffview.css"  />
 
@@ -101,7 +101,7 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
                 return new Date(unixnano_time / 1000000).toISOString().split('T').join(' ');
             },
             get_payload_url(value) {
-                return "/debug/view/?k=" + value.payloadKey;
+                return "debug/view/?k=" + value.payloadKey;
             }
         },
         mounted() {
@@ -206,7 +206,7 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
                 return value.split('T').join(' ');
             },
             get_payload_url(value) {
-                return "/debug/view/?k=" + value.eventKey;
+                return "debug/view?k=" + value.eventKey;
             }
         },
         mounted() {

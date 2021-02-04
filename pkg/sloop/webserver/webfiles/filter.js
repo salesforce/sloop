@@ -21,6 +21,16 @@ function getUrlParam(parameter, defaultvalue){
     return urlparameter;
 }
 
+function getWindowLocationPathName()
+{
+    var windowLocation = window.location.pathname.toString()
+    if (windowLocation.endsWith("/")) {
+        return windowLocation.substr(0, windowLocation.length - 1)
+    }
+
+    return windowLocation
+}
+
 // Look up the url parameter "param" using "defaultValue" if not found
 // then set the form option with id "elementId" to that value
 function setDropdown(param, elementId, defaultValue, insertValueIfMissing) {
@@ -89,11 +99,12 @@ function setFiltersAndReturnQueryUrl(defaultLookback, defaultKind, defaultNamesp
 
     namematch = setText("namematch", "filternamematch", "")
 
-    query =           populateDropdownFromQuery("query",     "filterquery",     "EventHeatMap",  "/data?query=Queries&lookback="+lookback);
-    ns =              populateDropdownFromQuery("namespace", "filternamespace", defaultNamespace, "/data?query=Namespaces&lookback="+lookback);
-    kind =            populateDropdownFromQuery("kind",      "filterkind",      defaultKind,      "/data?query=Kinds&lookback="+lookback);
+    windowLocation = getWindowLocationPathName()
+    query =           populateDropdownFromQuery("query",     "filterquery",     "EventHeatMap",  windowLocation+"/data?query=Queries&lookback="+lookback);
+    ns =              populateDropdownFromQuery("namespace", "filternamespace", defaultNamespace, windowLocation+"/data?query=Namespaces&lookback="+lookback);
+    kind =            populateDropdownFromQuery("kind",      "filterkind",      defaultKind,      windowLocation+"/data?query=Kinds&lookback="+lookback);
 
-    dataQuery = "/data?query="+query+"&namespace="+ns+"&lookback="+lookback+"&kind="+kind+"&sort="+sort+"&namematch="+namematch
+    dataQuery = windowLocation+"/data?query="+query+"&namespace="+ns+"&lookback="+lookback+"&kind="+kind+"&sort="+sort+"&namematch="+namematch
     return dataQuery
 }
 
