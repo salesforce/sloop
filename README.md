@@ -77,6 +77,16 @@ docker run --rm -it -p 8080:8080 -v ~/.kube/:/kube/ -e KUBECONFIG=/kube/config s
 
 In this mode, data is written to a memory-backed volume and is discarded after each run. To preserve the data, you can host-mount /data with something like `-v /data/:/some_path_on_host/`
 
+### Updating webfiles folder
+
+To reflect any changes to webserver/webfiles, run the following command on terminal while within the webserver directory before submitting a pr:
+
+```shell script
+go-bindata -o bindata.go webfiles/
+```
+
+This will update the bindata folder with your changes to any html, css or javascript files within the directory.
+
 ### Local Docker Run and connecting to EKS
 
 This is very similar to above but abstracts running docker with AWS credentials for connecting to EKS
