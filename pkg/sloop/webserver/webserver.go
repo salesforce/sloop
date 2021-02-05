@@ -91,7 +91,7 @@ func logWebError(err error, note string, r *http.Request, w http.ResponseWriter)
 
 // Example input: r.URL=/webfiles/static/style.css
 // Returns file: <webFiles>/static/style.css
-func webFileHandler(currentContext string) http.HandlerFunc {
+func WebFileHandler(currentContext string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		webFilesPathToTrim := "/" + currentContext + "/webfiles"
 		fixedUrl := strings.TrimPrefix(fmt.Sprint(r.URL), webFilesPathToTrim)
@@ -172,7 +172,7 @@ func healthHandler() http.HandlerFunc {
 }
 
 // Handler for redirecting / to /currentContext to ensure backward compatibility
-func redirectHandler(currentContext string) http.HandlerFunc {
+func RedirectHandler(currentContext string) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		redirectURL := "/"+currentContext
 		http.Redirect(writer, request, redirectURL, http.StatusTemporaryRedirect)
@@ -181,7 +181,7 @@ func redirectHandler(currentContext string) http.HandlerFunc {
 
 // Registers paths for mux router
 func registerPaths(router *mux.Router, config WebConfig, tables typed.Tables) {
-	router.PathPrefix("/webfiles/").HandlerFunc(webFileHandler(config.CurrentContext))
+	router.PathPrefix("/webfiles/").HandlerFunc(WebFileHandler(config.CurrentContext))
 	router.HandleFunc("/data/backup", backupHandler(tables.Db(), config.CurrentContext))
 	router.HandleFunc("/data", queryHandler(tables, config.MaxLookback))
 	router.HandleFunc("/resource", resourceHandler(config.ResourceLinks, config.CurrentContext))
@@ -207,7 +207,7 @@ func Run(config WebConfig, tables typed.Tables) error {
 	webFiles = config.WebFilesPath
 	server := &Server{}
 	server.mux = mux.NewRouter()
-	server.mux.HandleFunc("/", redirectHandler(config.CurrentContext))
+	server.mux.HandleFunc("/", RedirectHandler(config.CurrentContext))
 	subMux := server.mux.PathPrefix("/{clusterContext}").Subrouter()
 	registerPaths(subMux, config, tables)
 
