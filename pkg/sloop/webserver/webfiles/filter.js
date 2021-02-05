@@ -21,16 +21,6 @@ function getUrlParam(parameter, defaultvalue){
     return urlparameter;
 }
 
-function getWindowLocationPathName()
-{
-    var windowLocation = window.location.pathname.toString()
-    if (windowLocation.endsWith("/")) {
-        return windowLocation.substr(0, windowLocation.length - 1)
-    }
-
-    return windowLocation
-}
-
 // Look up the url parameter "param" using "defaultValue" if not found
 // then set the form option with id "elementId" to that value
 function setDropdown(param, elementId, defaultValue, insertValueIfMissing) {
@@ -99,7 +89,7 @@ function setFiltersAndReturnQueryUrl(defaultLookback, defaultKind, defaultNamesp
 
     namematch = setText("namematch", "filternamematch", "")
 
-    windowLocation = getWindowLocationPathName()
+    windowLocation = window.location.pathname.toString()
     query =           populateDropdownFromQuery("query",     "filterquery",     "EventHeatMap",  windowLocation+"/data?query=Queries&lookback="+lookback);
     ns =              populateDropdownFromQuery("namespace", "filternamespace", defaultNamespace, windowLocation+"/data?query=Namespaces&lookback="+lookback);
     kind =            populateDropdownFromQuery("kind",      "filterkind",      defaultKind,      windowLocation+"/data?query=Kinds&lookback="+lookback);

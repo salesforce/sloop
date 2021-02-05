@@ -93,7 +93,7 @@ func logWebError(err error, note string, r *http.Request, w http.ResponseWriter)
 // Returns file: <webFiles>/static/style.css
 func WebFileHandler(currentContext string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		webFilesPathToTrim := "/" + currentContext + "/webfiles"
+		webFilesPathToTrim := path.Join("/" + currentContext, "/webfiles")
 		fixedUrl := strings.TrimPrefix(fmt.Sprint(r.URL), webFilesPathToTrim)
 		if strings.Contains(fixedUrl, "..") {
 			logWebError(nil, "Not allowed", r, w)
