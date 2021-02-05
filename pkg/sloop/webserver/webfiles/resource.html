@@ -101,7 +101,7 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
                 return new Date(unixnano_time / 1000000).toISOString().split('T').join(' ');
             },
             get_payload_url(value) {
-                return "debug/view/?k=" + value.payloadKey;
+                return "debug/view?k=" + value.payloadKey;
             }
         },
         mounted() {
