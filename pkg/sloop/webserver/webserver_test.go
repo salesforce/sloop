@@ -13,7 +13,7 @@ func TestRedirectHandlerHandler(t *testing.T) {
 
 	// Create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(RedirectHandler("clusterContext"))
+	handler := http.HandlerFunc(redirectHandler("clusterContext"))
 	handler.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusTemporaryRedirect, rr.Code)
@@ -26,7 +26,7 @@ func TestWebFileHandler(t *testing.T) {
 
 	// Create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(WebFileHandler("clusterContext"))
+	handler := http.HandlerFunc(webFileHandler("clusterContext"))
 	handler.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)

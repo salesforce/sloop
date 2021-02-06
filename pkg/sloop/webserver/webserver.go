@@ -91,9 +91,9 @@ func logWebError(err error, note string, r *http.Request, w http.ResponseWriter)
 
 // Example input: r.URL=/webfiles/static/style.css
 // Returns file: <webFiles>/static/style.css
-func WebFileHandler(currentContext string) http.HandlerFunc {
+func webFileHandler(currentContext string) http.HandlerFunc {
+	webFilesPathToTrim := path.Join("/", currentContext, "/webfiles")
 	return func(w http.ResponseWriter, r *http.Request) {
-		webFilesPathToTrim := path.Join("/" + currentContext, "/webfiles")
 		fixedUrl := strings.TrimPrefix(fmt.Sprint(r.URL), webFilesPathToTrim)
 		if strings.Contains(fixedUrl, "..") {
 			logWebError(nil, "Not allowed", r, w)
@@ -172,16 +172,16 @@ func healthHandler() http.HandlerFunc {
 }
 
 // Handler for redirecting / to /currentContext to ensure backward compatibility
-func RedirectHandler(currentContext string) http.HandlerFunc {
+func redirectHandler(currentContext string) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
-		redirectURL := "/"+currentContext
+		redirectURL := path.Join("/", currentContext)
 		http.Redirect(writer, request, redirectURL, http.StatusTemporaryRedirect)
 	}
 }
 
 // Registers paths for mux router
 func registerPaths(router *mux.Router, config WebConfig, tables typed.Tables) {
-	router.PathPrefix("/webfiles/").HandlerFunc(WebFileHandler(config.CurrentContext))
+	router.PathPrefix("/webfiles/").HandlerFunc(webFileHandler(config.CurrentContext))
 	router.HandleFunc("/data/backup", backupHandler(tables.Db(), config.CurrentContext))
 	router.HandleFunc("/data", queryHandler(tables, config.MaxLookback))
 	router.HandleFunc("/resource", resourceHandler(config.ResourceLinks, config.CurrentContext))
@@ -207,7 +207,7 @@ func Run(config WebConfig, tables typed.Tables) error {
 	webFiles = config.WebFilesPath
 	server := &Server{}
 	server.mux = mux.NewRouter()
-	server.mux.HandleFunc("/", RedirectHandler(config.CurrentContext))
+	server.mux.HandleFunc("/", redirectHandler(config.CurrentContext))
 	subMux := server.mux.PathPrefix("/{clusterContext}").Subrouter()
 	registerPaths(subMux, config, tables)
 
