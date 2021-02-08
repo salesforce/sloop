@@ -89,11 +89,12 @@ function setFiltersAndReturnQueryUrl(defaultLookback, defaultKind, defaultNamesp
 
     namematch = setText("namematch", "filternamematch", "")
 
-    query =           populateDropdownFromQuery("query",     "filterquery",     "EventHeatMap",  "/data?query=Queries&lookback="+lookback);
-    ns =              populateDropdownFromQuery("namespace", "filternamespace", defaultNamespace, "/data?query=Namespaces&lookback="+lookback);
-    kind =            populateDropdownFromQuery("kind",      "filterkind",      defaultKind,      "/data?query=Kinds&lookback="+lookback);
+    windowLocation = window.location.pathname.toString()
+    query =           populateDropdownFromQuery("query",     "filterquery",     "EventHeatMap",  windowLocation+"/data?query=Queries&lookback="+lookback);
+    ns =              populateDropdownFromQuery("namespace", "filternamespace", defaultNamespace, windowLocation+"/data?query=Namespaces&lookback="+lookback);
+    kind =            populateDropdownFromQuery("kind",      "filterkind",      defaultKind,      windowLocation+"/data?query=Kinds&lookback="+lookback);
 
-    dataQuery = "/data?query="+query+"&namespace="+ns+"&lookback="+lookback+"&kind="+kind+"&sort="+sort+"&namematch="+namematch
+    dataQuery = windowLocation+"/data?query="+query+"&namespace="+ns+"&lookback="+lookback+"&kind="+kind+"&sort="+sort+"&namematch="+namematch
     return dataQuery
 }
 

@@ -497,7 +497,7 @@ function showDetailedTooltip(d, event, parent) {
 
         let tooltipX = event.pageX;
         let tooltipY = event.pageY;
-        const resourceRequestPath = "/resource";
+        const resourceRequestPath = "resource";
         $.ajax({
             url: resourceRequestPath,
             data: {

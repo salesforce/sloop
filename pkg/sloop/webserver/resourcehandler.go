@@ -13,6 +13,7 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/queries"
 	"html/template"
 	"net/http"
+	"path"
 	"strings"
 	"time"
 )
@@ -52,7 +53,7 @@ func runTextTemplate(templateStr string, data interface{}) (string, error) {
 	return tpl.String(), nil
 }
 
-func resourceHandler(resLinks []ResourceLinkTemplate) http.HandlerFunc {
+func resourceHandler(resLinks []ResourceLinkTemplate, currentContext string) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		resourceTemplate, err := getTemplate(resourceTemplateFile, _webfilesResourceHtml)
 		if err != nil {
@@ -83,10 +84,10 @@ func resourceHandler(resLinks []ResourceLinkTemplate) http.HandlerFunc {
 		queryEnd := d.ClickTime.Add(d.PlusMinusTime).Unix()
 
 		dataParams := fmt.Sprintf("?query=%v&namespace=%v&start_time=%v&end_time=%v&kind=%v&name=%v", "GetEventData", d.Namespace, queryStart, queryEnd, d.Kind, d.Name)
-		d.EventsUrl = "/data" + dataParams
+		d.EventsUrl = path.Join("/", currentContext, "data" + dataParams)
 
 		dataParams = fmt.Sprintf("?query=%v&namespace=%v&start_time=%v&end_time=%v&kind=%v&name=%v", "GetResPayload", d.Namespace, queryStart, queryEnd, d.Kind, d.Name)
-		d.PayloadUrl = "/data" + dataParams
+		d.PayloadUrl = path.Join("/", currentContext, "data" + dataParams)
 
 		err = resourceTemplate.Execute(writer, d)
 		if err != nil {

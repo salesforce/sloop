@@ -9,10 +9,13 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 <style type="text/css">
 </style>
 <head>
+    <script type="text/javascript">
+        document.write("<base href='/" + window.location.pathname.split('/')[1] + "/' />");
+    </script>
     <meta http-equiv="Content-type" content="text/html; charset=utf-8">
     <title>Sloop{{if (ne .CurrentContext "")}} - {{.CurrentContext}}{{end}}</title>
-    <link rel="stylesheet" type="text/css" href="/webfiles/sloop.css">
-    <link rel='shortcut icon' type='image/x-icon' href='/webfiles/favicon.ico'/>
+    <link rel="stylesheet" type="text/css" href="webfiles/sloop.css">
+    <link rel='shortcut icon' type='image/x-icon' href='webfiles/favicon.ico'/>
 </head>
 
 <body>
@@ -24,7 +27,7 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
         <label for="currentContext">Kubernetes Context:</label><br/>
         <input type="text" id="currentContext" value="{{.CurrentContext}}" disabled="true"><br><br>
 {{end}}
-        <form action="/" method="get">
+        <form action="" method="get">
             <!-- Not showing the query drop down as we only have one query at the moment -->
             <!-- <label for="filterquery">Query:</label><br /> -->
             <select name="query" id="filterquery" hidden="true"> </select>
@@ -66,7 +69,7 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
         <br><br>
 
         <h2>Links</h2>
-        <a href="/debug/">Sloop Debug Menu</a><br/>
+        <a href="debug/">Sloop Debug Menu</a><br/>
         <a href="" id="datafilelink">Data File For This Query</a><br/>
         <a href="https://github.com/salesforce/sloop" target="_blank">Source Code on GitHub</a><br/>
 {{range .LeftBarLinks}}
@@ -94,13 +97,12 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
     <script src="https://cemerick.github.io/jsdifflib/diffview.js" type="text/javascript" ></script>
     <script src="https://cemerick.github.io/jsdifflib/difflib.js" type="text/javascript" ></script>
 
-    <script src="/webfiles/filter.js"></script>
-
+    <script src="webfiles/filter.js"></script>
     <script>
         // When we reload the page this will set the correct selections for the drop-downs based on passed in parameters
         dataQueryUrl = setFiltersAndReturnQueryUrl("{{.DefaultLookback}}", "{{.DefaultKind}}", "{{.DefaultNamespace}}");
         document.getElementById("datafilelink").href = dataQueryUrl;
     </script>
-    <script src="/webfiles/sloop_ui.js"></script>
+    <script src="webfiles/sloop_ui.js"></script>
     </div>
 </body>

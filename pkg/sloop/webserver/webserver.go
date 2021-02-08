@@ -29,6 +29,7 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 
 	"github.com/golang/glog"
+	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -73,7 +74,7 @@ var webFiles string
 
 // Needed to use this to allow for graceful shutdown which is required for profiling
 type Server struct {
-	mux *http.ServeMux
+	mux *mux.Router
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -90,25 +91,28 @@ func logWebError(err error, note string, r *http.Request, w http.ResponseWriter)
 
 // Example input: r.URL=/webfiles/static/style.css
 // Returns file: <webFiles>/static/style.css
-func webFileHandler(w http.ResponseWriter, r *http.Request) {
-	fixedUrl := strings.TrimPrefix(fmt.Sprint(r.URL), "/webfiles")
-	if strings.Contains(fixedUrl, "..") {
-		logWebError(nil, "Not allowed", r, w)
-		return
+func webFileHandler(currentContext string) http.HandlerFunc {
+	webFilesPathToTrim := path.Join("/", currentContext, "/webfiles")
+	return func(w http.ResponseWriter, r *http.Request) {
+		fixedUrl := strings.TrimPrefix(fmt.Sprint(r.URL), webFilesPathToTrim)
+		if strings.Contains(fixedUrl, "..") {
+			logWebError(nil, "Not allowed", r, w)
+			return
+		}
+		fullPath := path.Join(prefix, fixedUrl)
+		data, err := readWebfile(fullPath, &afero.Afero{afero.NewOsFs()})
+		if err != nil {
+			logWebError(err, "Error reading web file: "+fixedUrl, r, w)
+			return
+		}
+		w.Header().Set("content-type", mime.TypeByExtension(filepath.Ext(fullPath)))
+		_, err = w.Write(data)
+		if err != nil {
+			logWebError(err, "Error writing web file: "+fixedUrl, r, w)
+			return
+		}
+		glog.V(2).Infof("webFileHandler successfully returned file %v for %v", fixedUrl, r.URL)
 	}
-	fullPath := path.Join(prefix, fixedUrl)
-	data, err := readWebfile(fullPath, &afero.Afero{afero.NewOsFs()})
-	if err != nil {
-		logWebError(err, "Error reading web file: "+fixedUrl, r, w)
-		return
-	}
-	w.Header().Set("content-type", mime.TypeByExtension(filepath.Ext(fullPath)))
-	_, err = w.Write(data)
-	if err != nil {
-		logWebError(err, "Error writing web file: "+fixedUrl, r, w)
-		return
-	}
-	glog.V(2).Infof("webFileHandler successfully returned file %v for %v", fixedUrl, r.URL)
 }
 
 // backupHandler streams a download of a backup of the database.
@@ -167,30 +171,45 @@ func healthHandler() http.HandlerFunc {
 	}
 }
 
+// Handler for redirecting / to /currentContext to ensure backward compatibility
+func redirectHandler(currentContext string) http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		redirectURL := path.Join("/", currentContext)
+		http.Redirect(writer, request, redirectURL, http.StatusTemporaryRedirect)
+	}
+}
+
+// Registers paths for mux router
+func registerPaths(router *mux.Router, config WebConfig, tables typed.Tables) {
+	router.PathPrefix("/webfiles/").HandlerFunc(webFileHandler(config.CurrentContext))
+	router.HandleFunc("/data/backup", backupHandler(tables.Db(), config.CurrentContext))
+	router.HandleFunc("/data", queryHandler(tables, config.MaxLookback))
+	router.HandleFunc("/resource", resourceHandler(config.ResourceLinks, config.CurrentContext))
+	// Debug pages
+	router.HandleFunc("/debug/listkeys/", listKeysHandler(tables))
+	router.HandleFunc("/debug/histogram/", histogramHandler(tables))
+	router.HandleFunc("/debug/tables/", debugBadgerTablesHandler(tables.Db()))
+	router.HandleFunc("/debug/view", viewKeyHandler(tables))
+	router.HandleFunc("/debug/config/", configHandler(config.ConfigYaml))
+	// Badger uses the trace package, which registers /debug/requests and /debug/events
+	router.HandleFunc("/debug/requests", trace.Traces)
+	router.HandleFunc("/debug/events", trace.Events)
+	// Badger also uses expvar which exposes prometheus compatible metrics on /debug/vars
+	router.HandleFunc("/debug/vars", expvar.Handler().ServeHTTP)
+	router.HandleFunc("/debug/", debugHandler())
+
+	router.HandleFunc("/healthz", healthHandler())
+	router.Handle("/metrics", promhttp.Handler())
+	router.Handle("", indexHandler(config))
+}
+
 func Run(config WebConfig, tables typed.Tables) error {
 	webFiles = config.WebFilesPath
 	server := &Server{}
-	server.mux = http.NewServeMux()
-	server.mux.HandleFunc("/webfiles/", webFileHandler)
-	server.mux.HandleFunc("/data/backup", backupHandler(tables.Db(), config.CurrentContext))
-	server.mux.HandleFunc("/data", queryHandler(tables, config.MaxLookback))
-	server.mux.HandleFunc("/resource", resourceHandler(config.ResourceLinks))
-	// Debug pages
-	server.mux.HandleFunc("/debug/", debugHandler())
-	server.mux.HandleFunc("/debug/listkeys/", listKeysHandler(tables))
-	server.mux.HandleFunc("/debug/histogram/", histogramHandler(tables))
-	server.mux.HandleFunc("/debug/tables/", debugBadgerTablesHandler(tables.Db()))
-	server.mux.HandleFunc("/debug/view/", viewKeyHandler(tables))
-	server.mux.HandleFunc("/debug/config/", configHandler(config.ConfigYaml))
-	// Badger uses the trace package, which registers /debug/requests and /debug/events
-	server.mux.HandleFunc("/debug/requests", trace.Traces)
-	server.mux.HandleFunc("/debug/events", trace.Events)
-	// Badger also uses expvar which exposes prometheus compatible metrics on /debug/vars
-	server.mux.HandleFunc("/debug/vars", expvar.Handler().ServeHTTP)
-
-	server.mux.HandleFunc("/healthz", healthHandler())
-	server.mux.Handle("/metrics", promhttp.Handler())
-	server.mux.HandleFunc("/", indexHandler(config))
+	server.mux = mux.NewRouter()
+	server.mux.HandleFunc("/", redirectHandler(config.CurrentContext))
+	subMux := server.mux.PathPrefix("/{clusterContext}").Subrouter()
+	registerPaths(subMux, config, tables)
 
 	addr := fmt.Sprintf("%v:%v", config.BindAddress, config.Port)
 
