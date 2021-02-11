@@ -84,10 +84,10 @@ func resourceHandler(resLinks []ResourceLinkTemplate, currentContext string) htt
 		queryEnd := d.ClickTime.Add(d.PlusMinusTime).Unix()
 
 		dataParams := fmt.Sprintf("?query=%v&namespace=%v&start_time=%v&end_time=%v&kind=%v&name=%v", "GetEventData", d.Namespace, queryStart, queryEnd, d.Kind, d.Name)
-		d.EventsUrl = path.Join("/", currentContext, "data" + dataParams)
+		d.EventsUrl = path.Join("/", currentContext, "data"+dataParams)
 
 		dataParams = fmt.Sprintf("?query=%v&namespace=%v&start_time=%v&end_time=%v&kind=%v&name=%v", "GetResPayload", d.Namespace, queryStart, queryEnd, d.Kind, d.Name)
-		d.PayloadUrl = path.Join("/", currentContext, "data" + dataParams)
+		d.PayloadUrl = path.Join("/", currentContext, "data"+dataParams)
 
 		err = resourceTemplate.Execute(writer, d)
 		if err != nil {

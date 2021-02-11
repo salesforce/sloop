@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	prefix="webfiles/"
+	prefix      = "webfiles/"
 	errorString = "Webfile %v does not exist in local directory or in binary form."
 )
 
@@ -18,14 +18,14 @@ const (
 // sample input : fileName="index.html"
 func readWebfile(fileName string, fs *afero.Afero) ([]byte, error) {
 	//file exists as a physical file
-	data, err := fs.ReadFile(common.GetFilePath(webFilesPath,fileName))
+	data, err := fs.ReadFile(common.GetFilePath(webFilesPath, fileName))
 	if err == nil {
 		return data, err
 	} else {
 		//file exists in binary
 		binFileList := AssetNames()
-		if common.Contains(binFileList, common.GetFilePath(prefix,fileName)) {
-			return Asset(common.GetFilePath(prefix,fileName))
+		if common.Contains(binFileList, common.GetFilePath(prefix, fileName)) {
+			return Asset(common.GetFilePath(prefix, fileName))
 		}
 	}
 	return nil, fmt.Errorf(errorString, fileName)

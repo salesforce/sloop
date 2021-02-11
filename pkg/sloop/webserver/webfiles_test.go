@@ -13,7 +13,7 @@ const (
 	defaultFileMode = os.FileMode(0755)
 	someContents1   = "contents abcd"
 	filePath        = "webfiles/index.html"
-	fileName ="index.html"
+	fileName        = "index.html"
 )
 
 func Test_BindataReadWebfile_True(t *testing.T) {
@@ -28,7 +28,7 @@ func Test_LocalReadWebfile_True(t *testing.T) {
 	notExpectedOutput, _ := Asset(filePath)
 
 	fs := &afero.Afero{afero.NewMemMapFs()}
-	fullPath:=common.GetFilePath(webFilesPath,fileName)
+	fullPath := common.GetFilePath(webFilesPath, fileName)
 	writeFile(t, fs, fullPath, someContents1)
 
 	actualOutput, _ := readWebfile(fileName, fs)

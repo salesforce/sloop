@@ -11,7 +11,7 @@ var files = []string{"webfiles/index.html", "webfiles/debug.html", "webfiles/fil
 var filePath = "webfiles/index.html"
 var filePath2 = "webfiles/sloop.css"
 var fileName = "index.html"
-var filePrefix ="webfiles/"
+var filePrefix = "webfiles/"
 
 func Test_boolToFloat(t *testing.T) {
 	assert.Equal(t, float64(1), BoolToFloat(true))
@@ -54,8 +54,8 @@ func Test_FileExistsInList_False(t *testing.T) {
 	assert.Equal(t, expectedOutput, actualOutput)
 }
 
-func Test_GetFilePath(t *testing.T){
-	expectedOutput := path.Join(filePrefix,fileName)
-	actualOutput :=GetFilePath(filePrefix,fileName)
-	assert.Equal(t,expectedOutput,actualOutput)
+func Test_GetFilePath(t *testing.T) {
+	expectedOutput := path.Join(filePrefix, fileName)
+	actualOutput := GetFilePath(filePrefix, fileName)
+	assert.Equal(t, expectedOutput, actualOutput)
 }

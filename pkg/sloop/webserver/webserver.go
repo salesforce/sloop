@@ -100,7 +100,7 @@ func webFileHandler(currentContext string) http.HandlerFunc {
 			logWebError(nil, "Not allowed", r, w)
 			return
 		}
-		fullPath := common.GetFilePath(prefix,fixedUrl)
+		fullPath := common.GetFilePath(prefix, fixedUrl)
 		data, err := readWebfile(fixedUrl, &afero.Afero{afero.NewOsFs()})
 		if err != nil {
 			logWebError(err, "Error reading web file: "+fixedUrl, r, w)
