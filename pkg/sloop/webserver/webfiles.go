@@ -6,33 +6,29 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/spf13/afero"
 	"html/template"
-	"path"
-	"strings"
 )
 
 const (
 	prefix      = "webfiles/"
-	errorString = "Webfile %v is invalid.  Must start with %v"
+	errorString = "Webfile %v does not exist in local directory or in binary form."
 )
 
 // go-bindata -o bindata.go webfiles
 // ReadWebfile is a function which finds the webfiles that have been predefined and converted to binary format.
-// sample input : filepath= "webfiles/index.html"
-func readWebfile(filepath string, fs *afero.Afero) ([]byte, error) {
-	if !strings.HasPrefix(filepath, prefix) {
-		return nil, fmt.Errorf(errorString, filepath, prefix)
+// sample input : fileName="index.html"
+func readWebfile(fileName string, fs *afero.Afero) ([]byte, error) {
+	//file exists as a physical file
+	data, err := fs.ReadFile(common.GetFilePath(webFilesPath, fileName))
+	if err != nil {
+		//file exists in binary
+		binFileList := AssetNames()
+		binFileName := common.GetFilePath(prefix, fileName)
+		if common.Contains(binFileList, binFileName) {
+			return Asset(binFileName)
+		}
+		return nil, fmt.Errorf(errorString, fileName)
 	}
-	data, err := fs.ReadFile(filepath)
-	if err == nil {
-		return data, err
-	}
-	files := AssetNames()
-	//if file exists in binary form
-	if common.Contains(files, filepath) {
-		return Asset(filepath)
-	} else {
-		return nil, err
-	}
+	return data, err
 }
 
 // Example input:
@@ -41,7 +37,7 @@ func readWebfile(filepath string, fs *afero.Afero) ([]byte, error) {
 // calling ReadWebfile ().
 func getTemplate(templateName string, _ []byte) (*template.Template, error) {
 	fs := afero.Afero{Fs: afero.NewOsFs()}
-	data, err := readWebfile((path.Join(prefix, templateName)), &fs)
+	data, err := readWebfile(templateName, &fs)
 	if err != nil {
 		return nil, err
 	}

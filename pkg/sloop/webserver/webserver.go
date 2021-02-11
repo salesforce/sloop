@@ -11,6 +11,7 @@ import (
 	"context"
 	"expvar"
 	"fmt"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/spf13/afero"
 	"log"
 	"mime"
@@ -70,7 +71,7 @@ var (
 
 // This is not going to change and we don't want to pass it to every function
 // so use a static for now
-var webFiles string
+var webFilesPath string
 
 // Needed to use this to allow for graceful shutdown which is required for profiling
 type Server struct {
@@ -99,12 +100,12 @@ func webFileHandler(currentContext string) http.HandlerFunc {
 			logWebError(nil, "Not allowed", r, w)
 			return
 		}
-		fullPath := path.Join(prefix, fixedUrl)
-		data, err := readWebfile(fullPath, &afero.Afero{afero.NewOsFs()})
+		data, err := readWebfile(fixedUrl, &afero.Afero{afero.NewOsFs()})
 		if err != nil {
 			logWebError(err, "Error reading web file: "+fixedUrl, r, w)
 			return
 		}
+		fullPath := common.GetFilePath(prefix, fixedUrl)
 		w.Header().Set("content-type", mime.TypeByExtension(filepath.Ext(fullPath)))
 		_, err = w.Write(data)
 		if err != nil {
@@ -204,7 +205,7 @@ func registerPaths(router *mux.Router, config WebConfig, tables typed.Tables) {
 }
 
 func Run(config WebConfig, tables typed.Tables) error {
-	webFiles = config.WebFilesPath
+	webFilesPath = config.WebFilesPath
 	server := &Server{}
 	server.mux = mux.NewRouter()
 	server.mux.HandleFunc("/", redirectHandler(config.CurrentContext))

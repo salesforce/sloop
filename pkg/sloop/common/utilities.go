@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"path"
 	"strings"
 )
 
@@ -31,4 +32,8 @@ func Contains(stringList []string, elem string) bool {
 		}
 	}
 	return false
+}
+
+func GetFilePath(filePath string, fileName string) string {
+	return path.Join(filePath, fileName)
 }
