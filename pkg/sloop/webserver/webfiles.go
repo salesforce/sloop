@@ -6,33 +6,29 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/spf13/afero"
 	"html/template"
-	"path"
-	"strings"
 )
 
 const (
-	prefix      = "webfiles/"
-	errorString = "Webfile %v is invalid.  Must start with %v"
+	prefix="webfiles/"
+	errorString = "Webfile %v does not exist in local directory or in binary form."
 )
 
 // go-bindata -o bindata.go webfiles
 // ReadWebfile is a function which finds the webfiles that have been predefined and converted to binary format.
-// sample input : filepath= "webfiles/index.html"
-func readWebfile(filepath string, fs *afero.Afero) ([]byte, error) {
-	if !strings.HasPrefix(filepath, prefix) {
-		return nil, fmt.Errorf(errorString, filepath, prefix)
-	}
-	data, err := fs.ReadFile(filepath)
+// sample input : fileName="index.html"
+func readWebfile(fileName string, fs *afero.Afero) ([]byte, error) {
+	//file exists as a physical file
+	data, err := fs.ReadFile(common.GetFilePath(webFilesPath,fileName))
 	if err == nil {
 		return data, err
-	}
-	files := AssetNames()
-	//if file exists in binary form
-	if common.Contains(files, filepath) {
-		return Asset(filepath)
 	} else {
-		return nil, err
+		//file exists in binary
+		binFileList := AssetNames()
+		if common.Contains(binFileList, common.GetFilePath(prefix,fileName)) {
+			return Asset(common.GetFilePath(prefix,fileName))
+		}
 	}
+	return nil, fmt.Errorf(errorString, fileName)
 }
 
 // Example input:
@@ -41,14 +37,11 @@ func readWebfile(filepath string, fs *afero.Afero) ([]byte, error) {
 // calling ReadWebfile ().
 func getTemplate(templateName string, _ []byte) (*template.Template, error) {
 	fs := afero.Afero{Fs: afero.NewOsFs()}
-	data, err := readWebfile((path.Join(prefix, templateName)), &fs)
-	if err != nil {
-		return nil, err
+	data, err := readWebfile(templateName, &fs)
+	if err == nil {
+		newTemplate := template.New(templateName)
+		newTemplate, err = newTemplate.Parse(string(data))
+		return newTemplate, nil
 	}
-	newTemplate := template.New(templateName)
-	newTemplate, err = newTemplate.Parse(string(data))
-	if err != nil {
-		return nil, err
-	}
-	return newTemplate, nil
+	return nil, err
 }
