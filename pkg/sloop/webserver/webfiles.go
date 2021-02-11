@@ -19,16 +19,16 @@ const (
 func readWebfile(fileName string, fs *afero.Afero) ([]byte, error) {
 	//file exists as a physical file
 	data, err := fs.ReadFile(common.GetFilePath(webFilesPath, fileName))
-	if err == nil {
-		return data, err
-	} else {
+	if err != nil {
 		//file exists in binary
 		binFileList := AssetNames()
-		if common.Contains(binFileList, common.GetFilePath(prefix, fileName)) {
-			return Asset(common.GetFilePath(prefix, fileName))
+		binFileName := common.GetFilePath(prefix, fileName)
+		if common.Contains(binFileList, binFileName) {
+			return Asset(binFileName)
 		}
+		return nil, fmt.Errorf(errorString, fileName)
 	}
-	return nil, fmt.Errorf(errorString, fileName)
+	return data, err
 }
 
 // Example input:
@@ -38,10 +38,13 @@ func readWebfile(fileName string, fs *afero.Afero) ([]byte, error) {
 func getTemplate(templateName string, _ []byte) (*template.Template, error) {
 	fs := afero.Afero{Fs: afero.NewOsFs()}
 	data, err := readWebfile(templateName, &fs)
-	if err == nil {
-		newTemplate := template.New(templateName)
-		newTemplate, err = newTemplate.Parse(string(data))
-		return newTemplate, nil
+	if err != nil {
+		return nil, err
 	}
-	return nil, err
+	newTemplate := template.New(templateName)
+	newTemplate, err = newTemplate.Parse(string(data))
+	if err != nil {
+		return nil, err
+	}
+	return newTemplate, nil
 }
