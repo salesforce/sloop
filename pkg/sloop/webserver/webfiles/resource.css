@@ -22,7 +22,12 @@ html, body {
 #resource_container {
     width: 100%;
 }
-
+#close {
+    float:right;
+    padding:2px 5px;
+    background:midnightblue;
+    color: white;
+}
 #resource_event_table td, #resource_event_table th {
     border: 1px solid lightgrey;
     padding: 4px;
