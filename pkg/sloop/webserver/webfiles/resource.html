@@ -27,7 +27,7 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 <body>
 <div id="resource_body" style="padding:10px">
 <div id="resource_container">
-
+    <button id='close' onclick='this.parentNode.parentNode.parentNode.removeChild(this.parentNode.parentNode); return false;'>X</button>
     <h2>Details</h2>
     <b>Name</b>: {{.Name}}<br>
     <b>Namespace</b>: {{.Namespace}}<br>
