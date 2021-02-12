@@ -72,7 +72,7 @@ func Test_bigPicture(t *testing.T) {
 	includeCrds := true
 	masterURL := "url"
 	kubeContext := "" // empty string makes things work
-	kw, err := NewKubeWatcherSource(kubeClient, outChan, resync, includeCrds, masterURL, kubeContext)
+	kw, err := NewKubeWatcherSource(kubeClient, outChan, resync, includeCrds, time.Duration(10*time.Second), masterURL, kubeContext)
 	assert.NoError(t, err)
 
 	// create service and await corresponding event

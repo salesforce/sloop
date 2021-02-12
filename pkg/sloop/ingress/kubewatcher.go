@@ -77,7 +77,7 @@ var (
 )
 
 // Todo: Add additional parameters for filtering
-func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.KubeWatchResult, resync time.Duration, includeCrds bool, masterURL string, kubeContext string) (KubeWatcher, error) {
+func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.KubeWatchResult, resync time.Duration, includeCrds bool, crdRefreshInterval time.Duration, masterURL string, kubeContext string) (KubeWatcher, error) {
 	kw := &kubeWatcherImpl{resync: resync, protection: &sync.Mutex{}}
 	kw.stopChan = make(chan struct{})
 	kw.crdInformers = make(map[crdGroupVersionResourceKind]*crdInformerInfo)
@@ -89,10 +89,10 @@ func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.Ku
 		if err != nil {
 			return nil, err
 		}
-	}
 
-	kw.refreshCrd = time.NewTicker(5 * time.Minute) // make this configurable
-	go kw.refershCrdInformers(masterURL, kubeContext)
+		kw.refreshCrd = time.NewTicker(crdRefreshInterval)
+		go kw.refershCrdInformers(masterURL, kubeContext)
+	}
 
 	return kw, nil
 }
@@ -352,7 +352,10 @@ func (i *kubeWatcherImpl) Stop() {
 	i.stopped = true
 	i.protection.Unlock()
 
-	i.refreshCrd.Stop()
+	if i.refreshCrd != nil {
+		i.refreshCrd.Stop()
+	}
+
 	close(i.stopChan)
 	stopUnwantedCrdInformers(i.pullCrdInformers())
 }
