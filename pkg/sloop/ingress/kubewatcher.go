@@ -100,10 +100,14 @@ func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.Ku
 func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interface) {
 	i.informerFactory = informers.NewSharedInformerFactory(kubeclient, i.resync)
 
+	i.informerFactory.Apps().V1().DaemonSets().Informer().AddEventHandler(i.getEventHandlerForResource("DaemonSet"))
 	i.informerFactory.Apps().V1().Deployments().Informer().AddEventHandler(i.getEventHandlerForResource("Deployment"))
+	i.informerFactory.Apps().V1().ReplicaSets().Informer().AddEventHandler(i.getEventHandlerForResource("ReplicaSet"))
 	i.informerFactory.Apps().V1().StatefulSets().Informer().AddEventHandler(i.getEventHandlerForResource("StatefulSet"))
+
 	i.informerFactory.Core().V1().ConfigMaps().Informer().AddEventHandler(i.getEventHandlerForResource("ConfigMap"))
 	i.informerFactory.Core().V1().Endpoints().Informer().AddEventHandler(i.getEventHandlerForResource("Endpoint"))
+	i.informerFactory.Core().V1().Events().Informer().AddEventHandler(i.getEventHandlerForResource("Event"))
 	i.informerFactory.Core().V1().Namespaces().Informer().AddEventHandler(i.getEventHandlerForResource("Namespace"))
 	i.informerFactory.Core().V1().Nodes().Informer().AddEventHandler(i.getEventHandlerForResource("Node"))
 	i.informerFactory.Core().V1().PersistentVolumeClaims().Informer().AddEventHandler(i.getEventHandlerForResource("PersistentVolumeClaim"))
@@ -111,14 +115,14 @@ func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interfac
 	i.informerFactory.Core().V1().Pods().Informer().AddEventHandler(i.getEventHandlerForResource("Pod"))
 	i.informerFactory.Core().V1().Services().Informer().AddEventHandler(i.getEventHandlerForResource("Service"))
 	i.informerFactory.Core().V1().ReplicationControllers().Informer().AddEventHandler(i.getEventHandlerForResource("ReplicationController"))
-	i.informerFactory.Extensions().V1beta1().DaemonSets().Informer().AddEventHandler(i.getEventHandlerForResource("DaemonSet"))
-	i.informerFactory.Extensions().V1beta1().ReplicaSets().Informer().AddEventHandler(i.getEventHandlerForResource("ReplicaSet"))
+
 	i.informerFactory.Storage().V1().StorageClasses().Informer().AddEventHandler(i.getEventHandlerForResource("StorageClass"))
-	i.informerFactory.Core().V1().Events().Informer().AddEventHandler(i.getEventHandlerForResource("Event"))
+
 	i.informerFactory.Start(i.stopChan)
 }
 
 func (i *kubeWatcherImpl) startCustomInformers(masterURL string, kubeContext string) error {
+
 	clientCfg := getConfig(masterURL, kubeContext)
 	kubeCfg, err := clientCfg.ClientConfig()
 	if err != nil {
@@ -134,17 +138,18 @@ func (i *kubeWatcherImpl) startCustomInformers(masterURL string, kubeContext str
 		return err
 	}
 
+	glog.Infof("Found %d CRD definitions", len(crdList))
 	dynamicClient, err := dynamic.NewForConfig(kubeCfg)
 	if err != nil {
 		return errors.Wrap(err, "failed to instantiate client for custom informers")
 	}
-
 	existing := i.pullCrdInformers()
 	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynamicClient, i.resync, "", nil)
 	for _, crd := range crdList {
 		i.existingOrStartNewCrdInformer(crd, existing, factory)
 	}
 
+	glog.Infof("Stopping %d CRD Informers", len(existing))
 	stopUnwantedCrdInformers(existing)
 	metricCrdInformerStarted.Set(float64(len(i.crdInformers)))
 	return nil
@@ -209,15 +214,33 @@ func stopUnwantedCrdInformers(existing map[crdGroupVersionResourceKind]*crdInfor
 func getCrdList(crdClient clientset.Interface) ([]crdGroupVersionResourceKind, error) {
 	crdList, err := crdClient.ApiextensionsV1().CustomResourceDefinitions().List(metav1.ListOptions{})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to query CRDs")
+		glog.Errorf("Failed to get CRD list from ApiextensionsV1, falling back to ApiextensionsV1beta1")
+		return getCrdListV1beta1(crdClient)
 	}
 
-	glog.Infof("Found %d CRD definitions", len(crdList.Items))
 	var resources []crdGroupVersionResourceKind
 	for _, crd := range crdList.Items {
 		for _, version := range crd.Spec.Versions {
 			gvrk := crdGroupVersionResourceKind{group: crd.Spec.Group, version: version.Name, resource: crd.Spec.Names.Plural, kind: crd.Spec.Names.Kind}
-			glog.V(5).Infof("CRD: group: %s, version: %s, kind: %s, plural:%s, singular:%s, short names:%v", crd.Spec.Group, version.Name, crd.Spec.Names.Kind, crd.Spec.Names.Plural, crd.Spec.Names.Singular, crd.Spec.Names.ShortNames)
+			glog.V(2).Infof("CRD: group: %s, version: %s, kind: %s, plural:%s, singular:%s, short names:%v", crd.Spec.Group, version.Name, crd.Spec.Names.Kind, crd.Spec.Names.Plural, crd.Spec.Names.Singular, crd.Spec.Names.ShortNames)
+			resources = append(resources, gvrk)
+		}
+	}
+	return resources, nil
+}
+
+func getCrdListV1beta1(crdClient clientset.Interface) ([]crdGroupVersionResourceKind, error) {
+	crdList, err := crdClient.ApiextensionsV1beta1().CustomResourceDefinitions().List(metav1.ListOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query CRDs")
+	}
+
+	// duplicated code (see getCrdList), the types for crdList are different
+	var resources []crdGroupVersionResourceKind
+	for _, crd := range crdList.Items {
+		for _, version := range crd.Spec.Versions {
+			gvrk := crdGroupVersionResourceKind{group: crd.Spec.Group, version: version.Name, resource: crd.Spec.Names.Plural, kind: crd.Spec.Names.Kind}
+			glog.V(2).Infof("CRD: group: %s, version: %s, kind: %s, plural:%s, singular:%s, short names:%v", crd.Spec.Group, version.Name, crd.Spec.Names.Kind, crd.Spec.Names.Plural, crd.Spec.Names.Singular, crd.Spec.Names.ShortNames)
 			resources = append(resources, gvrk)
 		}
 	}
@@ -283,7 +306,7 @@ func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResul
 	metricIngressKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Inc()
 	metricIngressKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Add(float64(len(resourceJson)))
 
-	glog.V(5).Infof("Informer update - Name: %s, Namespace: %s, ResourceVersion: %s", kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion)
+	glog.V(5).Infof("Informer update (%s) - Name: %s, Namespace: %s, ResourceVersion: %s", watchResult.WatchType, kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion)
 	watchResult.Payload = resourceJson
 	i.writeToOutChan(watchResult)
 }
@@ -311,6 +334,7 @@ func (i *kubeWatcherImpl) getResourceAsJsonString(kind string, obj interface{}) 
 
 func (i *kubeWatcherImpl) refershCrdInformers(masterURL string, kubeContext string) {
 	for _ = range i.refreshCrd.C {
+		glog.Infof("Starting to refresh CRD informers")
 		err := i.startCustomInformers(masterURL, kubeContext)
 		if err != nil {
 			glog.Errorf("Failed to refresh CRD informers: %v", err)
