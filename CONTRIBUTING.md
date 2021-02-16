@@ -23,7 +23,7 @@ Go to the folder where you want to save the repository, type `git clone that-htt
 `git branch a-descriptive-name`
 
 Then switch to that branch:
-`git checkout -b name-for-your-branch`
+`git checkout name-for-your-branch`
 
 6.Make some commits:
 
