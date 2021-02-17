@@ -135,7 +135,7 @@ func (i *kubeWatcherImpl) startCustomInformers(masterURL string, kubeContext str
 	}
 	crdList, err := getCrdList(crdClient)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to query list of CRDs")
 	}
 
 	glog.Infof("Found %d CRD definitions", len(crdList))
@@ -214,7 +214,7 @@ func stopUnwantedCrdInformers(existing map[crdGroupVersionResourceKind]*crdInfor
 func getCrdList(crdClient clientset.Interface) ([]crdGroupVersionResourceKind, error) {
 	crdList, err := crdClient.ApiextensionsV1().CustomResourceDefinitions().List(metav1.ListOptions{})
 	if err != nil {
-		glog.Errorf("Failed to get CRD list from ApiextensionsV1, falling back to ApiextensionsV1beta1")
+		glog.Errorf("Failed to get CRD list from ApiextensionsV1, falling back to ApiextensionsV1beta1: %v", err)
 		return getCrdListV1beta1(crdClient)
 	}
 
