@@ -18,12 +18,8 @@ Go to the folder where you want to save the repository, type `git clone that-htt
 
 4: Add a remote pointing to the original repository so you can sync changes: `git remote add upstream git@github.com:salesforce/sloop.git`
 
-5.Make a git branch: If you type git status you will see the branch name that you’re on, called master. In most projects, master is a special place where the most stable, reviewed, up-to-date code is. So, you’ll need to make your own branch: 
-
-`git branch a-descriptive-name`
-
-Then switch to that branch:
-`git checkout name-for-your-branch`
+5.Make a git branch: If you type git status you will see the branch name that you’re on, called master. In most projects, master is a special place where the most stable, reviewed, up-to-date code is. So, you’ll need to make your own branch and switch to that branch:
+`git checkout -b name-for-your-branch`
 
 6.Make some commits:
 
