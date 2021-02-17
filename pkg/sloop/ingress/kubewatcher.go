@@ -91,7 +91,7 @@ func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.Ku
 		}
 
 		kw.refreshCrd = time.NewTicker(crdRefreshInterval)
-		go kw.refershCrdInformers(masterURL, kubeContext)
+		go kw.refreshCrdInformers(masterURL, kubeContext)
 	}
 
 	return kw, nil
@@ -332,7 +332,7 @@ func (i *kubeWatcherImpl) getResourceAsJsonString(kind string, obj interface{}) 
 	return string(bytes), nil
 }
 
-func (i *kubeWatcherImpl) refershCrdInformers(masterURL string, kubeContext string) {
+func (i *kubeWatcherImpl) refreshCrdInformers(masterURL string, kubeContext string) {
 	for _ = range i.refreshCrd.C {
 		glog.Infof("Starting to refresh CRD informers")
 		err := i.startCustomInformers(masterURL, kubeContext)
