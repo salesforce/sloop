@@ -53,6 +53,7 @@ type SloopConfig struct {
 	DisplayContext           string        `json:"displayContext"`
 	ApiServerHost            string        `json:"apiServerHost"`
 	WatchCrds                bool          `json:"watchCrds"`
+	CrdRefreshInterval       time.Duration `json:"crdRefreshInterval"`
 	ThresholdForGC           float64       `json:"threshold for GC"`
 	RestoreDatabaseFile      string        `json:"restoreDatabaseFile"`
 	BadgerDiscardRatio       float64       `json:"badgerDiscardRatio"`
@@ -99,6 +100,7 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.StringVar(&config.DisplayContext, "display-context", "", "Use this to override the display context.  When running in k8s the context is empty string.  This lets you override that (mainly useful if you are running many copies of sloop on different clusters) ")
 	fs.StringVar(&config.ApiServerHost, "apiserver-host", "", "Kubernetes API server endpoint")
 	fs.BoolVar(&config.WatchCrds, "watch-crds", true, "Watch for activity for CRDs")
+	fs.DurationVar(&config.CrdRefreshInterval, "crd-refresh-interval", time.Duration(5*time.Minute), "Frequency between CRD Informer refresh")
 	fs.StringVar(&config.RestoreDatabaseFile, "restore-database-file", "", "Restore database from backup file into current context.")
 	fs.Float64Var(&config.BadgerDiscardRatio, "badger-discard-ratio", 0.99, "Badger value log GC uses this value to decide if it wants to compact a vlog file. The lower the value of discardRatio the higher the number of !badger!move keys. And thus more the number of !badger!move keys, the size on disk keeps on increasing over time.")
 	fs.Float64Var(&config.ThresholdForGC, "gc-threshold", 0.8, "Threshold for GC to start garbage collecting")
