@@ -25,7 +25,7 @@ import (
 const sloopConfigEnvVar = "SLOOP_CONFIG"
 
 type SloopConfig struct {
-	// These fields can only come from command line
+	// These fields can only come from command line or flag args
 	ConfigFile string	`json:"config"`
 	// These fields can only come from file because they use complex types
 	LeftBarLinks  []webserver.LinkTemplate         `json:"leftBarLinks"`
