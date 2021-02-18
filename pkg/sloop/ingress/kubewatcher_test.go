@@ -63,6 +63,11 @@ func newTestCrdClient(reaction func(_ k8sTesting.Action) (bool, runtime.Object, 
 	}
 }
 
+// This test (test-harness) exercises the kubewatcher from the client perspective
+// - start a kubewatcher
+// - force a k8s event in the system
+// - wait for an event
+// - cleanup
 func Test_bigPicture(t *testing.T) {
 	newCrdClient = newTestCrdClient(reactionListOfOne) // force startCustomInformers() to use a fake clientset
 
@@ -86,7 +91,7 @@ func Test_bigPicture(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating service: %v\n", err)
 	}
-	<-outChan
+	_ = <-outChan
 
 	kw.Stop()
 }
