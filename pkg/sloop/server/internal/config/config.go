@@ -26,56 +26,56 @@ const sloopConfigEnvVar = "SLOOP_CONFIG"
 
 type SloopConfig struct {
 	// These fields can only come from command line
-	ConfigFile string
+	ConfigFile string	`json:"config"`
 	// These fields can only come from file because they use complex types
 	LeftBarLinks  []webserver.LinkTemplate         `json:"leftBarLinks"`
 	ResourceLinks []webserver.ResourceLinkTemplate `json:"resourceLinks"`
 	// Normal fields that can come from file or cmd line
-	DisableKubeWatcher       bool          `json:"disableKubeWatch"`
-	KubeWatchResyncInterval  time.Duration `json:"kubeWatchResyncInterval"`
-	WebFilesPath             string        `json:"webfilesPath"`
-	BindAddress              string        `json:"bindAddress"`
+	DisableKubeWatcher       bool          `json:"disable-kube-watch"`
+	KubeWatchResyncInterval  time.Duration `json:"kube-watch-resync-interval"`
+	WebFilesPath             string        `json:"webfiles-path"`
+	BindAddress              string        `json:"bind-address"`
 	Port                     int           `json:"port"`
-	StoreRoot                string        `json:"storeRoot"`
-	MaxLookback              time.Duration `json:"maxLookBack"`
-	MaxDiskMb                int           `json:"maxDiskMb"`
-	DebugPlaybackFile        string        `json:"debugPlaybackFile"`
-	DebugRecordFile          string        `json:"debugRecordFile"`
-	DeletionBatchSize        int           `json:"deletionBatchSize"`
-	UseMockBadger            bool          `json:"mockBadger"`
-	DisableStoreManager      bool          `json:"disableStoreManager"`
-	CleanupFrequency         time.Duration `json:"cleanupFrequency" validate:"min=1h,max=120h"`
-	KeepMinorNodeUpdates     bool          `json:"keepMinorNodeUpdates"`
-	DefaultNamespace         string        `json:"defaultNamespace"`
-	DefaultKind              string        `json:"defaultKind"`
-	DefaultLookback          string        `json:"defaultLookback"`
+	StoreRoot                string        `json:"store-root"`
+	MaxLookback              time.Duration `json:"max-look-back"`
+	MaxDiskMb                int           `json:"max-disk-mb"`
+	DebugPlaybackFile        string        `json:"playback-file"`
+	DebugRecordFile          string        `json:"record-file"`
+	DeletionBatchSize        int           `json:"deletion-batch-size"`
+	UseMockBadger            bool          `json:"use-mock-badger"`
+	DisableStoreManager      bool          `json:"disable-store-manager"`
+	CleanupFrequency         time.Duration `json:"cleanup-frequency" validate:"min=1h,max=120h"`
+	KeepMinorNodeUpdates     bool          `json:"keep-minor-node-updates"`
+	DefaultNamespace         string        `json:"default-namespace"`
+	DefaultKind              string        `json:"default-kind"`
+	DefaultLookback          string        `json:"default-lookback"`
 	UseKubeContext           string        `json:"context"`
-	DisplayContext           string        `json:"displayContext"`
-	ApiServerHost            string        `json:"apiServerHost"`
-	WatchCrds                bool          `json:"watchCrds"`
-	CrdRefreshInterval       time.Duration `json:"crdRefreshInterval"`
-	ThresholdForGC           float64       `json:"threshold for GC"`
-	RestoreDatabaseFile      string        `json:"restoreDatabaseFile"`
-	BadgerDiscardRatio       float64       `json:"badgerDiscardRatio"`
-	BadgerVLogGCFreq         time.Duration `json:"badgerVLogGCFreq"`
-	BadgerMaxTableSize       int64         `json:"badgerMaxTableSize"`
-	BadgerLevelOneSize       int64         `json:"badgerLevelOneSize"`
-	BadgerLevSizeMultiplier  int           `json:"badgerLevSizeMultiplier"`
-	BadgerKeepL0InMemory     bool          `json:"badgerKeepL0InMemory"`
-	BadgerVLogFileSize       int64         `json:"badgerVLogFileSize"`
-	BadgerVLogMaxEntries     uint          `json:"badgerVLogMaxEntries"`
-	BadgerUseLSMOnlyOptions  bool          `json:"badgerUseLSMOnlyOptions"`
-	BadgerEnableEventLogging bool          `json:"badgerEnableEventLogging"`
-	BadgerNumOfCompactors    int           `json:"badgerNumOfCompactors"`
-	BadgerNumL0Tables        int           `json:"badgerNumLevelZeroTables"`
-	BadgerNumL0TablesStall   int           `json:"badgerNumLevelZeroTables"`
-	BadgerSyncWrites         bool          `json:"badgerSyncWrites"`
-	BadgerVLogFileIOMapping  bool          `json:"badgerVLogFileIOMapping"`
-	BadgerVLogTruncate       bool          `json:"badgerVLogTruncate"`
-	EnableDeleteKeys         bool          `json:"enableDeleteKeys"`
+	DisplayContext           string        `json:"display-context"`
+	ApiServerHost            string        `json:"apiserver-host"`
+	WatchCrds                bool          `json:"watch-crds"`
+	CrdRefreshInterval       time.Duration `json:"crd-refresh-interval"`
+	ThresholdForGC           float64       `json:"gc-threshold"`
+	RestoreDatabaseFile      string        `json:"restore-database-file"`
+	BadgerDiscardRatio       float64       `json:"badger-discard-ratio"`
+	BadgerVLogGCFreq         time.Duration `json:"badger-vlog-gc-freq"`
+	BadgerMaxTableSize       int64         `json:"badger-max-table-size"`
+	BadgerLevelOneSize       int64         `json:"badger-level-one-size"`
+	BadgerLevSizeMultiplier  int           `json:"badger-level-size-multiplier"`
+	BadgerKeepL0InMemory     bool          `json:"badger-keep-l0-in-memory"`
+	BadgerVLogFileSize       int64         `json:"badger-vlog-file-size"`
+	BadgerVLogMaxEntries     uint          `json:"badger-vlog-max-entries"`
+	BadgerUseLSMOnlyOptions  bool          `json:"badger-use-lsm-only-options"`
+	BadgerEnableEventLogging bool          `json:"badger-enable-event-logging"`
+	BadgerNumOfCompactors    int           `json:"badger-number-of-compactors"`
+	BadgerNumL0Tables        int           `json:"badger-number-of-level-zero-tables"`
+	BadgerNumL0TablesStall   int           `json:"badger-number-of-zero-tables-stall"`
+	BadgerSyncWrites         bool          `json:"badger-sync-writes"`
+	BadgerVLogFileIOMapping  bool          `json:"badger-vlog-fileIO-mapping"`
+	BadgerVLogTruncate       bool          `json:"badger-vlog-truncate"`
+	EnableDeleteKeys         bool          `json:"enable-delete-keys"`
 }
 
-func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
+func registerDefaultFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.StringVar(&config.ConfigFile, "config", "", "Path to a yaml or json config file")
 	fs.BoolVar(&config.DisableKubeWatcher, "disable-kube-watch", false, "Turn off kubernetes watch")
 	fs.DurationVar(&config.KubeWatchResyncInterval, "kube-watch-resync-interval", 30*time.Minute,
@@ -129,7 +129,8 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 //
 // We do this to support settings that can come from either cmd line or config file
 func Init() *SloopConfig {
-	newConfig := &SloopConfig{}
+	finalConfig := &SloopConfig{}
+	registerDefaultFlags(flag.CommandLine, finalConfig)
 
 	configFilename := preParseConfigFlag()
 	glog.Infof("Config flag: %s", configFilename)
@@ -138,14 +139,13 @@ func Init() *SloopConfig {
 		glog.Infof("Config env: %s", configFilename)
 	}
 	if configFilename != "" {
-		newConfig = loadFromFile(configFilename)
-	} else {
-		registerFlags(flag.CommandLine, newConfig)
-		flag.Parse()
+		finalConfig = loadFromFile(configFilename,finalConfig)
 	}
+	//register cmd line args
+	flag.Parse()
 	// Set this to the correct value in case we got it from envVar
-	newConfig.ConfigFile = configFilename
-	return newConfig
+	finalConfig.ConfigFile = configFilename
+	return finalConfig
 }
 
 func (c *SloopConfig) ToYaml() string {
@@ -174,9 +174,7 @@ func (c *SloopConfig) Validate() error {
 	return nil
 }
 
-func loadFromFile(filename string) *SloopConfig {
-	var config SloopConfig
-
+func loadFromFile(filename string,config *SloopConfig) *SloopConfig {
 	configFile, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(fmt.Sprintf("failed to read %v. %v", filename, err))
@@ -193,7 +191,7 @@ func loadFromFile(filename string) *SloopConfig {
 	if err != nil {
 		panic(fmt.Sprintf("failed to unmarshal %v. %v", filename, err))
 	}
-	return &config
+	return config
 
 }
 
@@ -201,7 +199,7 @@ func loadFromFile(filename string) *SloopConfig {
 func preParseConfigFlag() string {
 	tempCfg := &SloopConfig{}
 	fs := flag.NewFlagSet("configFileOnly", flag.ContinueOnError)
-	registerFlags(fs, tempCfg)
+	registerDefaultFlags(fs, tempCfg)
 	registerDummyGlogFlags(fs)
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
