@@ -132,19 +132,25 @@ func Init() *SloopConfig {
 	finalConfig := &SloopConfig{}
 	registerDefaultFlags(flag.CommandLine, finalConfig)
 
-	configFilename := preParseConfigFlag()
-	glog.Infof("Config flag: %s", configFilename)
-	if configFilename == "" {
-		configFilename = os.Getenv(sloopConfigEnvVar)
-		glog.Infof("Config env: %s", configFilename)
+	configFileName:=""
+	configFileFlag := preParseConfigFlag()
+	configFileOS := os.Getenv(sloopConfigEnvVar)
+
+	if configFileFlag != "" {
+		configFileName = configFileFlag
+		glog.Infof("Config flag: %s", configFileFlag)
+	} else if configFileOS!=""{
+		configFileName=configFileOS
+		glog.Infof("Config env: %s", configFileOS)
 	}
-	if configFilename != "" {
-		finalConfig = loadFromFile(configFilename,finalConfig)
+
+	if configFileName != "" {
+		finalConfig = loadFromFile(configFileName,finalConfig)
 	}
 	//register cmd line args
 	flag.Parse()
 	// Set this to the correct value in case we got it from envVar
-	finalConfig.ConfigFile = configFilename
+	finalConfig.ConfigFile = configFileName
 	return finalConfig
 }
 
