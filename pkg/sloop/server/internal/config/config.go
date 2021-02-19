@@ -75,7 +75,7 @@ type SloopConfig struct {
 	EnableDeleteKeys         bool          `json:"enableDeleteKeys"`
 }
 
-func registerFlags(fs *flag.FlagSet, config *SloopConfig) *SloopConfig{
+func registerFlags(fs *flag.FlagSet, config *SloopConfig) *SloopConfig {
 	fs.StringVar(&config.ConfigFile, "config", config.ConfigFile, "Path to a yaml or json config file")
 	fs.BoolVar(&config.DisableKubeWatcher, "disable-kube-watch", config.DisableKubeWatcher, "Turn off kubernetes watch")
 	fs.DurationVar(&config.KubeWatchResyncInterval, "kube-watch-resync-interval", config.KubeWatchResyncInterval,
@@ -123,23 +123,23 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) *SloopConfig{
 	return config
 }
 
-func registerDefaultSloopConfig() *SloopConfig{
-	defaultConfig:=SloopConfig{
+func registerDefaultSloopConfig() *SloopConfig {
+	defaultConfig := SloopConfig{
 		ConfigFile:               "",
 		DisableKubeWatcher:       false,
-		KubeWatchResyncInterval:  30*time.Minute,
+		KubeWatchResyncInterval:  30 * time.Minute,
 		WebFilesPath:             "./pkg/sloop/webserver/webfiles",
 		BindAddress:              "",
 		Port:                     8080,
 		StoreRoot:                "./data",
-		MaxLookback:              time.Duration(14*24)*time.Hour,
-		MaxDiskMb:                32*1024,
+		MaxLookback:              time.Duration(14*24) * time.Hour,
+		MaxDiskMb:                32 * 1024,
 		DebugPlaybackFile:        "",
 		DebugRecordFile:          "",
 		DeletionBatchSize:        1000,
 		UseMockBadger:            false,
 		DisableStoreManager:      false,
-		CleanupFrequency:         time.Minute*30,
+		CleanupFrequency:         time.Minute * 30,
 		KeepMinorNodeUpdates:     false,
 		DefaultNamespace:         "default",
 		DefaultKind:              "_all",
@@ -148,15 +148,15 @@ func registerDefaultSloopConfig() *SloopConfig{
 		DisplayContext:           "",
 		ApiServerHost:            "",
 		WatchCrds:                true,
-		CrdRefreshInterval:       time.Duration(5*time.Minute),
+		CrdRefreshInterval:       time.Duration(5 * time.Minute),
 		ThresholdForGC:           0.8,
 		RestoreDatabaseFile:      "",
 		BadgerDiscardRatio:       0.99,
-		BadgerVLogGCFreq:         time.Minute*1,
+		BadgerVLogGCFreq:         time.Minute * 1,
 		BadgerMaxTableSize:       0,
 		BadgerLevelOneSize:       0,
 		BadgerLevSizeMultiplier:  0,
-		BadgerKeepL0InMemory:    true,
+		BadgerKeepL0InMemory:     true,
 		BadgerVLogFileSize:       0,
 		BadgerVLogMaxEntries:     200000,
 		BadgerUseLSMOnlyOptions:  true,
@@ -171,6 +171,7 @@ func registerDefaultSloopConfig() *SloopConfig{
 	}
 	return &defaultConfig
 }
+
 // This will first check if a config file is specified on cmd line using a temporary flagSet
 // If not there, check the environment variable
 // If we have a config path, load initial values from it
@@ -180,21 +181,21 @@ func registerDefaultSloopConfig() *SloopConfig{
 func Init() *SloopConfig {
 	finalConfig := registerDefaultSloopConfig()
 
-	configFileName:=""
+	configFileName := ""
 	configFileFlag := preParseConfigFlag()
 	configFileOS := os.Getenv(sloopConfigEnvVar)
 
 	if configFileFlag != "" {
 		configFileName = configFileFlag
 		glog.Infof("Config flag: %s", configFileFlag)
-	} else if configFileOS!=""{
-		configFileName=configFileOS
+	} else if configFileOS != "" {
+		configFileName = configFileOS
 		glog.Infof("Config env: %s", configFileOS)
 	}
 	if configFileName != "" {
-		finalConfig = loadFromFile(configFileName,finalConfig)
+		finalConfig = loadFromFile(configFileName, finalConfig)
 	}
-	finalConfig=registerFlags(flag.CommandLine,finalConfig)
+	finalConfig = registerFlags(flag.CommandLine, finalConfig)
 	flag.Parse()
 	// Set this to the correct value in case we got it from envVar
 	finalConfig.ConfigFile = configFileName
@@ -227,7 +228,7 @@ func (c *SloopConfig) Validate() error {
 	return nil
 }
 
-func loadFromFile(filename string,config *SloopConfig) *SloopConfig {
+func loadFromFile(filename string, config *SloopConfig) *SloopConfig {
 	configFile, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(fmt.Sprintf("failed to read %v. %v", filename, err))
