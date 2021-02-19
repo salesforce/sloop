@@ -76,7 +76,6 @@ type SloopConfig struct {
 }
 
 func registerFlags(fs *flag.FlagSet, config *SloopConfig) *SloopConfig{
-	//var flagConfig *SloopConfig
 	fs.StringVar(&config.ConfigFile, "config", config.ConfigFile, "Path to a yaml or json config file")
 	fs.BoolVar(&config.DisableKubeWatcher, "disable-kube-watch", config.DisableKubeWatcher, "Turn off kubernetes watch")
 	fs.DurationVar(&config.KubeWatchResyncInterval, "kube-watch-resync-interval", config.KubeWatchResyncInterval,
