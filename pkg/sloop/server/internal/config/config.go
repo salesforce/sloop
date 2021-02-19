@@ -75,53 +75,103 @@ type SloopConfig struct {
 	EnableDeleteKeys         bool          `json:"enableDeleteKeys"`
 }
 
-func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
-	fs.StringVar(&config.ConfigFile, "config", "", "Path to a yaml or json config file")
-	fs.BoolVar(&config.DisableKubeWatcher, "disable-kube-watch", false, "Turn off kubernetes watch")
-	fs.DurationVar(&config.KubeWatchResyncInterval, "kube-watch-resync-interval", 30*time.Minute,
+func registerFlags(fs *flag.FlagSet, config *SloopConfig) *SloopConfig{
+	//var flagConfig *SloopConfig
+	fs.StringVar(&config.ConfigFile, "config", config.ConfigFile, "Path to a yaml or json config file")
+	fs.BoolVar(&config.DisableKubeWatcher, "disable-kube-watch", config.DisableKubeWatcher, "Turn off kubernetes watch")
+	fs.DurationVar(&config.KubeWatchResyncInterval, "kube-watch-resync-interval", config.KubeWatchResyncInterval,
 		"OPTIONAL: Kubernetes watch resync interval")
-	fs.StringVar(&config.WebFilesPath, "web-files-path", "./pkg/sloop/webserver/webfiles", "Path to web files")
-	fs.StringVar(&config.BindAddress, "bind-address", "", "Web server bind ip address.")
-	fs.IntVar(&config.Port, "port", 8080, "Web server port")
-	fs.StringVar(&config.StoreRoot, "store-root", "./data", "Path to store history data")
-	fs.DurationVar(&config.MaxLookback, "max-look-back", time.Duration(14*24)*time.Hour, "Max history data to keep")
-	fs.IntVar(&config.MaxDiskMb, "max-disk-mb", 32*1024, "Max disk storage in MB")
-	fs.StringVar(&config.DebugPlaybackFile, "playback-file", "", "Read watch data from a playback file")
-	fs.StringVar(&config.DebugRecordFile, "record-file", "", "Record watch data to a playback file")
-	fs.BoolVar(&config.UseMockBadger, "use-mock-badger", false, "Use a fake in-memory mock of badger")
-	fs.BoolVar(&config.DisableStoreManager, "disable-store-manager", false, "Turn off store manager which is to clean up database")
-	fs.DurationVar(&config.CleanupFrequency, "cleanup-frequency", time.Minute*30, "Frequency between subsequent runs for the database cleanup")
-	fs.BoolVar(&config.KeepMinorNodeUpdates, "keep-minor-node-updates", false, "Keep all node updates even if change is only condition timestamps")
-	fs.StringVar(&config.DefaultLookback, "default-lookback", "1h", "Default UX filter lookback")
-	fs.StringVar(&config.DefaultKind, "default-kind", "_all", "Default UX filter kind")
-	fs.StringVar(&config.DefaultNamespace, "default-namespace", "default", "Default UX filter namespace")
-	fs.IntVar(&config.DeletionBatchSize, "deletion-batch-size", 1000, "Size of batch for deletion")
-	fs.StringVar(&config.UseKubeContext, "context", "", "Use a specific kubernetes context")
-	fs.StringVar(&config.DisplayContext, "display-context", "", "Use this to override the display context.  When running in k8s the context is empty string.  This lets you override that (mainly useful if you are running many copies of sloop on different clusters) ")
-	fs.StringVar(&config.ApiServerHost, "apiserver-host", "", "Kubernetes API server endpoint")
-	fs.BoolVar(&config.WatchCrds, "watch-crds", true, "Watch for activity for CRDs")
-	fs.DurationVar(&config.CrdRefreshInterval, "crd-refresh-interval", time.Duration(5*time.Minute), "Frequency between CRD Informer refresh")
-	fs.StringVar(&config.RestoreDatabaseFile, "restore-database-file", "", "Restore database from backup file into current context.")
-	fs.Float64Var(&config.BadgerDiscardRatio, "badger-discard-ratio", 0.99, "Badger value log GC uses this value to decide if it wants to compact a vlog file. The lower the value of discardRatio the higher the number of !badger!move keys. And thus more the number of !badger!move keys, the size on disk keeps on increasing over time.")
-	fs.Float64Var(&config.ThresholdForGC, "gc-threshold", 0.8, "Threshold for GC to start garbage collecting")
-	fs.DurationVar(&config.BadgerVLogGCFreq, "badger-vlog-gc-freq", time.Minute*1, "Frequency of running badger's ValueLogGC")
-	fs.Int64Var(&config.BadgerMaxTableSize, "badger-max-table-size", 0, "Max LSM table size in bytes.  0 = use badger default")
-	fs.Int64Var(&config.BadgerLevelOneSize, "badger-level-one-size", 0, "The maximum total size for Level 1.  0 = use badger default")
-	fs.IntVar(&config.BadgerLevSizeMultiplier, "badger-level-size-multiplier", 0, "The ratio between the maximum sizes of contiguous levels in the LSM.  0 = use badger default")
-	fs.BoolVar(&config.BadgerKeepL0InMemory, "badger-keep-l0-in-memory", true, "Keeps all level 0 tables in memory for faster writes and compactions")
-	fs.Int64Var(&config.BadgerVLogFileSize, "badger-vlog-file-size", 0, "Max size in bytes per value log file. 0 = use badger default")
-	fs.UintVar(&config.BadgerVLogMaxEntries, "badger-vlog-max-entries", 200000, "Max number of entries per value log files. 0 = use badger default")
-	fs.BoolVar(&config.BadgerUseLSMOnlyOptions, "badger-use-lsm-only-options", true, "Sets a higher valueThreshold so values would be collocated with LSM tree reducing vlog disk usage")
-	fs.BoolVar(&config.BadgerEnableEventLogging, "badger-enable-event-logging", false, "Turns on badger event logging")
-	fs.IntVar(&config.BadgerNumOfCompactors, "badger-number-of-compactors", 0, "Number of compactors for badger")
-	fs.IntVar(&config.BadgerNumL0Tables, "badger-number-of-level-zero-tables", 0, "Number of level zero tables for badger")
-	fs.IntVar(&config.BadgerNumL0TablesStall, "badger-number-of-zero-tables-stall", 0, "Number of Level 0 tables that once reached causes the DB to stall until compaction succeeds")
-	fs.BoolVar(&config.BadgerSyncWrites, "badger-sync-writes", true, "Sync Writes ensures writes are synced to disk if set to true")
-	fs.BoolVar(&config.EnableDeleteKeys, "enable-delete-keys", false, "Use delete prefixes instead of dropPrefix for GC")
-	fs.BoolVar(&config.BadgerVLogFileIOMapping, "badger-vlog-fileIO-mapping", false, "Indicates which file loading mode should be used for the value log data, in memory constrained environments the value is recommended to be true")
-	fs.BoolVar(&config.BadgerVLogTruncate, "badger-vlog-truncate", true, "Truncate value log if badger db offset is different from badger db size")
+	fs.StringVar(&config.WebFilesPath, "web-files-path", config.WebFilesPath, "Path to web files")
+	fs.StringVar(&config.BindAddress, "bind-address", config.BindAddress, "Web server bind ip address.")
+	fs.IntVar(&config.Port, "port", config.Port, "Web server port")
+	fs.StringVar(&config.StoreRoot, "store-root", config.StoreRoot, "Path to store history data")
+	fs.DurationVar(&config.MaxLookback, "max-look-back", config.MaxLookback, "Max history data to keep")
+	fs.IntVar(&config.MaxDiskMb, "max-disk-mb", config.MaxDiskMb, "Max disk storage in MB")
+	fs.StringVar(&config.DebugPlaybackFile, "playback-file", config.DebugPlaybackFile, "Read watch data from a playback file")
+	fs.StringVar(&config.DebugRecordFile, "record-file", config.DebugRecordFile, "Record watch data to a playback file")
+	fs.BoolVar(&config.UseMockBadger, "use-mock-badger", config.UseMockBadger, "Use a fake in-memory mock of badger")
+	fs.BoolVar(&config.DisableStoreManager, "disable-store-manager", config.DisableStoreManager, "Turn off store manager which is to clean up database")
+	fs.DurationVar(&config.CleanupFrequency, "cleanup-frequency", config.CleanupFrequency, "Frequency between subsequent runs for the database cleanup")
+	fs.BoolVar(&config.KeepMinorNodeUpdates, "keep-minor-node-updates", config.KeepMinorNodeUpdates, "Keep all node updates even if change is only condition timestamps")
+	fs.StringVar(&config.DefaultLookback, "default-lookback", config.DefaultLookback, "Default UX filter lookback")
+	fs.StringVar(&config.DefaultKind, "default-kind", config.DefaultKind, "Default UX filter kind")
+	fs.StringVar(&config.DefaultNamespace, "default-namespace", config.DefaultNamespace, "Default UX filter namespace")
+	fs.IntVar(&config.DeletionBatchSize, "deletion-batch-size", config.DeletionBatchSize, "Size of batch for deletion")
+	fs.StringVar(&config.UseKubeContext, "context", config.UseKubeContext, "Use a specific kubernetes context")
+	fs.StringVar(&config.DisplayContext, "display-context", config.DisplayContext, "Use this to override the display context.  When running in k8s the context is empty string.  This lets you override that (mainly useful if you are running many copies of sloop on different clusters) ")
+	fs.StringVar(&config.ApiServerHost, "apiserver-host", config.ApiServerHost, "Kubernetes API server endpoint")
+	fs.BoolVar(&config.WatchCrds, "watch-crds", config.WatchCrds, "Watch for activity for CRDs")
+	fs.DurationVar(&config.CrdRefreshInterval, "crd-refresh-interval", config.CrdRefreshInterval, "Frequency between CRD Informer refresh")
+	fs.StringVar(&config.RestoreDatabaseFile, "restore-database-file", config.RestoreDatabaseFile, "Restore database from backup file into current context.")
+	fs.Float64Var(&config.BadgerDiscardRatio, "badger-discard-ratio", config.BadgerDiscardRatio, "Badger value log GC uses this value to decide if it wants to compact a vlog file. The lower the value of discardRatio the higher the number of !badger!move keys. And thus more the number of !badger!move keys, the size on disk keeps on increasing over time.")
+	fs.Float64Var(&config.ThresholdForGC, "gc-threshold", config.ThresholdForGC, "Threshold for GC to start garbage collecting")
+	fs.DurationVar(&config.BadgerVLogGCFreq, "badger-vlog-gc-freq", config.BadgerVLogGCFreq, "Frequency of running badger's ValueLogGC")
+	fs.Int64Var(&config.BadgerMaxTableSize, "badger-max-table-size", config.BadgerMaxTableSize, "Max LSM table size in bytes.  0 = use badger default")
+	fs.Int64Var(&config.BadgerLevelOneSize, "badger-level-one-size", config.BadgerLevelOneSize, "The maximum total size for Level 1.  0 = use badger default")
+	fs.IntVar(&config.BadgerLevSizeMultiplier, "badger-level-size-multiplier", config.BadgerLevSizeMultiplier, "The ratio between the maximum sizes of contiguous levels in the LSM.  0 = use badger default")
+	fs.BoolVar(&config.BadgerKeepL0InMemory, "badger-keep-l0-in-memory", config.BadgerKeepL0InMemory, "Keeps all level 0 tables in memory for faster writes and compactions")
+	fs.Int64Var(&config.BadgerVLogFileSize, "badger-vlog-file-size", config.BadgerVLogFileSize, "Max size in bytes per value log file. 0 = use badger default")
+	fs.UintVar(&config.BadgerVLogMaxEntries, "badger-vlog-max-entries", config.BadgerVLogMaxEntries, "Max number of entries per value log files. 0 = use badger default")
+	fs.BoolVar(&config.BadgerUseLSMOnlyOptions, "badger-use-lsm-only-options", config.BadgerUseLSMOnlyOptions, "Sets a higher valueThreshold so values would be collocated with LSM tree reducing vlog disk usage")
+	fs.BoolVar(&config.BadgerEnableEventLogging, "badger-enable-event-logging", config.BadgerEnableEventLogging, "Turns on badger event logging")
+	fs.IntVar(&config.BadgerNumOfCompactors, "badger-number-of-compactors", config.BadgerNumOfCompactors, "Number of compactors for badger")
+	fs.IntVar(&config.BadgerNumL0Tables, "badger-number-of-level-zero-tables", config.BadgerNumL0Tables, "Number of level zero tables for badger")
+	fs.IntVar(&config.BadgerNumL0TablesStall, "badger-number-of-zero-tables-stall", config.BadgerNumL0TablesStall, "Number of Level 0 tables that once reached causes the DB to stall until compaction succeeds")
+	fs.BoolVar(&config.BadgerSyncWrites, "badger-sync-writes", config.BadgerSyncWrites, "Sync Writes ensures writes are synced to disk if set to true")
+	fs.BoolVar(&config.EnableDeleteKeys, "enable-delete-keys", config.EnableDeleteKeys, "Use delete prefixes instead of dropPrefix for GC")
+	fs.BoolVar(&config.BadgerVLogFileIOMapping, "badger-vlog-fileIO-mapping", config.BadgerVLogFileIOMapping, "Indicates which file loading mode should be used for the value log data, in memory constrained environments the value is recommended to be true")
+	fs.BoolVar(&config.BadgerVLogTruncate, "badger-vlog-truncate", config.BadgerVLogTruncate, "Truncate value log if badger db offset is different from badger db size")
+	return config
 }
 
+func registerDefaultSloopConfig() *SloopConfig{
+	defaultConfig:=SloopConfig{
+		ConfigFile:               "",
+		DisableKubeWatcher:       false,
+		KubeWatchResyncInterval:  30*time.Minute,
+		WebFilesPath:             "./pkg/sloop/webserver/webfiles",
+		BindAddress:              "",
+		Port:                     8080,
+		StoreRoot:                "./data",
+		MaxLookback:              time.Duration(14*24)*time.Hour,
+		MaxDiskMb:                32*1024,
+		DebugPlaybackFile:        "",
+		DebugRecordFile:          "",
+		DeletionBatchSize:        1000,
+		UseMockBadger:            false,
+		DisableStoreManager:      false,
+		CleanupFrequency:         time.Minute*30,
+		KeepMinorNodeUpdates:     false,
+		DefaultNamespace:         "default",
+		DefaultKind:              "_all",
+		DefaultLookback:          "1h",
+		UseKubeContext:           "",
+		DisplayContext:           "",
+		ApiServerHost:            "",
+		WatchCrds:                true,
+		CrdRefreshInterval:       time.Duration(5*time.Minute),
+		ThresholdForGC:           0.8,
+		RestoreDatabaseFile:      "",
+		BadgerDiscardRatio:       0.99,
+		BadgerVLogGCFreq:         time.Minute*1,
+		BadgerMaxTableSize:       0,
+		BadgerLevelOneSize:       0,
+		BadgerLevSizeMultiplier:  0,
+		BadgerKeepL0InMemory:    true,
+		BadgerVLogFileSize:       0,
+		BadgerVLogMaxEntries:     200000,
+		BadgerUseLSMOnlyOptions:  true,
+		BadgerEnableEventLogging: false,
+		BadgerNumOfCompactors:    0,
+		BadgerNumL0Tables:        0,
+		BadgerNumL0TablesStall:   0,
+		BadgerSyncWrites:         true,
+		BadgerVLogFileIOMapping:  false,
+		BadgerVLogTruncate:       true,
+		EnableDeleteKeys:         false,
+	}
+	return &defaultConfig
+}
 // This will first check if a config file is specified on cmd line using a temporary flagSet
 // If not there, check the environment variable
 // If we have a config path, load initial values from it
@@ -129,23 +179,27 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 //
 // We do this to support settings that can come from either cmd line or config file
 func Init() *SloopConfig {
-	newConfig := &SloopConfig{}
+	finalConfig := registerDefaultSloopConfig()
 
-	configFilename := preParseConfigFlag()
-	glog.Infof("Config flag: %s", configFilename)
-	if configFilename == "" {
-		configFilename = os.Getenv(sloopConfigEnvVar)
-		glog.Infof("Config env: %s", configFilename)
+	configFileName:=""
+	configFileFlag := preParseConfigFlag()
+	configFileOS := os.Getenv(sloopConfigEnvVar)
+
+	if configFileFlag != "" {
+		configFileName = configFileFlag
+		glog.Infof("Config flag: %s", configFileFlag)
+	} else if configFileOS!=""{
+		configFileName=configFileOS
+		glog.Infof("Config env: %s", configFileOS)
 	}
-	if configFilename != "" {
-		newConfig = loadFromFile(configFilename)
-	} else {
-		registerFlags(flag.CommandLine, newConfig)
-		flag.Parse()
+	if configFileName != "" {
+		finalConfig = loadFromFile(configFileName,finalConfig)
 	}
+	finalConfig=registerFlags(flag.CommandLine,finalConfig)
+	flag.Parse()
 	// Set this to the correct value in case we got it from envVar
-	newConfig.ConfigFile = configFilename
-	return newConfig
+	finalConfig.ConfigFile = configFileName
+	return finalConfig
 }
 
 func (c *SloopConfig) ToYaml() string {
@@ -174,9 +228,7 @@ func (c *SloopConfig) Validate() error {
 	return nil
 }
 
-func loadFromFile(filename string) *SloopConfig {
-	var config SloopConfig
-
+func loadFromFile(filename string,config *SloopConfig) *SloopConfig {
 	configFile, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(fmt.Sprintf("failed to read %v. %v", filename, err))
@@ -193,7 +245,7 @@ func loadFromFile(filename string) *SloopConfig {
 	if err != nil {
 		panic(fmt.Sprintf("failed to unmarshal %v. %v", filename, err))
 	}
-	return &config
+	return config
 
 }
 

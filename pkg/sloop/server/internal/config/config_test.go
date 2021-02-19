@@ -16,8 +16,9 @@ func Test_loadFromJSONFile_Success(t *testing.T) {
 	err = json.Unmarshal(configFile, &expectedconfig)
 	assert.Nil(t, err)
 
-	out_config := loadFromFile(configfilename)
-	assert.Equal(t, out_config, &expectedconfig)
+	var outConfig *SloopConfig
+	outConfig = loadFromFile(configfilename,outConfig)
+	assert.Equal(t, outConfig, &expectedconfig)
 }
 
 func Test_loadFromYAMLFile_Success(t *testing.T) {
@@ -27,16 +28,19 @@ func Test_loadFromYAMLFile_Success(t *testing.T) {
 	err = yaml.Unmarshal(configFile, &expectedconfig)
 	assert.Nil(t, err)
 
-	out_config := loadFromFile(configfilename)
-	assert.Equal(t, out_config, &expectedconfig)
+	var outConfig *SloopConfig
+	outConfig = loadFromFile(configfilename,outConfig)
+	assert.Equal(t, outConfig, &expectedconfig)
 }
 
 func Test_loadFromTxtFile_shouldPanic(t *testing.T) {
+	var config *SloopConfig
 	configfilename, _ := filepath.Abs("../testFiles/testconfig.txt")
-	assert.Panics(t, func() { loadFromFile(configfilename) }, "The code did not panic")
+	assert.Panics(t, func() { loadFromFile(configfilename,config) }, "The code did not panic")
 }
 
 func Test_loadFromNoFile_shouldPanic(t *testing.T) {
+	var config *SloopConfig
 	configfilename, _ := filepath.Abs("../testconfig.json")
-	assert.Panics(t, func() { loadFromFile(configfilename) }, "The code did not panic")
+	assert.Panics(t, func() { loadFromFile(configfilename,config) }, "The code did not panic")
 }
