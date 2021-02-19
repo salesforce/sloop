@@ -33,7 +33,7 @@ type SloopConfig struct {
 	// Normal fields that can come from file or cmd line
 	DisableKubeWatcher       bool          `json:"disable-kube-watch"`
 	KubeWatchResyncInterval  time.Duration `json:"kube-watch-resync-interval"`
-	WebFilesPath             string        `json:"webfiles-path"`
+	WebFilesPath             string        `json:"web-files-path"`
 	BindAddress              string        `json:"bind-address"`
 	Port                     int           `json:"port"`
 	StoreRoot                string        `json:"store-root"`
