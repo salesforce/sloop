@@ -75,7 +75,7 @@ type SloopConfig struct {
 	EnableDeleteKeys         bool          `json:"enableDeleteKeys"`
 }
 
-func registerFlags(fs *flag.FlagSet, config *SloopConfig) *SloopConfig {
+func registerFlags(fs *flag.FlagSet, config *SloopConfig)  {
 	fs.StringVar(&config.ConfigFile, "config", config.ConfigFile, "Path to a yaml or json config file")
 	fs.BoolVar(&config.DisableKubeWatcher, "disable-kube-watch", config.DisableKubeWatcher, "Turn off kubernetes watch")
 	fs.DurationVar(&config.KubeWatchResyncInterval, "kube-watch-resync-interval", config.KubeWatchResyncInterval,
@@ -120,7 +120,6 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) *SloopConfig {
 	fs.BoolVar(&config.EnableDeleteKeys, "enable-delete-keys", config.EnableDeleteKeys, "Use delete prefixes instead of dropPrefix for GC")
 	fs.BoolVar(&config.BadgerVLogFileIOMapping, "badger-vlog-fileIO-mapping", config.BadgerVLogFileIOMapping, "Indicates which file loading mode should be used for the value log data, in memory constrained environments the value is recommended to be true")
 	fs.BoolVar(&config.BadgerVLogTruncate, "badger-vlog-truncate", config.BadgerVLogTruncate, "Truncate value log if badger db offset is different from badger db size")
-	return config
 }
 
 func registerDefaultSloopConfig() *SloopConfig {
@@ -195,7 +194,7 @@ func Init() *SloopConfig {
 	if configFileName != "" {
 		finalConfig = loadFromFile(configFileName, finalConfig)
 	}
-	finalConfig = registerFlags(flag.CommandLine, finalConfig)
+	registerFlags(flag.CommandLine, finalConfig)
 	flag.Parse()
 	// Set this to the correct value in case we got it from envVar
 	finalConfig.ConfigFile = configFileName
