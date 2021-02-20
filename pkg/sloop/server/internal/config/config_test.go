@@ -21,7 +21,7 @@ func Test_loadFromJSONFile_Success(t *testing.T) {
 
 	var outConfig *SloopConfig
 	outConfig = loadFromFile(configfilename, outConfig)
-	assert.Equal(t, outConfig, &expectedconfig)
+	assert.Equal(t, &expectedconfig, outConfig)
 }
 
 func Test_loadFromYAMLFile_Success(t *testing.T) {
@@ -33,7 +33,7 @@ func Test_loadFromYAMLFile_Success(t *testing.T) {
 
 	var outConfig *SloopConfig
 	outConfig = loadFromFile(configfilename, outConfig)
-	assert.Equal(t, outConfig, &expectedconfig)
+	assert.Equal(t, &expectedconfig, outConfig)
 }
 
 func Test_loadFromTxtFile_shouldPanic(t *testing.T) {
