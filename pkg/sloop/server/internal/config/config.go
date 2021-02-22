@@ -122,7 +122,7 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.BoolVar(&config.BadgerVLogTruncate, "badger-vlog-truncate", config.BadgerVLogTruncate, "Truncate value log if badger db offset is different from badger db size")
 }
 
-func registerDefaultSloopConfig() *SloopConfig {
+func getDefaultConfig() *SloopConfig {
 	defaultConfig := SloopConfig{
 		ConfigFile:               "",
 		DisableKubeWatcher:       false,
@@ -178,7 +178,7 @@ func registerDefaultSloopConfig() *SloopConfig {
 //
 // We do this to support settings that can come from either cmd line or config file
 func Init() *SloopConfig {
-	finalConfig := registerDefaultSloopConfig()
+	finalConfig := getDefaultConfig()
 	configFileName := getConfigFilePath()
 	if configFileName != "" {
 		finalConfig = loadFromFile(configFileName, finalConfig)
