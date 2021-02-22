@@ -179,18 +179,7 @@ func registerDefaultSloopConfig() *SloopConfig {
 // We do this to support settings that can come from either cmd line or config file
 func Init() *SloopConfig {
 	finalConfig := registerDefaultSloopConfig()
-
-	configFileName := ""
-	configFileFlag := preParseConfigFlag()
-	configFileOS := os.Getenv(sloopConfigEnvVar)
-
-	if configFileFlag != "" {
-		configFileName = configFileFlag
-		glog.Infof("Config flag: %s", configFileFlag)
-	} else if configFileOS != "" {
-		configFileName = configFileOS
-		glog.Infof("Config env: %s", configFileOS)
-	}
+	configFileName := getConfigFilePath()
 	if configFileName != "" {
 		finalConfig = loadFromFile(configFileName, finalConfig)
 	}
@@ -248,8 +237,21 @@ func loadFromFile(filename string, config *SloopConfig) *SloopConfig {
 
 }
 
+func getConfigFilePath()string{
+	configFileFlag := getConfigFlag()
+	configFileOS := os.Getenv(sloopConfigEnvVar)
+
+	if configFileFlag != "" {
+		glog.Infof("Config flag: %s", configFileFlag)
+		return configFileFlag
+	} else if configFileOS != "" {
+		glog.Infof("Config env: %s", configFileOS)
+		return configFileOS
+	}
+	return ""
+}
 // Pre-parse flags and return config filename without side-effects
-func preParseConfigFlag() string {
+func getConfigFlag() string {
 	tempCfg := &SloopConfig{}
 	fs := flag.NewFlagSet("configFileOnly", flag.ContinueOnError)
 	registerFlags(fs, tempCfg)
