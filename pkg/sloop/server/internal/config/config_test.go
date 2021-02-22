@@ -52,7 +52,7 @@ func Test_loadFromNoFile_shouldPanic(t *testing.T) {
 func TestInit(t *testing.T) {
 	absFilePath, _ := filepath.Abs("../testFiles/testconfig.json")
 	configFileName := "--config=" + absFilePath
-	os.Args = []string{"--max-look-back=342h",configFileName}
+	os.Args = []string{"--max-look-back=342h", configFileName}
 	cmd := exec.Command(os.Args[0])
 	if err := cmd.Start(); err != nil {
 		glog.Fatal(err)
@@ -60,6 +60,6 @@ func TestInit(t *testing.T) {
 }
 
 func TestInitonly(t *testing.T) {
-	config:=Init()
+	config := Init()
 	fmt.Print("SloopConfig: \n", config.ToYaml())
 }

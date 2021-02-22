@@ -75,7 +75,7 @@ type SloopConfig struct {
 	EnableDeleteKeys         bool          `json:"enableDeleteKeys"`
 }
 
-func registerFlags(fs *flag.FlagSet, config *SloopConfig)  {
+func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.StringVar(&config.ConfigFile, "config", config.ConfigFile, "Path to a yaml or json config file")
 	fs.BoolVar(&config.DisableKubeWatcher, "disable-kube-watch", config.DisableKubeWatcher, "Turn off kubernetes watch")
 	fs.DurationVar(&config.KubeWatchResyncInterval, "kube-watch-resync-interval", config.KubeWatchResyncInterval,
@@ -237,7 +237,7 @@ func loadFromFile(filename string, config *SloopConfig) *SloopConfig {
 
 }
 
-func getConfigFilePath()string{
+func getConfigFilePath() string {
 	configFileFlag := getConfigFlag()
 	configFileOS := os.Getenv(sloopConfigEnvVar)
 
@@ -250,6 +250,7 @@ func getConfigFilePath()string{
 	}
 	return ""
 }
+
 // Pre-parse flags and return config filename without side-effects
 func getConfigFlag() string {
 	tempCfg := &SloopConfig{}
