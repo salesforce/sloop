@@ -248,6 +248,7 @@ func getConfigFilePath() string {
 		glog.Infof("Config env: %s", configFileOS)
 		return configFileOS
 	}
+	glog.Infof("Default config:")
 	return ""
 }
 

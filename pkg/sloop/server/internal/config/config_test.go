@@ -2,13 +2,9 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/ghodss/yaml"
-	"github.com/golang/glog"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 )
@@ -47,19 +43,4 @@ func Test_loadFromNoFile_shouldPanic(t *testing.T) {
 	var config *SloopConfig
 	configfilename, _ := filepath.Abs("../testconfig.json")
 	assert.Panics(t, func() { loadFromFile(configfilename, config) }, "The code did not panic")
-}
-
-func TestInit(t *testing.T) {
-	absFilePath, _ := filepath.Abs("../testFiles/testconfig.json")
-	configFileName := "--config=" + absFilePath
-	os.Args = []string{"--max-look-back=342h", configFileName}
-	cmd := exec.Command(os.Args[0])
-	if err := cmd.Start(); err != nil {
-		glog.Fatal(err)
-	}
-}
-
-func TestInitonly(t *testing.T) {
-	config := Init()
-	fmt.Print("SloopConfig: \n", config.ToYaml())
 }
