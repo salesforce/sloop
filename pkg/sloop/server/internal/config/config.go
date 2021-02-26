@@ -239,15 +239,17 @@ func loadFromFile(filename string, config *SloopConfig) *SloopConfig {
 
 func getConfigFilePath() string {
 	configFileFlag := getConfigFlag()
-	configFileOS := os.Getenv(sloopConfigEnvVar)
-
 	if configFileFlag != "" {
 		glog.Infof("Config flag: %s", configFileFlag)
 		return configFileFlag
-	} else if configFileOS != "" {
+	}
+
+	configFileOS := os.Getenv(sloopConfigEnvVar)
+	if configFileOS != "" {
 		glog.Infof("Config env: %s", configFileOS)
 		return configFileOS
 	}
+
 	glog.Infof("Default config set")
 	return ""
 }
