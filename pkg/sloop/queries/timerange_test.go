@@ -73,6 +73,25 @@ func Test_timeRangeTable(t *testing.T) {
 	}
 }
 
+func Test_computeActualEndTime(t *testing.T) {
+	var userInputEndTime string
+	var endOfTime time.Time
+	var result time.Time
+	userInputEndTime = fmt.Sprintf("%v", someQueryEndTs.UTC().Unix())
+	// endOfTIme is before userInput
+	result = computeActualEndTime(userInputEndTime, endOfTime)
+	assert.Equal(t, result, endOfTime)
+
+	// endOfTIme is after userInput
+	endOfTime = someQueryEndTs.Add(time.Hour*2)
+	result = computeActualEndTime(userInputEndTime, endOfTime)
+	assert.Equal(t, result, someQueryEndTs)
+
+	// invalid userInput
+	result = computeActualEndTime("", endOfTime)
+	assert.Equal(t, result, endOfTime)
+}
+
 func Test_timeFilterResSumValue_OutsideRangeDrop(t *testing.T) {
 	resVal := typed.ResourceSummary{}
 	resVal.CreateTime, _ = ptypes.TimestampProto(rightBeforeStartTs)

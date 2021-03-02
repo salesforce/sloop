@@ -36,7 +36,24 @@ const minLookback = 1 * time.Minute
 // TODO: If wall clock is in the middle of the newest partition min-max time we can use it
 func computeTimeRange(params url.Values, tables typed.Tables, maxLookBack time.Duration) (time.Time, time.Time, error) {
 	endOfTime := getEndOfTime(tables)
-	return computeTimeRangeInternal(params, endOfTime, maxLookBack)
+	actualEndTime := computeActualEndTime(params.Get(EndTimeParam), endOfTime)
+	return computeTimeRangeInternal(params, actualEndTime, maxLookBack)
+}
+
+// Compare result of function `getEndOfTime` and user defined end time,
+// return the earlier one
+func computeActualEndTime(userInputEndTime string, endOfTime time.Time) time.Time {
+	var userDefinedEndOfTime time.Time
+	var err error
+	userDefinedEndOfTime, err = parseUnixTimeString(userInputEndTime)
+	if err != nil {
+		glog.Errorf("Invalid EndTimeParam input: %v.  err: %v", userInputEndTime, err)
+		return endOfTime
+	}
+	if endOfTime.After(userDefinedEndOfTime) {
+		return userDefinedEndOfTime
+	}
+	return endOfTime
 }
 
 func computeTimeRangeInternal(params url.Values, endOfTime time.Time, maxLookBack time.Duration) (time.Time, time.Time, error) {
