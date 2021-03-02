@@ -62,18 +62,18 @@ func computeTimeRangeInternal(params url.Values, endOfTime time.Time, maxLookBac
 		}
 	}
 
+	// always use customer input as computedEnd
+	computedStart, computedEnd, err = getTimeRangeFromStartEnd(startTimeVal, endTimeVal)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+
 	if lookBackVal != "" {
-		computedEnd = endOfTime
 		lookbackRange, err := getDurationFromLookback(lookBackVal)
 		if err != nil {
 			return time.Time{}, time.Time{}, err
 		}
 		computedStart = computedEnd.Add(-1 * lookbackRange)
-	} else {
-		computedStart, computedEnd, err = getTimeRangeFromStartEnd(startTimeVal, endTimeVal)
-		if err != nil {
-			return time.Time{}, time.Time{}, err
-		}
 	}
 
 	// If the time range ends beyond endOfTime shift it back
