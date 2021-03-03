@@ -87,6 +87,10 @@ func Test_computeActualEndTime(t *testing.T) {
 	result = computeActualEndTime(userInputEndTime, endOfTime)
 	assert.Equal(t, result, someQueryEndTs)
 
+	// endOfTIme is the same as userInput
+	result = computeActualEndTime(userInputEndTime, someQueryEndTs)
+	assert.Equal(t, result, someQueryEndTs)
+
 	// invalid userInput
 	result = computeActualEndTime("", endOfTime)
 	assert.Equal(t, result, endOfTime)

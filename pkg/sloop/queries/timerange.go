@@ -43,9 +43,7 @@ func computeTimeRange(params url.Values, tables typed.Tables, maxLookBack time.D
 // Compare result of function `getEndOfTime` and user defined end time,
 // return the earlier one
 func computeActualEndTime(userInputEndTime string, endOfTime time.Time) time.Time {
-	var userDefinedEndOfTime time.Time
-	var err error
-	userDefinedEndOfTime, err = parseUnixTimeString(userInputEndTime)
+	userDefinedEndOfTime, err := parseUnixTimeString(userInputEndTime)
 	if err != nil {
 		glog.Errorf("Invalid EndTimeParam input: %v.  err: %v", userInputEndTime, err)
 		return endOfTime
