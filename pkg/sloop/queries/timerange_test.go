@@ -33,11 +33,15 @@ func Test_timeRangeTable(t *testing.T) {
 		expectedEnd   time.Time
 	}{
 		// Valid Cases
+		{"2h", "", fmt.Sprintf("%v", someQueryEndTs.UTC().Unix()), false, someQueryEndTs.Add(-2 * time.Hour), someQueryEndTs},
+		{"1h", "", "", false, someQueryEndTs.Add(-1 * time.Hour), someQueryEndTs},
+		{"0h", "", "", false, someQueryEndTs.Add(-1 * minLookback), someQueryEndTs},
+		{"1000h", "", "", false, someQueryEndTs.Add(-1 * someMaxLookBack), someQueryEndTs},
 		{"", fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*-45).UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*-15).UTC().Unix()), false, someQueryEndTs.Add(time.Minute * -45), someQueryEndTs.Add(time.Minute * -15)},
-		{"", fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*-35).UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*-5).UTC().Unix()), false, someQueryEndTs.Add(time.Minute * -35), someQueryEndTs.Add(time.Minute * -5)},
 		{"", fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*-30).UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*5).UTC().Unix()), false, someQueryEndTs.Add(time.Minute * -35), someQueryEndTs},
 
 		// Too short, gets adjusted
+		{"0h", "", "", false, someQueryEndTs.Add(-1 * minLookback), someQueryEndTs},
 		{"", fmt.Sprintf("%v", someQueryEndTs.UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.UTC().Unix()), false, someQueryEndTs.Add(-1 * minLookback), someQueryEndTs},
 		// Too long, gets adjusted
 		{"", fmt.Sprintf("%v", someQueryEndTs.Add(-1000*time.Hour).UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.UTC().Unix()), false, someQueryEndTs.Add(-1 * someMaxLookBack), someQueryEndTs},
@@ -45,9 +49,6 @@ func Test_timeRangeTable(t *testing.T) {
 		{"", fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*-15).UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*15).UTC().Unix()), false, someQueryEndTs.Add(time.Minute * -30), someQueryEndTs},
 
 		// Missing or too many inputs
-		{"1h", "", "", true, someQueryEndTs.Add(-1 * time.Hour), someQueryEndTs},
-		{"0h", "", "", true, someQueryEndTs.Add(-1 * minLookback), someQueryEndTs},
-		{"1000h", "", "", true, someQueryEndTs.Add(-1 * someMaxLookBack), someQueryEndTs},
 		{"", "", "", true, time.Time{}, time.Time{}},
 		{"", "123", "", true, time.Time{}, time.Time{}},
 		{"", "", "123", true, time.Time{}, time.Time{}},
