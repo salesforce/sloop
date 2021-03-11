@@ -44,6 +44,7 @@ func Test_timeRangeTable(t *testing.T) {
 		{"0h", "", "", false, someQueryEndTs.Add(-1 * minLookback), someQueryEndTs},
 		{"", fmt.Sprintf("%v", someQueryEndTs.UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.UTC().Unix()), false, someQueryEndTs.Add(-1 * minLookback), someQueryEndTs},
 		// Too long, gets adjusted
+		{"1000h", "", "", false, someQueryEndTs.Add(-1 * someMaxLookBack), someQueryEndTs},
 		{"", fmt.Sprintf("%v", someQueryEndTs.Add(-1000*time.Hour).UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.UTC().Unix()), false, someQueryEndTs.Add(-1 * someMaxLookBack), someQueryEndTs},
 		// Ends in the future
 		{"", fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*-15).UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*15).UTC().Unix()), false, someQueryEndTs.Add(time.Minute * -30), someQueryEndTs},
