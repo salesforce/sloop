@@ -60,8 +60,7 @@ func Test_timeRangeTable(t *testing.T) {
 		{"", "123", "abc", true, time.Time{}, time.Time{}},
 	}
 	for i, thisRange := range rangeTests {
-		fmt.Print(i)
-		t.Run(fmt.Sprintf("%+v", thisRange), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Test id: %v, thisRange: %v", i, thisRange), func(t *testing.T){
 			paramMap := make(map[string][]string)
 			paramMap[LookbackParam] = []string{thisRange.lookbackStr}
 			paramMap[StartTimeParam] = []string{thisRange.startStr}
