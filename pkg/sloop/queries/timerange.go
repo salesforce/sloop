@@ -53,8 +53,8 @@ func computeTimeRangeInternal(params url.Values, endOfTime time.Time, maxLookBac
 		return time.Time{}, time.Time{}, fmt.Errorf("Time range must be set with either [%v] or both of [%v,%v] but all 3 were empty", LookbackParam, StartTimeParam, EndTimeParam)
 	}
 	if lookBackVal != "" {
-		if startTimeVal != "" || endTimeVal != "" {
-			return time.Time{}, time.Time{}, fmt.Errorf("When [%v] is set, you can not set either of [%v,%v].  Got (%v,%v,%v) respectively", LookbackParam, StartTimeParam, EndTimeParam, lookBackVal, startTimeVal, endTimeVal)
+		if startTimeVal != "" {
+			return time.Time{}, time.Time{}, fmt.Errorf("When [%v] is set, you can not set both of [%v,%v] or set only [%v].  Got (%v,%v,%v) respectively", LookbackParam, StartTimeParam, EndTimeParam, StartTimeParam, lookBackVal, startTimeVal, endTimeVal)
 		}
 	} else {
 		if (startTimeVal == "") || (endTimeVal == "") {
@@ -62,8 +62,19 @@ func computeTimeRangeInternal(params url.Values, endOfTime time.Time, maxLookBac
 		}
 	}
 
+
+	// 	The new UI will guarantee endTimeVal != "" we need to support 1 more case here:
+	//	startTimeVal == "" && endTimeVal != "" && lookBackVal != ""
 	if lookBackVal != "" {
-		computedEnd = endOfTime
+		if endTimeVal == "" {
+			computedEnd = endOfTime
+		} else {
+			//startTimeVal == "" && endTimeVal != "" && lookBackVal != ""
+			computedEnd, err = parseUnixTimeString(endTimeVal)
+			if err != nil {
+				return time.Time{}, time.Time{}, err
+			}
+		}
 		lookbackRange, err := getDurationFromLookback(lookBackVal)
 		if err != nil {
 			return time.Time{}, time.Time{}, err

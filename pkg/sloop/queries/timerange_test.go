@@ -33,8 +33,12 @@ func Test_timeRangeTable(t *testing.T) {
 		expectedEnd   time.Time
 	}{
 		// Valid Cases
+		{"2h", "", fmt.Sprintf("%v", someQueryEndTs.UTC().Unix()), false, someQueryEndTs.Add(-2 * time.Hour), someQueryEndTs},
 		{"1h", "", "", false, someQueryEndTs.Add(-1 * time.Hour), someQueryEndTs},
+		{"0h", "", "", false, someQueryEndTs.Add(-1 * minLookback), someQueryEndTs},
+		{"1000h", "", "", false, someQueryEndTs.Add(-1 * someMaxLookBack), someQueryEndTs},
 		{"", fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*-45).UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*-15).UTC().Unix()), false, someQueryEndTs.Add(time.Minute * -45), someQueryEndTs.Add(time.Minute * -15)},
+		{"", fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*-30).UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*5).UTC().Unix()), false, someQueryEndTs.Add(time.Minute * -35), someQueryEndTs},
 
 		// Too short, gets adjusted
 		{"0h", "", "", false, someQueryEndTs.Add(-1 * minLookback), someQueryEndTs},
@@ -55,8 +59,8 @@ func Test_timeRangeTable(t *testing.T) {
 		{"", "abc", "123", true, time.Time{}, time.Time{}},
 		{"", "123", "abc", true, time.Time{}, time.Time{}},
 	}
-	for _, thisRange := range rangeTests {
-		t.Run(fmt.Sprintf("%+v", thisRange), func(t *testing.T) {
+	for i, thisRange := range rangeTests {
+		t.Run(fmt.Sprintf("Test id: %v, thisRange: %+v", i, thisRange), func(t *testing.T){
 			paramMap := make(map[string][]string)
 			paramMap[LookbackParam] = []string{thisRange.lookbackStr}
 			paramMap[StartTimeParam] = []string{thisRange.startStr}
