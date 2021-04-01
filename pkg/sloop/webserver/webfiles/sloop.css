@@ -129,3 +129,8 @@ a[target="_blank"]:after {
 	margin: 0 3px 0 5px;
 }
 
+input[type="datetime-local"] {
+	width: 200px;
+	height: 1.3rem;
+	font-size: 0.85em;
+}

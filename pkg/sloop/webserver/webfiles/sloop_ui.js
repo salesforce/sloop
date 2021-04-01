@@ -515,3 +515,19 @@ function showDetailedTooltip(d, event, parent) {
         });
     }
 }
+
+$(document).ready(function() {
+    //set max allowed selected date to now
+    var iso = new Date().toISOString();
+    var maxDate = iso.substring(0,iso.length-1);
+    elem = document.getElementById("selectedEndTime")
+    elem.value = maxDate
+    elem.max = maxDate
+
+    //set default end time to now
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    now.setMilliseconds(null);
+    document.getElementById('selectedEndTime').value = now.toISOString().slice(0, -1);
+
+});
