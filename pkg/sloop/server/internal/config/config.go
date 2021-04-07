@@ -68,7 +68,7 @@ type SloopConfig struct {
 	BadgerEnableEventLogging bool          `json:"badgerEnableEventLogging"`
 	BadgerNumOfCompactors    int           `json:"badgerNumOfCompactors"`
 	BadgerNumL0Tables        int           `json:"badgerNumLevelZeroTables"`
-	BadgerNumL0TablesStall   int           `json:"badgerNumLevelZeroTables"`
+	BadgerNumL0TablesStall   int           `json:"badgerNumLevelZeroTablesStall"`
 	BadgerSyncWrites         bool          `json:"badgerSyncWrites"`
 	BadgerVLogFileIOMapping  bool          `json:"badgerVLogFileIOMapping"`
 	BadgerVLogTruncate       bool          `json:"badgerVLogTruncate"`
