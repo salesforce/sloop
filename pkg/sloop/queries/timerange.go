@@ -62,7 +62,6 @@ func computeTimeRangeInternal(params url.Values, endOfTime time.Time, maxLookBac
 		}
 	}
 
-
 	// 	The new UI will guarantee endTimeVal != "" we need to support 1 more case here:
 	//	startTimeVal == "" && endTimeVal != "" && lookBackVal != ""
 	if lookBackVal != "" {
@@ -70,7 +69,7 @@ func computeTimeRangeInternal(params url.Values, endOfTime time.Time, maxLookBac
 			computedEnd = endOfTime
 		} else {
 			//startTimeVal == "" && endTimeVal != "" && lookBackVal != ""
-			computedEnd, err = parseUnixTimeString(endTimeVal)
+			computedEnd, err = parseTimestampString(endTimeVal)
 			if err != nil {
 				return time.Time{}, time.Time{}, err
 			}
@@ -102,7 +101,6 @@ func computeTimeRangeInternal(params url.Values, endOfTime time.Time, maxLookBac
 	if computedEnd.Sub(computedStart) > maxLookBack {
 		computedStart = computedEnd.Add(-1 * maxLookBack)
 	}
-
 	return computedStart, computedEnd, nil
 
 }
@@ -165,6 +163,16 @@ func parseUnixTimeString(unixStr string) (time.Time, error) {
 		return time.Time{}, err
 	}
 	return time.Unix(unixNum, 0).UTC(), nil
+}
+
+func parseTimestampString(str string) (time.Time, error) {
+	// Golang constant value, do NOT change
+	layout := "2006-01-02T15:04:05"
+	t, err := time.Parse(layout, str)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return t, nil
 }
 
 // This extracts time info from the ResourceSummary value and checks if it overlaps with the query time range.

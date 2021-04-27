@@ -97,6 +97,7 @@ function render(result) {
 
 
     if (!data) {
+        console.log("!!!!!!!!!! inside no data !!!!!")
         xAxisScale = d3.scaleUtc().range([margin.left, displayMaxX - margin.left]);
         yAxisBand = d3.scaleBand().padding(resourceBarVerticalSpacing);
 
@@ -517,17 +518,23 @@ function showDetailedTooltip(d, event, parent) {
 }
 
 $(document).ready(function() {
-    //set max allowed selected date to now
-    var iso = new Date().toISOString();
-    var maxDate = iso.substring(0,iso.length-1);
-    elem = document.getElementById("selectedEndTime")
-    elem.value = maxDate
-    elem.max = maxDate
-
-    //set default end time to now
+    //Set max allowed selected date/time to now
     const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    now.setMilliseconds(null);
-    document.getElementById('selectedEndTime').value = now.toISOString().slice(0, -1);
+    var iso = now.toISOString();
+    var maxDate = iso.substring(0,iso.length-5);
+    elem = document.getElementById("selectedEndTime");
+    elem.value = maxDate;
+    elem.max = maxDate;
+
+    //Display user selected end time on ui after click submit button or refresh the page
+    var userDate = new Date();
+    // check if selected end time happened within 3 seconds
+    if (sessionStorage.getItem('setSelectedEndTime') !== null
+        && ! Date.parse(sessionStorage.getItem('setSelectedEndTime')) < new Date(userDate.getTime() - 3000)){
+        userDate = new Date(sessionStorage.getItem('selectedEndTime'));
+    }
+    userDate.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    userDate.setMilliseconds(null);
+    document.getElementById('selectedEndTime').value = userDate.toISOString().slice(0, -1);
 
 });

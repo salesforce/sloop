@@ -75,6 +75,16 @@ function populateDropdownFromQuery(param, elementId, defaultValue, queryUrl) {
     return value
 }
 
+var selectedEndTimeValue;
+$(document).ready(function(e) {
+    $('#selectedEndTime').on('blur', function(evt) {
+        var dateTimeValue = document.getElementById('selectedEndTime').value;
+        selectedEndTimeValue = dateTimeValue.toString()
+        sessionStorage.setItem('selectedEndTime', selectedEndTimeValue);
+        sessionStorage.setItem('setSelectedEndTime', new Date().toISOString());
+    });
+});
+
 function setFiltersAndReturnQueryUrl(defaultLookback, defaultKind, defaultNamespace) {
     // Keep this in sync with pkg/sloop/queries/params.go
 
@@ -83,6 +93,13 @@ function setFiltersAndReturnQueryUrl(defaultLookback, defaultKind, defaultNamesp
     // TODO: Query the back-end async
     // TODO: Also, we may consider initially populating the drop-down with the value from url params as a placholder
     //       until we get the full list back
+
+    selectedEndTime = sessionStorage.getItem('selectedEndTime')
+    // If user shut down the old window and open a new window, set the default ui displayed time to now
+    if (selectedEndTime === null) {
+        var now =  new Date().toISOString()
+        selectedEndTime = now.substring(0, now.length-5)
+    }
 
     lookback =        setDropdown("lookback", "filterlookback", defaultLookback, true)
     sort =            setDropdown("sort",     "filtersort",     "start_time", false)
@@ -94,7 +111,7 @@ function setFiltersAndReturnQueryUrl(defaultLookback, defaultKind, defaultNamesp
     ns =              populateDropdownFromQuery("namespace", "filternamespace", defaultNamespace, windowLocation+"/data?query=Namespaces&lookback="+lookback);
     kind =            populateDropdownFromQuery("kind",      "filterkind",      defaultKind,      windowLocation+"/data?query=Kinds&lookback="+lookback);
 
-    dataQuery = windowLocation+"/data?query="+query+"&namespace="+ns+"&lookback="+lookback+"&kind="+kind+"&sort="+sort+"&namematch="+namematch
+    dataQuery = windowLocation+"/data?query="+query+"&namespace="+ns+"&lookback="+lookback+"&kind="+kind+"&sort="+sort+"&namematch="+namematch+"&endtime="+selectedEndTime
     return dataQuery
 }
 
