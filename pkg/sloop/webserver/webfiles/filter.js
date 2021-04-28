@@ -75,11 +75,10 @@ function populateDropdownFromQuery(param, elementId, defaultValue, queryUrl) {
     return value
 }
 
-var selectedEndTimeValue;
 $(document).ready(function(e) {
     $('#selectedEndTime').on('blur', function(evt) {
         var dateTimeValue = document.getElementById('selectedEndTime').value;
-        selectedEndTimeValue = dateTimeValue.toString()
+        var selectedEndTimeValue = dateTimeValue.toString();
         sessionStorage.setItem('selectedEndTime', selectedEndTimeValue);
         sessionStorage.setItem('setSelectedEndTime', new Date().toISOString());
     });

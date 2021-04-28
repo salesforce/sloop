@@ -167,7 +167,7 @@ func parseUnixTimeString(unixStr string) (time.Time, error) {
 
 func parseTimestampString(str string) (time.Time, error) {
 	// Golang constant value, do NOT change
-	layout := "2006-01-02T15:04:05"
+	const layout = "2006-01-02T15:04:05"
 	t, err := time.Parse(layout, str)
 	if err != nil {
 		return time.Time{}, err

@@ -97,7 +97,6 @@ function render(result) {
 
 
     if (!data) {
-        console.log("!!!!!!!!!! inside no data !!!!!")
         xAxisScale = d3.scaleUtc().range([margin.left, displayMaxX - margin.left]);
         yAxisBand = d3.scaleBand().padding(resourceBarVerticalSpacing);
 
