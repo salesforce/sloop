@@ -15,7 +15,7 @@
 // webfiles/sloop_ui.js
 // DO NOT EDIT!
 
-package main
+package webserver
 
 import (
 	"bytes"
