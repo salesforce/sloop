@@ -16,6 +16,9 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
     <title>Sloop{{if (ne .CurrentContext "")}} - {{.CurrentContext}}{{end}}</title>
     <link rel="stylesheet" type="text/css" href="webfiles/sloop.css">
     <link rel='shortcut icon' type='image/x-icon' href='webfiles/favicon.ico'/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
+          integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2"
+          crossorigin="anonymous">
 </head>
 
 <body>
@@ -33,7 +36,12 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
             <select name="query" id="filterquery" hidden="true"> </select>
             <!-- <br><br> -->
 
-            <label for="filterlookback">Time Range:</label><br/>
+            <label for="selectedEndTime">End time</label><br/>
+            <div>
+                <input type="datetime-local" step="1" id="selectedEndTime" name="selectedEndTime" />
+            </div><br>
+
+            <label for="filterlookback">Look Back Range:</label><br/>
             <select name="lookback" id="filterlookback">
                 <option value="1h">1 Hour</option>
                 <option value="3h">3 Hours</option>

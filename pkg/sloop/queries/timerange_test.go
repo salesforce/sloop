@@ -169,3 +169,33 @@ func Test_timeFilterWatchActivityMap(t *testing.T) {
 	assert.Contains(t, activityMap, typed.WatchActivityKey{Name: "during1"})
 	assert.Contains(t, activityMap, typed.WatchActivityKey{Name: "during2"})
 }
+
+func Test_parseTimestampString(t *testing.T){
+	const longForm = "2019-01-02T15:04:05"
+	var str string
+	var result time.Time
+
+	// str and longForm are equal
+	str = "2019-01-02T15:04:05"
+	result, err := parseTimestampString(str)
+	assert.Nil(t, err)
+	assert.Equal(t, result.Format(longForm), str)
+
+	// str and longForm not equal
+	str = "2013-05-02T15:04:05"
+	result, err = parseTimestampString(str)
+	assert.Nil(t, err)
+	assert.NotEqual(t, result.Format(longForm), str)
+
+	//str format is wrong
+	str = "2019-01-02 15:04:05"
+	result, err = parseTimestampString(str)
+	assert.NotNil(t, err)
+	assert.NotEqual(t, result.Format(longForm), str)
+
+ 	// edge case: str is empty
+	str = ""
+	result, err = parseTimestampString(str)
+	assert.NotNil(t, err)
+	assert.Equal(t, result.Format(""), "")
+}

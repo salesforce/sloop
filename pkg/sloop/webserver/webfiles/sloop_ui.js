@@ -515,3 +515,25 @@ function showDetailedTooltip(d, event, parent) {
         });
     }
 }
+
+$(document).ready(function() {
+    //Set max allowed selected date/time to now
+    const now = new Date();
+    var iso = now.toISOString();
+    var maxDate = iso.substring(0,iso.length-5);
+    elem = document.getElementById("selectedEndTime");
+    elem.value = maxDate;
+    elem.max = maxDate;
+
+    //Display user selected end time on ui after click submit button or refresh the page
+    var userDate = new Date();
+    // check if selected end time happened within 3 seconds
+    if (sessionStorage.getItem('setSelectedEndTime') !== null
+        && ! Date.parse(sessionStorage.getItem('setSelectedEndTime')) < new Date(userDate.getTime() - 3000)){
+        userDate = new Date(sessionStorage.getItem('selectedEndTime'));
+    }
+    userDate.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    userDate.setMilliseconds(null);
+    document.getElementById('selectedEndTime').value = userDate.toISOString().slice(0, -1);
+
+});
