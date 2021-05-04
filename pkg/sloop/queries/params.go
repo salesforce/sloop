@@ -17,7 +17,7 @@ const (
 	NameMatchParam = "namematch" // substring match on name
 	UuidParam      = "uuid"
 	StartTimeParam = "start_time"
-	EndTimeParam   = "end_time"
+	EndTimeParam   = "endtime"
 	ClickTimeParam = "click_time"
 	QueryParam     = "query"
 	SortParam      = "sort"
