@@ -136,7 +136,7 @@ input[type="datetime-local"] {
 }
 
 input[type="button"] {
-	width: 40px;
+	width: 35px;
 	height: 1.3rem;
 	font-size: 0.80em;
 }
