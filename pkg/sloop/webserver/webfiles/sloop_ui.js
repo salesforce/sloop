@@ -541,7 +541,7 @@ $(document).ready(function() {
         resetNow.setMinutes(resetNow.getMinutes() - resetNow.getTimezoneOffset());
         resetNow.setMilliseconds(null);
         document.getElementById('selectedEndTime').value = resetNow.toISOString().slice(0, -1);
-        sessionStorage.clear();
+        sessionStorage.removeItem('selectedEndTime');
         sessionStorage.setItem('selectedEndTime', resetNow.toISOString().slice(0, -1));
     });
 
