@@ -536,4 +536,13 @@ $(document).ready(function() {
     userDate.setMilliseconds(null);
     document.getElementById('selectedEndTime').value = userDate.toISOString().slice(0, -1);
 
+    $('#now').click(function(){
+        const resetNow = new Date();
+        resetNow.setMinutes(resetNow.getMinutes() - resetNow.getTimezoneOffset());
+        resetNow.setMilliseconds(null);
+        document.getElementById('selectedEndTime').value = resetNow.toISOString().slice(0, -1);
+        sessionStorage.removeItem('selectedEndTime');
+        sessionStorage.setItem('selectedEndTime', resetNow.toISOString().slice(0, -1));
+    });
+
 });

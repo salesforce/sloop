@@ -78,7 +78,7 @@ div#resource_container {
 
 #sloopleftnav {
 	height: 100%;
-	width: 250px;
+	width: 320px;
 	padding-right: 20px;
 	overflow-y: auto;
 }
@@ -133,4 +133,15 @@ input[type="datetime-local"] {
 	width: 200px;
 	height: 1.3rem;
 	font-size: 0.85em;
+}
+
+input[type="button"] {
+	width: 35px;
+	height: 1.3rem;
+	font-size: 0.80em;
+}
+
+input[type="text"] {
+	width: 245px;
+	height: 1.3rem;
 }

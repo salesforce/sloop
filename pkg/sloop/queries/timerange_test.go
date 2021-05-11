@@ -33,7 +33,7 @@ func Test_timeRangeTable(t *testing.T) {
 		expectedEnd   time.Time
 	}{
 		// Valid Cases
-		{"2h", "", fmt.Sprintf("%v", someQueryEndTs.UTC().Unix()), false, someQueryEndTs.Add(-2 * time.Hour), someQueryEndTs},
+		{"2h", "", "", false, someQueryEndTs.Add(-2 * time.Hour), someQueryEndTs},
 		{"1h", "", "", false, someQueryEndTs.Add(-1 * time.Hour), someQueryEndTs},
 		{"0h", "", "", false, someQueryEndTs.Add(-1 * minLookback), someQueryEndTs},
 		{"1000h", "", "", false, someQueryEndTs.Add(-1 * someMaxLookBack), someQueryEndTs},
@@ -193,7 +193,7 @@ func Test_parseTimestampString(t *testing.T){
 	assert.NotNil(t, err)
 	assert.NotEqual(t, result.Format(longForm), str)
 
- 	// edge case: str is empty
+	//edge case: str is empty
 	str = ""
 	result, err = parseTimestampString(str)
 	assert.NotNil(t, err)
