@@ -82,7 +82,7 @@ In this mode, data is written to a memory-backed volume and is discarded after e
 To reflect any changes to webserver/webfiles, run the following command on terminal while within the webserver directory before submitting a pr:
 
 ```shell script
-go-bindata -o bindata.go webfiles/
+go-bindata -pkg webserver -o bindata.go webfiles/
 ```
 
 This will update the bindata folder with your changes to any html, css or javascript files within the directory.
