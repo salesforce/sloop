@@ -110,7 +110,7 @@ function setFiltersAndReturnQueryUrl(defaultLookback, defaultKind, defaultNamesp
     ns =              populateDropdownFromQuery("namespace", "filternamespace", defaultNamespace, windowLocation+"/data?query=Namespaces&lookback="+lookback);
     kind =            populateDropdownFromQuery("kind",      "filterkind",      defaultKind,      windowLocation+"/data?query=Kinds&lookback="+lookback);
 
-    dataQuery = windowLocation+"/data?query="+query+"&namespace="+ns+"&lookback="+lookback+"&kind="+kind+"&sort="+sort+"&namematch="+namematch+"&endtime="+selectedEndTime
+    dataQuery = windowLocation+"/data?query="+query+"&namespace="+ns+"&lookback="+lookback+"&kind="+kind+"&sort="+sort+"&namematch="+namematch+"&end_time="+selectedEndTime
     return dataQuery
 }
 
