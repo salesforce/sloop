@@ -25,6 +25,7 @@ spec:
         command:
         - /sloop
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
         name: sloop
         ports:
         - containerPort: {{ .Values.service.targetPort }}
@@ -72,9 +73,9 @@ spec:
     spec:
      accessModes:
        - {{ .Values.persistentVolume.dataAccessMode | quote }}
-{{- if .Values.persistentVolume.storageClass }}     
+{{- if .Values.persistentVolume.storageClass }}
      storageClassName: "{{ .Values.persistentVolume.storageClass }}"
-{{- end }}     
+{{- end }}
      resources:
        requests:
          storage: {{ .Values.persistentVolume.size }}

@@ -9,14 +9,4 @@ metadata:
   name: {{ .Values.name }}
 data:
   sloop.json: |-
-    {
-      defaultNamespace: "default",
-      defaultKind: "Pod",
-      defaultLookback: "1h",
-      leftBarLinks: [
-      ],
-      resourceLinks: [
-      ]
-    }
-
-
+{{ .Values.config | indent 4 }}

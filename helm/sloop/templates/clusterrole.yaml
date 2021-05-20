@@ -8,9 +8,9 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
   name: {{ .Values.name }}
 rules:
-  - apiGroups: 
+  - apiGroups:
       - ""
-    resources: 
+    resources:
       - configmaps
       - endpoints
       - events
@@ -23,62 +23,62 @@ rules:
       - replicationcontrollers
       - resourcequotas
       - services
-    verbs: 
+    verbs:
       - list
       - watch
-  - apiGroups: 
+  - apiGroups:
       - batch
-    resources: 
+    resources:
       - cronjobs
       - jobs
-    verbs: 
+    verbs:
       - list
       - watch
-  - apiGroups: 
+  - apiGroups:
       - extensions
       - apps
-    resources: 
+    resources:
       - daemonsets
       - deployments
       - replicasets
       - statefulsets
-    verbs: 
+    verbs:
       - list
       - watch
-  - apiGroups: 
+  - apiGroups:
       - autoscaling
-    resources: 
+    resources:
       - horizontalpodautoscalers
-    verbs: 
+    verbs:
       - list
       - watch
-  - apiGroups: 
+  - apiGroups:
       - extensions
       - networking.k8s.io
-    resources: 
+    resources:
       - ingress
-    verbs: 
+    verbs:
       - list
       - watch
-  - apiGroups: 
+  - apiGroups:
       - policy
-    resources: 
+    resources:
       - poddisruptionbudgets
-    verbs: 
+    verbs:
       - list
       - watch
-  - apiGroups: 
+  - apiGroups:
       - storage.k8s.io
-    resources: 
+    resources:
       - storageclasses
-    verbs: 
+    verbs:
       - list
       - watch
-  - apiGroups: 
+  - apiGroups:
       - autoscaling.k8s.io
-    resources: 
+    resources:
       - verticalpodautoscalers
-    verbs: 
+    verbs:
       - list
       - watch
   - apiGroups:
@@ -88,17 +88,14 @@ rules:
     verbs:
       - list
       - watch
-# List CRDs that you want to watch here
-# Istio is just here as an example.  Alternatively if you want to get all CRDs its possible to add '*'
-# to apiGroups, but that would give sloop permissions to read secrets which may not be desirable
+{{- with .Values.clusterRole.apiGroups }}
   - apiGroups:
-      - authentication.istio.io
-      - config.istio.io
-      - networking.istio.io
-      - rbac.istio.io
-      - security.istio.io
+{{- range . }}
+      - {{ . }}
+{{- end }}
     resources:
       - '*'
     verbs:
       - list
       - watch
+{{- end }}
