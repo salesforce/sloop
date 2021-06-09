@@ -104,7 +104,6 @@ func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interfac
 	i.informerFactory.Apps().V1().Deployments().Informer().AddEventHandler(i.getEventHandlerForResource("Deployment"))
 	i.informerFactory.Apps().V1().ReplicaSets().Informer().AddEventHandler(i.getEventHandlerForResource("ReplicaSet"))
 	i.informerFactory.Apps().V1().StatefulSets().Informer().AddEventHandler(i.getEventHandlerForResource("StatefulSet"))
-
 	i.informerFactory.Core().V1().ConfigMaps().Informer().AddEventHandler(i.getEventHandlerForResource("ConfigMap"))
 	i.informerFactory.Core().V1().Endpoints().Informer().AddEventHandler(i.getEventHandlerForResource("Endpoint"))
 	i.informerFactory.Core().V1().Events().Informer().AddEventHandler(i.getEventHandlerForResource("Event"))
@@ -118,9 +117,7 @@ func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interfac
 	i.informerFactory.Policy().V1beta1().PodDisruptionBudgets().Informer().AddEventHandler(i.getEventHandlerForResource("PodDisruptionBudget"))
 	i.informerFactory.Core().V1().Services().Informer().AddEventHandler(i.getEventHandlerForResource("Service"))
 	i.informerFactory.Core().V1().ReplicationControllers().Informer().AddEventHandler(i.getEventHandlerForResource("ReplicationController"))
-
 	i.informerFactory.Storage().V1().StorageClasses().Informer().AddEventHandler(i.getEventHandlerForResource("StorageClass"))
-
 	i.informerFactory.Start(i.stopChan)
 }
 
