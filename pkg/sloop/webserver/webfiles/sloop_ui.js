@@ -519,7 +519,8 @@ function showDetailedTooltip(d, event, parent) {
 $(document).ready(function() {
     //Set max allowed selected date/time to now
     const now = new Date();
-    var iso = now.toISOString();
+    var utcNow = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
+    var iso = utcNow.toISOString();
     var maxDate = iso.substring(0,iso.length-5);
     elem = document.getElementById("selectedEndTime");
     elem.value = maxDate;
@@ -532,13 +533,13 @@ $(document).ready(function() {
         && ! Date.parse(sessionStorage.getItem('setSelectedEndTime')) < new Date(userDate.getTime() - 3000)){
         userDate = new Date(sessionStorage.getItem('selectedEndTime'));
     }
-    userDate.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    userDate.setMinutes(userDate.getMinutes() - userDate.getTimezoneOffset());
     userDate.setMilliseconds(null);
     document.getElementById('selectedEndTime').value = userDate.toISOString().slice(0, -1);
 
     $('#now').click(function(){
         const resetNow = new Date();
-        resetNow.setMinutes(resetNow.getMinutes() - resetNow.getTimezoneOffset());
+        resetNow.setMinutes(resetNow.getUTCMinutes());
         resetNow.setMilliseconds(null);
         document.getElementById('selectedEndTime').value = resetNow.toISOString().slice(0, -1);
         sessionStorage.removeItem('selectedEndTime');
