@@ -539,7 +539,7 @@ $(document).ready(function() {
 
     $('#now').click(function(){
         const resetNow = new Date();
-        resetNow.setMinutes(resetNow.getUTCMinutes());
+        resetNow.setMinutes(resetNow.getMinutes() - resetNow.getTimezoneOffset());
         resetNow.setMilliseconds(null);
         document.getElementById('selectedEndTime').value = resetNow.toISOString().slice(0, -1);
         sessionStorage.removeItem('selectedEndTime');
