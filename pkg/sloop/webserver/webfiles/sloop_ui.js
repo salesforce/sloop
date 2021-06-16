@@ -519,26 +519,27 @@ function showDetailedTooltip(d, event, parent) {
 $(document).ready(function() {
     //Set max allowed selected date/time to now
     const now = new Date();
-    var iso = now.toISOString();
+    var utcNow = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
+    var iso = utcNow.toISOString();
     var maxDate = iso.substring(0,iso.length-5);
     elem = document.getElementById("selectedEndTime");
     elem.value = maxDate;
     elem.max = maxDate;
 
     //Display user selected end time on ui after click submit button or refresh the page
-    var userDate = new Date();
+    //Set page default to UTC time on first loading
+    var userDate = utcNow;
     // check if selected end time happened within 3 seconds
     if (sessionStorage.getItem('setSelectedEndTime') !== null
         && ! Date.parse(sessionStorage.getItem('setSelectedEndTime')) < new Date(userDate.getTime() - 3000)){
         userDate = new Date(sessionStorage.getItem('selectedEndTime'));
     }
-    userDate.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    userDate.setMinutes(userDate.getMinutes() - userDate.getTimezoneOffset());
     userDate.setMilliseconds(null);
     document.getElementById('selectedEndTime').value = userDate.toISOString().slice(0, -1);
 
     $('#now').click(function(){
         const resetNow = new Date();
-        resetNow.setMinutes(resetNow.getMinutes() - resetNow.getTimezoneOffset());
         resetNow.setMilliseconds(null);
         document.getElementById('selectedEndTime').value = resetNow.toISOString().slice(0, -1);
         sessionStorage.removeItem('selectedEndTime');
