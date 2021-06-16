@@ -200,7 +200,12 @@ func registerPaths(router *mux.Router, config WebConfig, tables typed.Tables) {
 	router.HandleFunc("/debug/", debugHandler())
 
 	router.HandleFunc("/healthz", healthHandler())
-	router.Handle("/metrics", promhttp.Handler())
+	router.Handle("/metrics", promhttp.HandlerFor(
+		prometheus.DefaultGatherer,
+		promhttp.HandlerOpts{
+			EnableOpenMetrics: true,
+		},
+	))
 	router.Handle("", indexHandler(config))
 }
 
