@@ -60,7 +60,7 @@ func Test_timeRangeTable(t *testing.T) {
 		{"", "123", "abc", true, time.Time{}, time.Time{}},
 	}
 	for i, thisRange := range rangeTests {
-		t.Run(fmt.Sprintf("Test id: %v, thisRange: %+v", i, thisRange), func(t *testing.T){
+		t.Run(fmt.Sprintf("Test id: %v, thisRange: %+v", i, thisRange), func(t *testing.T) {
 			paramMap := make(map[string][]string)
 			paramMap[LookbackParam] = []string{thisRange.lookbackStr}
 			paramMap[StartTimeParam] = []string{thisRange.startStr}
@@ -170,7 +170,7 @@ func Test_timeFilterWatchActivityMap(t *testing.T) {
 	assert.Contains(t, activityMap, typed.WatchActivityKey{Name: "during2"})
 }
 
-func Test_parseTimestampString(t *testing.T){
+func Test_parseTimestampString(t *testing.T) {
 	const longForm = "2019-01-02T15:04:05"
 	var str string
 	var result time.Time
