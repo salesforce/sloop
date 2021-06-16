@@ -527,7 +527,8 @@ $(document).ready(function() {
     elem.max = maxDate;
 
     //Display user selected end time on ui after click submit button or refresh the page
-    var userDate = new Date();
+    //Set page default to UTC time on first loading
+    var userDate = utcNow;
     // check if selected end time happened within 3 seconds
     if (sessionStorage.getItem('setSelectedEndTime') !== null
         && ! Date.parse(sessionStorage.getItem('setSelectedEndTime')) < new Date(userDate.getTime() - 3000)){
@@ -539,7 +540,6 @@ $(document).ready(function() {
 
     $('#now').click(function(){
         const resetNow = new Date();
-        resetNow.setMinutes(resetNow.getMinutes() - resetNow.getTimezoneOffset());
         resetNow.setMilliseconds(null);
         document.getElementById('selectedEndTime').value = resetNow.toISOString().slice(0, -1);
         sessionStorage.removeItem('selectedEndTime');
