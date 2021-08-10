@@ -45,5 +45,5 @@ release:
     	curl -sfL https://git.io/goreleaser | sh -s -- release --rm-dist;\
   	else \
   	  	curl -sfL https://git.io/goreleaser | sh -s -- release --rm-dist --skip-publish && \
-        docker push salesforce/sloop;\
+        docker push sloopimage/sloop;\
   	fi
