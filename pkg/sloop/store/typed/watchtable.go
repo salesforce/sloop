@@ -71,9 +71,9 @@ func (k *WatchTableKey) SetPartitionId(newPartitionId string) {
 //todo: need to make sure it can work as keyPrefix when some fields are empty
 func (k *WatchTableKey) String() string {
 	if k.Name == "" && k.Timestamp.IsZero() {
-		return fmt.Sprintf("/%v/%v/%v/%v", k.TableName(), k.PartitionId, k.Kind, k.Namespace)
+		return fmt.Sprintf("/%v/%v/%v/%v/", k.TableName(), k.PartitionId, k.Kind, k.Namespace)
 	} else if k.Timestamp.IsZero() {
-		return fmt.Sprintf("/%v/%v/%v/%v/%v", k.TableName(), k.PartitionId, k.Kind, k.Namespace, k.Name)
+		return fmt.Sprintf("/%v/%v/%v/%v/%v/", k.TableName(), k.PartitionId, k.Kind, k.Namespace, k.Name)
 	} else {
 		return fmt.Sprintf("/%v/%v/%v/%v/%v/%v", k.TableName(), k.PartitionId, k.Kind, k.Namespace, k.Name, k.Timestamp.UnixNano())
 	}
