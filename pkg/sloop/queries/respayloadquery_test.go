@@ -228,7 +228,7 @@ func Test_GetResPayload_NoDataInTimeRangeStillFindsPayload(t *testing.T) {
 	keys = append(keys, typed.NewWatchTableKey(partitionId, expectedKind, expectedNS, expectedName, someTs).String())
 	tables := helper_get_resPayload(keys, t, somePTime)
 
-	queryTs := someTs.Add(5*time.Hour)
+	queryTs := someTs.Add(5 * time.Hour)
 	res, err := GetResPayload(values, tables, queryTs.Add(-15*time.Minute), queryTs.Add(15*time.Minute), someRequestId)
 	assert.Nil(t, err)
 	expectedRes := `[
