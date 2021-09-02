@@ -21,6 +21,10 @@ import (
 	"time"
 )
 
+const (
+	glogVerbose = 10
+)
+
 type ResPayLoadData struct {
 	PayloadList []PayloadOuput `json:"payloadList"`
 }
@@ -32,6 +36,8 @@ type PayloadOuput struct {
 }
 
 func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTime time.Time, requestId string) ([]byte, error) {
+
+	glog.V(glogVerbose).Infof("GetResPayload: startTime: %v, endTime: %v", startTime.Unix(), endTime.Unix())
 	var watchRes map[typed.WatchTableKey]*typed.KubeWatchResult
 	var previousKey *typed.WatchTableKey
 	var previousVal *typed.KubeWatchResult
@@ -40,32 +46,40 @@ func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTi
 		var stats typed.RangeReadStats
 
 		keyComparator := getKeyComparator(params)
+		glog.V(glogVerbose).Infof("GetResPayload: keyComparator: %v", keyComparator.String())
 		valPredFn := typed.KubeWatchResult_ValPredicateFns(isResPayloadInTimeRange(startTime, endTime))
 
 		var rangeReadErr error
 		watchRes, _, rangeReadErr = t.WatchTable().RangeRead(txn, keyComparator, nil, valPredFn, startTime, endTime)
 		if rangeReadErr != nil {
+			glog.V(glogVerbose).Infof("GetResPayload: range read error: %v", rangeReadErr)
 			return rangeReadErr
 		}
+		glog.V(glogVerbose).Infof("GetResPayload: range read found: %v payload", len(watchRes))
 
 		// get the previous key for those who has same payload but just before startTime
 		var getPreviousErr error
 		seekKey := getSeekKey(keyComparator, startTime)
+		glog.V(glogVerbose).Infof("GetResPayload: seekKey: %v", seekKey.String())
 		previousKey, getPreviousErr = t.WatchTable().GetPreviousKey(txn, seekKey, keyComparator)
 
 		// when getPreviousErr is not nil, we will not return err since it is ok we did not find previous key from startTime,
 		// we can continue using the result from rangeRead to proceed the rest payload
 		if getPreviousErr == nil {
+			glog.V(glogVerbose).Infof("GetResPayload: previousKey: %v", previousKey.String())
 			var getErr error
 			previousVal, getErr = t.WatchTable().Get(txn, previousKey.String())
 			if getErr == nil {
 				watchRes[*previousKey] = previousVal
 			} else {
+				glog.V(glogVerbose).Infof("GetResPayload: getErr: %v", getErr)
 				// we need to return error when getErr is not nil and its error is not keyNotFound
 				if getErr != badger.ErrKeyNotFound {
 					return getErr
 				}
 			}
+		} else {
+			glog.V(glogVerbose).Infof("GetResPayload: no previous key found. seekKey: %v, err: %v", seekKey.String(), getPreviousErr)
 		}
 
 		stats.Log(requestId)
@@ -91,11 +105,11 @@ func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTi
 	return bytes, nil
 }
 
-//todo: add unit tests
 func getSeekKey(keyComparator *typed.WatchTableKey, startTime time.Time) *typed.WatchTableKey {
-	seekKey := keyComparator
-	seekKey.PartitionId = untyped.GetPartitionId(startTime)
-	seekKey.Timestamp = startTime
+	kind := keyComparator.Kind
+	namespace := keyComparator.Namespace
+	name := keyComparator.Name
+	seekKey := typed.NewWatchTableKey(untyped.GetPartitionId(startTime), kind, namespace, name, startTime)
 	return seekKey
 }
 
@@ -136,7 +150,10 @@ func removeDupePayloads(payloads []PayloadOuput) []PayloadOuput {
 	lastPayload := ""
 	for _, val := range payloads {
 		if val.Payload != lastPayload {
+			glog.V(glogVerbose).Infof("removeDupePayloads: found key: %v", len(val.PayloadKey))
 			ret = append(ret, val)
+		} else {
+			glog.V(glogVerbose).Infof("removeDupePayloads: duplicate key: %v", len(val.PayloadKey))
 		}
 		lastPayload = val.Payload
 	}
