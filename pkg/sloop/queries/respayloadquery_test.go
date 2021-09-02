@@ -213,6 +213,34 @@ func Test_GetResPayload_True_HasSamePrefix(t *testing.T) {
 	assertex.JsonEqual(t, expectedRes, string(res))
 }
 
+func Test_GetResPayload_NoDataInTimeRangeStillFindsPayload(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	partitionId := untyped.GetPartitionId(someTs)
+	values := helper_get_params()
+	expectedKind := "someKind"
+	expectedNS := "someNamespace"
+	expectedName := "someName"
+	values[KindParam] = []string{expectedKind}
+	values[NamespaceParam] = []string{expectedNS}
+	values[NameParam] = []string{expectedName}
+
+	var keys []string
+	keys = append(keys, typed.NewWatchTableKey(partitionId, expectedKind, expectedNS, expectedName, someTs).String())
+	tables := helper_get_resPayload(keys, t, somePTime)
+
+	queryTs := someTs.Add(5*time.Hour)
+	res, err := GetResPayload(values, tables, queryTs.Add(-15*time.Minute), queryTs.Add(15*time.Minute), someRequestId)
+	assert.Nil(t, err)
+	expectedRes := `[
+ {
+  "payloadTime": 1546398245000000006,
+  "payload": "{\n  \"metadata\": {\n    \"name\": \"someName\",\n    \"namespace\": \"someNamespace\",\n    \"uid\": \"6c2a9795-a282-11e9-ba2f-14187761de09\",\n    \"creationTimestamp\": \"2019-07-09T19:47:45Z\"\n  }\n}",
+  "payloadKey": "/watch/001546398000/someKind/someNamespace/someName/1546398245000000006"
+ }
+]`
+	assertex.JsonEqual(t, expectedRes, string(res))
+}
+
 func Test_getSeekKey(t *testing.T) {
 	untyped.TestHookSetPartitionDuration(time.Hour)
 
