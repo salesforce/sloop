@@ -91,7 +91,7 @@ func Test_GetEventData_True(t *testing.T) {
 	values := helper_get_params()
 	values[KindParam] = []string{"someKinda"}
 	values[NamespaceParam] = []string{"someNamespace"}
-	values[NameParam] = []string{"someName"}
+	values[NameParam] = []string{"someName.xx"}
 	var keys []string
 	keys = append(keys, typed.NewWatchTableKey(partitionId, "Event", "someNamespace", "someName.xx", someTs).String())
 	keys = append(keys, typed.NewWatchTableKey(partitionId, "Event", "someNamespaceb", "someName.xx", someTs).String())
