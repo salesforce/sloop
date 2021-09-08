@@ -124,32 +124,44 @@ func listKeysHandler(tables typed.Tables) http.HandlerFunc {
 		count := 0
 		totalCount := 0
 		var totalSize int64 = 0
+		var tablesToSearch []string
+
+		if table == "all" {
+			tablesToSearch = append(tablesToSearch, "watch", "eventcount", "ressum", "watchactivity")
+		} else {
+			tablesToSearch = append(tablesToSearch, table)
+		}
+
 		err = tables.Db().View(func(txn badgerwrap.Txn) error {
-			keyPrefix := ""
-			if table != "internal" {
-				keyPrefix = "/" + table + "/"
-			}
 
-			iterOpt := badger.DefaultIteratorOptions
-			iterOpt.Prefix = []byte(keyPrefix)
-			iterOpt.AllVersions = true
-			iterOpt.InternalAccess = true
-			itr := txn.NewIterator(iterOpt)
-			defer itr.Close()
+			for _, tablename := range tablesToSearch {
+				keyPrefix := ""
+				if tablename != "internal" {
+					keyPrefix = "/" + tablename + "/"
+				}
 
-			// TODO: Investigate if Seek() can be used instead of rewind
-			for itr.Rewind(); itr.ValidForPrefix([]byte(keyPrefix)); itr.Next() {
-				totalCount++
-				thisKey := string(itr.Item().Key())
-				if keyRegEx.MatchString(thisKey) {
-					keys = append(keys, thisKey)
-					count += 1
-					totalSize += itr.Item().EstimatedSize()
-					if count >= maxRows {
-						glog.Infof("Number of rows : %v has reached max rows: %v", count, maxRows)
-						break
+				iterOpt := badger.DefaultIteratorOptions
+				iterOpt.Prefix = []byte(keyPrefix)
+				iterOpt.AllVersions = true
+				iterOpt.InternalAccess = true
+				itr := txn.NewIterator(iterOpt)
+				defer itr.Close()
+
+				// TODO: Investigate if Seek() can be used instead of rewind
+				for itr.Rewind(); itr.ValidForPrefix([]byte(keyPrefix)); itr.Next() {
+					totalCount++
+					thisKey := string(itr.Item().Key())
+					if keyRegEx.MatchString(thisKey) {
+						keys = append(keys, thisKey)
+						count += 1
+						totalSize += itr.Item().EstimatedSize()
+						if count >= maxRows {
+							glog.Infof("Number of rows : %v has reached max rows: %v", count, maxRows)
+							break
+						}
 					}
 				}
+
 			}
 
 			return nil

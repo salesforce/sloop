@@ -10,6 +10,7 @@ package ingress
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -306,7 +307,7 @@ func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResul
 	metricIngressKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Inc()
 	metricIngressKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Add(float64(len(resourceJson)))
 
-	glog.V(5).Infof("Informer update (%s) - Name: %s, Namespace: %s, ResourceVersion: %s", watchResult.WatchType, kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion)
+	glog.V(common.GlogVerbose).Infof("Informer update (%s) - Name: %s, Namespace: %s, ResourceVersion: %s", watchResult.WatchType, kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion)
 	watchResult.Payload = resourceJson
 	i.writeToOutChan(watchResult)
 }
@@ -334,7 +335,7 @@ func (i *kubeWatcherImpl) getResourceAsJsonString(kind string, obj interface{}) 
 
 func (i *kubeWatcherImpl) refreshCrdInformers(masterURL string, kubeContext string) {
 	for range i.refreshCrd.C {
-		glog.Infof("Starting to refresh CRD informers")
+		glog.V(common.GlogVerbose).Infof("Starting to refresh CRD informers")
 		err := i.startCustomInformers(masterURL, kubeContext)
 		if err != nil {
 			glog.Errorf("Failed to refresh CRD informers: %v", err)

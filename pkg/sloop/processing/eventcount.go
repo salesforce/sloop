@@ -11,6 +11,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
@@ -69,6 +70,15 @@ func updateEventCountTable(
 
 	eventCountByMinute := spreadOutEvents(computedFirstTs, computedLastTs, computedCount)
 
+	if involvedObject.Uid == "" {
+		glog.V(common.GlogVerbose).Infof("Got empty Uid for name: %v, namespace: %v, kind: %v for event: %v ", involvedObject.Name, involvedObject.Namespace, involvedObject.Kind, newEventInfo.Reason)
+		returnedUid, err := GetUidForWatchEntry(tables, txn, involvedObject.Kind, involvedObject.Namespace, involvedObject.Name, time.Time{})
+		if err != nil {
+			return err
+		}
+
+		involvedObject.Uid = returnedUid
+	}
 	err = storeMinutes(tables, txn, eventCountByMinute, involvedObject.Kind, involvedObject.Namespace, involvedObject.Name, involvedObject.Uid, newEventInfo.Reason, newEventInfo.Type)
 	if err != nil {
 		return err

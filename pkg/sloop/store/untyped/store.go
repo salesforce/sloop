@@ -33,6 +33,7 @@ type Config struct {
 	BadgerLevelOneSize       int64
 	BadgerLevSizeMultiplier  int
 	BadgerVLogFileIOMapping  bool
+	BadgerDetailLogEnabled   bool
 	BadgerVLogTruncate       bool
 }
 
@@ -93,6 +94,10 @@ func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error
 
 	if config.BadgerVLogFileIOMapping {
 		opts = opts.WithValueLogLoadingMode(options.FileIO)
+	}
+
+	if !config.BadgerDetailLogEnabled {
+		opts = opts.WithLogger(nil)
 	}
 
 	opts = opts.WithTruncate(config.BadgerVLogTruncate)

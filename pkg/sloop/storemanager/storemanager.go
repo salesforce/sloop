@@ -113,7 +113,7 @@ func (sm *StoreManager) gcLoop() {
 			metricGcFailedCount.Inc()
 		}
 		metricGcLatency.Set(time.Since(before).Seconds())
-		glog.Infof("GC finished in %v with error '%v'.  Next run in %v", time.Since(before), err, sm.config.Freq)
+		glog.V(common.GlogVerbose).Infof("GC finished in %v with error '%v'.  Next run in %v", time.Since(before), err, sm.config.Freq)
 
 		var afterGCEnds = sm.refreshStats()
 		var deltaStats = getDeltaStats(beforeGCStats, afterGCEnds)
@@ -142,7 +142,7 @@ func (sm *StoreManager) vlogGcLoop() {
 			metricValueLogGcRunning.Set(0)
 			metricValueLogGcRunCount.Add(1)
 			metricValueLogGcLatency.Set(time.Since(before).Seconds())
-			glog.Infof("RunValueLogGC(%v) run took %v and returned '%v'", sm.config.BadgerDiscardRatio, time.Since(before), err)
+			glog.V(common.GlogVerbose).Infof("RunValueLogGC(%v) run took %v and returned '%v'", sm.config.BadgerDiscardRatio, time.Since(before), err)
 			if err != nil {
 				break
 			}
@@ -193,14 +193,14 @@ func doCleanup(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int,
 			return false, totalNumOfDeletedKeys, totalNumOfKeysToDelete, fmt.Errorf(errMsg)
 		}
 
-		glog.Infof("Removed number of keys so far: %v ", totalNumOfDeletedKeys)
+		glog.V(common.GlogVerbose).Infof("Removed number of keys so far: %v ", totalNumOfDeletedKeys)
 		totalNumOfDeletedKeys += int64(numOfDeletedKeysForPrefix)
 		totalNumOfKeysToDelete += int64(numOfKeysToDeleteForPrefix)
 
 	}
 
 	elapsed := time.Since(beforeGCTime)
-	glog.Infof("Deletion/dropPrefix of prefixes took %v:", elapsed)
+	glog.V(common.GlogVerbose).Infof("Deletion/dropPrefix of prefixes took %v:", elapsed)
 
 	if enableDeletePrefix {
 		beforeDropPrefix := time.Now()
@@ -325,7 +325,7 @@ func deletePartition(minPartition string, tables typed.Tables, deletionBatchSize
 		}
 
 		elapsed := time.Since(start)
-		glog.Infof("Call to DropPrefix(%v) took %v and removed %d keys with error: %v", prefix, elapsed, numOfDeletedKeysForPrefix, err)
+		glog.V(common.GlogVerbose).Infof("Call to DropPrefix(%v) took %v and removed %d keys with error: %v", prefix, elapsed, numOfDeletedKeysForPrefix, err)
 		if err != nil {
 			errMessages = append(errMessages, fmt.Sprintf("failed to cleanup with min key: %s, elapsed: %v,err: %v,", prefix, elapsed, err))
 		}
