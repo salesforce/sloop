@@ -232,3 +232,33 @@ func Test_getLastKubeWatchResult(t *testing.T) {
 	})
 	assert.Nil(t, err)
 }
+
+func Test_GetUidForWatchEntry(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	db, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
+	assert.Nil(t, err)
+	tables := typed.NewTableList(db)
+
+	ts, err := ptypes.TimestampProto(someWatchTime)
+	assert.Nil(t, err)
+
+	watchRec := typed.KubeWatchResult{Kind: kubeextractor.PodKind, WatchType: typed.KubeWatchResult_UPDATE, Timestamp: ts, Payload: somePodPayload}
+	metadata := &kubeextractor.KubeMetadata{Name: "someName", Namespace: "someNamespace"}
+	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
+		return updateKubeWatchTable(tables, txn, &watchRec, metadata, true)
+	})
+	assert.Nil(t, err)
+
+	err = tables.Db().View(func(txn badgerwrap.Txn) error {
+		uid, err := GetUidForWatchEntry(tables, txn, kubeextractor.PodKind, metadata.Namespace, "differentName", time.Time{})
+		assert.NotNil(t, err)
+		assert.Equal(t, "", uid)
+
+		uid, err = GetUidForWatchEntry(tables, txn, kubeextractor.PodKind, metadata.Namespace, metadata.Name, time.Time{})
+		assert.Nil(t, err)
+		assert.Equal(t, "6c2a9795-a282-11e9-ba2f-14187761de09", uid)
+
+		return nil
+	})
+	assert.Nil(t, err)
+}
