@@ -200,19 +200,19 @@ func Test_String(t *testing.T) {
 	someKindWatchKeyStr := someKindWatchKey.String()
 	assert.Equal(t, someKindWatchKeyStr, "/watch/001546405200/somekind/somenamespace/somename/1546398245000000006")
 
-	someKindWatchKey = NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName + ".xx", someTs)
+	someKindWatchKey = NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName+".xx", someTs)
 	someKindWatchKeyStr = someKindWatchKey.String()
 	assert.Equal(t, someKindWatchKeyStr, "/watch/001546405200/somekind/somenamespace/somename.xx/1546398245000000006")
 
-	someKindWatchKey = NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName + ".", time.Time{})
+	someKindWatchKey = NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName+".", time.Time{})
 	someKindWatchKeyStr = someKindWatchKey.String()
 	assert.Equal(t, someKindWatchKeyStr, "/watch/001546405200/somekind/somenamespace/somename.")
 
-	someKindWatchKey = NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName + "/", time.Time{})
+	someKindWatchKey = NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName+"/", time.Time{})
 	someKindWatchKeyStr = someKindWatchKey.String()
 	assert.Equal(t, someKindWatchKeyStr, "/watch/001546405200/somekind/somenamespace/somename/")
 
-	someKindWatchKey = NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName +".xx", time.Time{})
+	someKindWatchKey = NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName+".xx", time.Time{})
 	someKindWatchKeyStr = someKindWatchKey.String()
 	assert.Equal(t, someKindWatchKeyStr, "/watch/001546405200/somekind/somenamespace/somename.xx/")
 }

@@ -191,3 +191,53 @@ func Test_GetEventData_ValPayloadKindNotMatch(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, string(res), "")
 }
+
+func Test_GetEventData_True_HasSamePrefix(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	partitionId := untyped.GetPartitionId(someTs)
+	values := helper_get_params()
+	expectedKind := "someKind"
+	expectedNS := "someNamespace"
+	expectedName := "someName-1"
+	values[KindParam] = []string{expectedKind}
+	values[NamespaceParam] = []string{expectedNS}
+	values[NameParam] = []string{expectedName}
+
+	var keys []string
+	keys = append(keys, typed.NewWatchTableKey(partitionId, expectedKind, expectedNS, expectedName, someTs).String())
+	keys = append(keys, typed.NewWatchTableKey(partitionId, "Event", expectedNS, "someName-1.xx", someTs).String())
+	keys = append(keys, typed.NewWatchTableKey(partitionId, "Event", expectedNS, "someName-16.xx", someTs).String())
+	keys = append(keys, typed.NewWatchTableKey(partitionId, "Event", expectedNS, "someName-15.xx", someTs).String())
+
+	someEventPayload := `{
+  "involvedObject": {
+    "kind": "someKind",
+    "namespace": "someNamespace",
+    "name": "someName-1",
+    "uid": "someuuid",
+    "apiVersion": "v1",
+    "resourceVersion": "2716553ddd",
+    "fieldPath": "spec.containers{xxx}"
+  },
+        "reason":"someReason",
+        "firstTimestamp": "2019-01-01T21:24:55Z",
+        "lastTimestamp": "2019-01-02T21:27:55Z",
+        "count": 10
+    }`
+
+	tables := helper_get_k8Watchtable(keys, t, someEventPayload)
+	res, err := GetEventData(values, tables, someTs.Add(-1*time.Hour), someTs.Add(6*time.Hour), someRequestId)
+	assert.Nil(t, err)
+	expectedRes := `[
+ {
+  "partitionId": "001546398000",
+  "namespace": "someNamespace",
+  "name": "someName-1.xx",
+  "watchTimestamp": "2019-01-02T03:04:05.000000006Z",
+  "kind": "Event",
+  "payload": "{\n  \"involvedObject\": {\n    \"kind\": \"someKind\",\n    \"namespace\": \"someNamespace\",\n    \"name\": \"someName-1\",\n    \"uid\": \"someuuid\",\n    \"apiVersion\": \"v1\",\n    \"resourceVersion\": \"2716553ddd\",\n    \"fieldPath\": \"spec.containers{xxx}\"\n  },\n        \"reason\":\"someReason\",\n        \"firstTimestamp\": \"2019-01-01T21:24:55Z\",\n        \"lastTimestamp\": \"2019-01-02T21:27:55Z\",\n        \"count\": 10\n    }",
+  "eventKey": "/watch/001546398000/Event/someNamespace/someName-1.xx/1546398245000000006"
+ }
+]`
+	assertex.JsonEqual(t, expectedRes, string(res))
+}
