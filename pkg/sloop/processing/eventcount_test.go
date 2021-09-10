@@ -38,7 +38,7 @@ var (
     "kind": "Pod",
     "namespace": "someNamespace",
     "name": "somePodName",
-    "uid": "somePodUid"
+    "uid": "[somePodUid]"
   },
   "reason":"failed",
   "firstTimestamp": "[firstTimestamp]",
@@ -52,6 +52,14 @@ const (
 	expectedEventKey    = "/eventcount/001567036800/Pod/someNamespace/somePodName/somePodUid"
 	expectedEventMinKey = 1567113900
 	expectedEventReason = "failed:Warning"
+	someNamePodPayload  = `{
+    "metadata": {
+    "name": "somePodName",
+    "namespace": "someNamespace",
+    "uid": "6c2a9795-a282-11e9-ba2f-14187761de09",
+    "creationTimestamp": "2019-07-09T19:47:45Z"
+  }
+}`
 )
 
 func Test_EventCountTable_NonEvent(t *testing.T) {
@@ -223,7 +231,7 @@ func addEventCount(t *testing.T, tables typed.Tables, timeStamp *timestamp.Times
 	watchRec := typed.KubeWatchResult{
 		Kind:      kubeextractor.EventKind,
 		Timestamp: timeStamp,
-		Payload:   get_event_pay_load(firstTimeStamp, lastTimeStamp),
+		Payload:   get_event_pay_load(firstTimeStamp, lastTimeStamp, "somePodUid"),
 	}
 
 	resourceMetadata, err := kubeextractor.ExtractMetadata(watchRec.Payload)
@@ -290,9 +298,10 @@ func helper_dumpKeys(t *testing.T, db badgerwrap.DB, message string) {
 	assert.Nil(t, err)
 }
 
-func get_event_pay_load(firstTimeStamp string, lastTimeStamp string) string {
+func get_event_pay_load(firstTimeStamp string, lastTimeStamp string, uid string) string {
 	payLoad := strings.ReplaceAll(someEventPayload, "[firstTimestamp]", firstTimeStamp)
-	return strings.ReplaceAll(payLoad, "[lastTimestamp]", lastTimeStamp)
+	payLoad = strings.ReplaceAll(payLoad, "[lastTimestamp]", lastTimeStamp)
+	return strings.ReplaceAll(payLoad, "[somePodUid]", uid)
 }
 
 func Test_distributeValue(t *testing.T) {
@@ -499,4 +508,82 @@ func Test_adjustForAvailablePartitions_Overlapping(t *testing.T) {
 	assert.Equal(t, 10, count)
 	assert.Equal(t, maxPartitionStartTime, beginTS)
 	assert.Equal(t, maxPartitionEndTime, endTS)
+}
+
+func Test_updateEventCountTable_NoUid_Success(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	db, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
+	assert.Nil(t, err)
+	tables := typed.NewTableList(db)
+
+	ts, err := ptypes.TimestampProto(someWatchTime)
+	assert.Nil(t, err)
+
+	watchRec := typed.KubeWatchResult{Kind: kubeextractor.PodKind, WatchType: typed.KubeWatchResult_UPDATE, Timestamp: ts, Payload: someNamePodPayload}
+	metadata := &kubeextractor.KubeMetadata{Name: "somePodName", Namespace: "someNamespace"}
+	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
+		return updateKubeWatchTable(tables, txn, &watchRec, metadata, true)
+	})
+	assert.Nil(t, err)
+
+	eventWatchRec := typed.KubeWatchResult{
+		Kind:      kubeextractor.EventKind,
+		Timestamp: someEventWatchPTime,
+		Payload:   get_event_pay_load(firstTimeStamp, lastTimeStamp, ""),
+	}
+
+	resourceMetadata, err := kubeextractor.ExtractMetadata(eventWatchRec.Payload)
+	assert.Nil(t, err)
+	involvedObject, err := kubeextractor.ExtractInvolvedObject(eventWatchRec.Payload)
+	assert.Nil(t, err)
+
+	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
+		err2 := updateEventCountTable(tables, txn, &eventWatchRec, &resourceMetadata, &involvedObject, someMaxLookback)
+		if err2 != nil {
+			return err2
+		}
+
+		assert.Nil(t, err2)
+		return err2
+	})
+	assert.Nil(t, err)
+}
+
+func Test_updateEventCountTable_NoUid_Failure(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	db, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
+	assert.Nil(t, err)
+	tables := typed.NewTableList(db)
+
+	ts, err := ptypes.TimestampProto(someWatchTime)
+	assert.Nil(t, err)
+
+	watchRec := typed.KubeWatchResult{Kind: kubeextractor.PodKind, WatchType: typed.KubeWatchResult_UPDATE, Timestamp: ts, Payload: somePodPayload}
+	metadata := &kubeextractor.KubeMetadata{Name: "RandomName", Namespace: "someNamespace"}
+	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
+		return updateKubeWatchTable(tables, txn, &watchRec, metadata, true)
+	})
+	assert.Nil(t, err)
+
+	eventWatchRec := typed.KubeWatchResult{
+		Kind:      kubeextractor.EventKind,
+		Timestamp: someEventWatchPTime,
+		Payload:   get_event_pay_load(firstTimeStamp, lastTimeStamp, ""),
+	}
+
+	resourceMetadata, err := kubeextractor.ExtractMetadata(eventWatchRec.Payload)
+	assert.Nil(t, err)
+	involvedObject, err := kubeextractor.ExtractInvolvedObject(eventWatchRec.Payload)
+	assert.Nil(t, err)
+
+	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
+		err2 := updateEventCountTable(tables, txn, &eventWatchRec, &resourceMetadata, &involvedObject, someMaxLookback)
+		if err2 != nil {
+			return err2
+		}
+
+		assert.NotNil(t, err2)
+		return err2
+	})
+	assert.NotNil(t, err)
 }

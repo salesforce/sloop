@@ -13,7 +13,9 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
+	"github.com/salesforce/sloop/pkg/sloop/queries"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
@@ -123,4 +125,22 @@ func toWatchTableKeyPrefix(ts *timestamp.Timestamp, kind string, namespace strin
 	}
 
 	return typed.NewWatchTableKey(untyped.GetPartitionId(timestamp), kind, namespace, name, time.Time{}), nil
+}
+
+func GetUidForWatchEntry(tables typed.Tables, txn badgerwrap.Txn, kind string, namespace string, name string, timestamp time.Time) (string, error) {
+	watchKeyComparator := typed.NewWatchTableKeyComparator(kind, namespace, name, timestamp)
+	seekKey := queries.GetSeekKey(watchKeyComparator, time.Now())
+	previousKey, getPreviousErr := tables.WatchTable().GetPreviousKey(txn, seekKey, watchKeyComparator)
+	if getPreviousErr == nil {
+		var getErr error
+		previousVal, getErr := tables.WatchTable().Get(txn, previousKey.String())
+		if getErr == nil {
+			metadata, _ := kubeextractor.ExtractMetadata(previousVal.Payload)
+			glog.V(common.GlogVerbose).Infof("Found Uid for name: %v, namespace: %v, kind: %v", name, namespace, kind)
+			return metadata.Uid, nil
+		}
+
+		return "", getErr
+	}
+	return "", getPreviousErr
 }
