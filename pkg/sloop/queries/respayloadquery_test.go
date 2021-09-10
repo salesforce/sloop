@@ -250,7 +250,7 @@ func Test_getSeekKey(t *testing.T) {
 
 	// returns COPY populated with contents from source & adjusts for new time
 	keyComparator := typed.NewWatchTableKey(untyped.GetPartitionId(keyTime), "k", "ns", "n", keyTime)
-	seekKey := GetSeekKey(keyComparator, seekTime)
+	seekKey := getSeekKey(keyComparator, seekTime)
 	assert.Equal(t, untyped.GetPartitionId(seekTime), seekKey.PartitionId)
 	assert.Equal(t, keyComparator.Kind, seekKey.Kind)
 	assert.Equal(t, keyComparator.Namespace, seekKey.Namespace)
