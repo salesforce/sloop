@@ -64,12 +64,12 @@ func generateStats(storeRoot string, db badgerwrap.DB, fs *afero.Afero) *storeSt
 	ret.TotalKeyCount = common.GetTotalKeyCount(db, "")
 	tables := db.Tables(true)
 	for _, table := range tables {
-		glog.V(2).Infof("BadgerDB TABLE id=%v keycount=%v level=%v left=%q right=%q", table.ID, table.KeyCount, table.Level, string(table.Left), string(table.Right))
+		glog.V(common.GlogVerbose).Infof("BadgerDB TABLE id=%v keycount=%v level=%v left=%q right=%q", table.ID, table.KeyCount, table.Level, string(table.Left), string(table.Right))
 		ret.LevelToTableCount[table.Level] += 1
 		ret.LevelToKeyCount[table.Level] += table.KeyCount
 	}
 
-	glog.Infof("Finished updating store stats: %+v", ret)
+	glog.V(common.GlogVerbose).Infof("Finished updating store stats: %+v", ret)
 	return ret
 }
 

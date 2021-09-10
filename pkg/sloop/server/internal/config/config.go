@@ -73,6 +73,7 @@ type SloopConfig struct {
 	BadgerVLogFileIOMapping  bool          `json:"badgerVLogFileIOMapping"`
 	BadgerVLogTruncate       bool          `json:"badgerVLogTruncate"`
 	EnableDeleteKeys         bool          `json:"enableDeleteKeys"`
+	BadgerDetailLogEnabled   bool          `json:"badgerDetailLogEnabled"`
 }
 
 func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
@@ -120,6 +121,7 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.BoolVar(&config.EnableDeleteKeys, "enable-delete-keys", config.EnableDeleteKeys, "Use delete prefixes instead of dropPrefix for GC")
 	fs.BoolVar(&config.BadgerVLogFileIOMapping, "badger-vlog-fileIO-mapping", config.BadgerVLogFileIOMapping, "Indicates which file loading mode should be used for the value log data, in memory constrained environments the value is recommended to be true")
 	fs.BoolVar(&config.BadgerVLogTruncate, "badger-vlog-truncate", config.BadgerVLogTruncate, "Truncate value log if badger db offset is different from badger db size")
+	fs.BoolVar(&config.BadgerDetailLogEnabled, "badger-detail-log-enabled", config.BadgerDetailLogEnabled, "Turns on detailed logging of BadgerDB")
 }
 
 func getDefaultConfig() *SloopConfig {
@@ -167,6 +169,7 @@ func getDefaultConfig() *SloopConfig {
 		BadgerVLogFileIOMapping:  false,
 		BadgerVLogTruncate:       true,
 		EnableDeleteKeys:         false,
+		BadgerDetailLogEnabled:   false,
 	}
 	return &defaultConfig
 }
