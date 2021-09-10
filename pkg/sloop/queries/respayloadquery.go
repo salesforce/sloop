@@ -56,7 +56,7 @@ func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTi
 
 		// get the previous key for those who has same payload but just before startTime
 		var getPreviousErr error
-		seekKey := getSeekKey(keyComparator, startTime)
+		seekKey := GetSeekKey(keyComparator, startTime)
 		glog.V(common.GlogVerbose).Infof("GetResPayload: seekKey: %v", seekKey.String())
 		previousKey, getPreviousErr = t.WatchTable().GetPreviousKey(txn, seekKey, keyComparator)
 
@@ -102,7 +102,7 @@ func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTi
 	return bytes, nil
 }
 
-func getSeekKey(keyComparator *typed.WatchTableKey, startTime time.Time) *typed.WatchTableKey {
+func GetSeekKey(keyComparator *typed.WatchTableKey, startTime time.Time) *typed.WatchTableKey {
 	kind := keyComparator.Kind
 	namespace := keyComparator.Namespace
 	name := keyComparator.Name
