@@ -41,11 +41,15 @@ func GetEventData(params url.Values, t typed.Tables, startTime time.Time, endTim
 		selectedName := params.Get(NameParam)
 		selectedKind := params.Get(KindParam)
 
+		// Events are stored with metadata name which are like InvolvedObjectName.XXXX
+		// To ensure we only get events for this resource. Add a '.' delimiter in the end.
+		selectedName = selectedName + "."
+
 		if kubeextractor.IsClustersScopedResource(selectedKind) {
 			selectedNamespace = DefaultNamespace
 		}
 
-		key := &typed.WatchTableKey{
+		key := typed.WatchTableKey{
 			// partition id will be rest, it is ok to leave it as empty string
 			PartitionId: "",
 			Kind:        kubeextractor.EventKind,
@@ -56,7 +60,7 @@ func GetEventData(params url.Values, t typed.Tables, startTime time.Time, endTim
 
 		// pass a few valPredFn filters: payload in time range and payload kind matched
 		valPredFn := typed.KubeWatchResult_ValPredicateFns(isEventValInTimeRange(startTime, endTime), matchEventInvolvedObject(params))
-		watchEvents, stats, err2 = t.WatchTable().RangeRead(txn, key, nil, valPredFn, startTime, endTime)
+		watchEvents, stats, err2 = t.WatchTable().RangeRead(txn, &key, nil, valPredFn, startTime, endTime)
 		if err2 != nil {
 			return err2
 		}

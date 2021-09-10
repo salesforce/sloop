@@ -68,12 +68,26 @@ func (k *WatchTableKey) SetPartitionId(newPartitionId string) {
 	k.PartitionId = newPartitionId
 }
 
+func (k *WatchTableKey) IsNameAlreadyDelimited() bool {
+	// Currently only '.' or '/' are supported as delimiters
+	nameLength := len(k.Name)
+	if nameLength > 0 && (k.Name[nameLength-1:] == "." || k.Name[nameLength-1:] == "/") {
+		return true
+	}
+
+	return false
+}
+
 //todo: need to make sure it can work as keyPrefix when some fields are empty
 func (k *WatchTableKey) String() string {
 	if k.Name == "" && k.Timestamp.IsZero() {
 		return fmt.Sprintf("/%v/%v/%v/%v/", k.TableName(), k.PartitionId, k.Kind, k.Namespace)
 	} else if k.Timestamp.IsZero() {
-		return fmt.Sprintf("/%v/%v/%v/%v/%v/", k.TableName(), k.PartitionId, k.Kind, k.Namespace, k.Name)
+		if k.IsNameAlreadyDelimited() {
+			return fmt.Sprintf("/%v/%v/%v/%v/%v", k.TableName(), k.PartitionId, k.Kind, k.Namespace, k.Name)
+		} else {
+			return fmt.Sprintf("/%v/%v/%v/%v/%v/", k.TableName(), k.PartitionId, k.Kind, k.Namespace, k.Name)
+		}
 	} else {
 		return fmt.Sprintf("/%v/%v/%v/%v/%v/%v", k.TableName(), k.PartitionId, k.Kind, k.Namespace, k.Name, k.Timestamp.UnixNano())
 	}
