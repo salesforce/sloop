@@ -41,6 +41,10 @@ func GetEventData(params url.Values, t typed.Tables, startTime time.Time, endTim
 		selectedName := params.Get(NameParam)
 		selectedKind := params.Get(KindParam)
 
+		// Events are stored with metadata name which are like InvolvedObjectName.XXXX
+		// To ensure we only get events for this resource. Add a '.' delimiter in the end.
+		selectedName = selectedName + "."
+
 		if kubeextractor.IsClustersScopedResource(selectedKind) {
 			selectedNamespace = DefaultNamespace
 		}

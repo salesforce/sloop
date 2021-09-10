@@ -195,6 +195,28 @@ func Test_GetPreviousKey_Fail(t *testing.T) {
 	assert.Equal(t, &WatchTableKey{}, partRes)
 }
 
+func Test_String(t *testing.T) {
+	someKindWatchKey := NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName, someTs)
+	someKindWatchKeyStr := someKindWatchKey.String()
+	assert.Equal(t, someKindWatchKeyStr, "/watch/001546405200/somekind/somenamespace/somename/1546398245000000006")
+
+	someKindWatchKey = NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName + ".xx", someTs)
+	someKindWatchKeyStr = someKindWatchKey.String()
+	assert.Equal(t, someKindWatchKeyStr, "/watch/001546405200/somekind/somenamespace/somename.xx/1546398245000000006")
+
+	someKindWatchKey = NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName + ".", time.Time{})
+	someKindWatchKeyStr = someKindWatchKey.String()
+	assert.Equal(t, someKindWatchKeyStr, "/watch/001546405200/somekind/somenamespace/somename.")
+
+	someKindWatchKey = NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName + "/", time.Time{})
+	someKindWatchKeyStr = someKindWatchKey.String()
+	assert.Equal(t, someKindWatchKeyStr, "/watch/001546405200/somekind/somenamespace/somename/")
+
+	someKindWatchKey = NewWatchTableKey(someMaxPartition, someKind, someNamespace, someName +".xx", time.Time{})
+	someKindWatchKeyStr = someKindWatchKey.String()
+	assert.Equal(t, someKindWatchKeyStr, "/watch/001546405200/somekind/somenamespace/somename.xx/")
+}
+
 func (*WatchTableKey) GetTestKey() string {
 	k := NewWatchTableKey(someMinPartition, someKind, someNamespace, someName, someTs)
 	return k.String()
