@@ -19,13 +19,13 @@ const palette = {
 // Globals Live Here
 let topAxis, bottomAxis;
 
-// These funcs get called whenever the propertes of either axis are changed
+// These functions get called whenever the properties of either axis are changed
 let topAxisDrawFunc, bottomAxisDrawFunc;
 
 // These are d3 structs
 let xAxisScale, yAxisBand;
 
-// Array containing data retreived from sloop server
+// Array containing data retrieved from sloop server
 let data;
 
 // The time displayed on certain mouseover and mousemove events
