@@ -9,6 +9,7 @@ package typed
 
 import (
 	"github.com/golang/glog"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 	"time"
 )
 
@@ -78,6 +79,6 @@ type RangeReadStats struct {
 }
 
 func (stats RangeReadStats) Log(requestId string) {
-	glog.Infof("reqId: %v range read on table %v took %v.  Partitions scanned %v.  Rows scanned %v, past key predicate %v, past value predicate %v",
+	glog.V(common.GlogVerbose).Infof("reqId: %v range read on table %v took %v.  Partitions scanned %v.  Rows scanned %v, past key predicate %v, past value predicate %v",
 		requestId, stats.TableName, stats.Elapsed, stats.PartitionCount, stats.RowsVisitedCount, stats.RowsPassedKeyPredicateCount, stats.RowsPassedValuePredicateCount)
 }
