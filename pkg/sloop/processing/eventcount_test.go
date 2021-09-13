@@ -30,7 +30,7 @@ var (
 	lastTimeStamp          = "2019-08-29T21:27:55Z"
 	someEventPayload       = `{
   "metadata": {
-    "name": "someEventName",
+    "name": "somePodName.xx",
     "namespace": "someNamespace",
     "uid": "someEventUid"
   },
