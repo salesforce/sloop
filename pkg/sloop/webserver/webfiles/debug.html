@@ -6,15 +6,31 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 -->
 <html>
 <head>
+    <!-- commenting out for later -->
     <script type="text/javascript">
-        document.write("<base href='/" + window.location.pathname.split('/')[1] + "/' />");
+        // this does not actually append the path
+        document.write('<base href="/' + window.location.pathname.split('/')[1] + '" >');
+        console.log("file name is" + '<base href="/' + window.location.pathname.split('/')[1] + '" >');
+    </script>
+    <!-- <script>
+        function loadhomeref() {
+            var homeref = "/" + window.location.pathname.split('/')[1]; //is this bad practice?
+            // var strLink = "2.html&Key=" + homeref;
+            document.getElementById("homelink").setAttribute("href", homeref);
+        }   -->
     </script>
     <title>Sloop Debug Menu</title>
     <link rel='shortcut icon' type='image/x-icon' href='webfiles/favicon.ico' />
 </head>
-<body>
-[ <a href="/">Home</a> ]<br/><br/>
 
+<body>
+[ <a href=" ">Home</a> ]<br/><br/>
+<!-- <script>
+    var loc = "/" + window.location.pathname.split('/')[1];
+    document.write('<a href="' + loc + '"> Home</a>');
+</script> -->
+
+<!-- <a id="homelink">Home</a> -->
 <h2>Sloop Debug Menu</h2>
 
 <ul>
