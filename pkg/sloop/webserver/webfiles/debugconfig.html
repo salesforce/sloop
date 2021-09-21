@@ -6,14 +6,18 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 -->
 <html>
 <head>
-    <script type="text/javascript">
-        document.write("<base href='/" + window.location.pathname.split('/')[1] + "/' />");
+    <script>
+        var homeref = "/" + window.location.pathname.split('/')[1]; 
+        function loadhomeref() {
+            document.getElementById("homelink").setAttribute("href", homeref);
+        }  
+        document.write('<base href="' + homeref + '/" >');
     </script>
     <title>Sloop Debug Config</title>
     <link rel='shortcut icon' type='image/x-icon' href='webfiles/favicon.ico' />
 </head>
-<body>
-[ <a href="/">Home</a> ][ <a href="debug/">Debug Menu</a> ]<br/>
+<body onload="loadhomeref()">
+[ <a id=homelink>Home</a> ][ <a href="debug/">Debug Menu</a> ]<br/>
 
 <h2>Current Config</h2>
 
