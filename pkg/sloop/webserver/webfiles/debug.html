@@ -6,31 +6,43 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 -->
 <html>
 <head>
-    <!-- commenting out for later -->
-    <script type="text/javascript">
-        // this does not actually append the path
-        document.write('<base href="/' + window.location.pathname.split('/')[1] + '" >');
-        console.log("file name is" + '<base href="/' + window.location.pathname.split('/')[1] + '" >');
-    </script>
-    <!-- <script>
+    <!-- Method 1:  -->
+    <!-- <script type="text/javascript">
+        document.write('<base href="/' + window.location.pathname.split('/')[1] + '/" >');
+    </script> -->
+
+    <!-- Method 2: -->
+    <script>
+        var homeref = "/" + window.location.pathname.split('/')[1]; 
         function loadhomeref() {
-            var homeref = "/" + window.location.pathname.split('/')[1]; //is this bad practice?
-            // var strLink = "2.html&Key=" + homeref;
+            var strLink = "2.html&Key=" + homeref;
             document.getElementById("homelink").setAttribute("href", homeref);
-        }   -->
+        }  
+        document.write('<base href="' + homeref + '/" >');
     </script>
+
     <title>Sloop Debug Menu</title>
     <link rel='shortcut icon' type='image/x-icon' href='webfiles/favicon.ico' />
 </head>
 
-<body>
-[ <a href=" ">Home</a> ]<br/><br/>
-<!-- <script>
+<body onload="loadhomeref()">
+[ <a href="/">Home</a> ]<br/><br/>
+
+<!-- Method 1: 
+<script type="text/javascript">
     var loc = "/" + window.location.pathname.split('/')[1];
-    document.write('<a href="' + loc + '"> Home</a>');
+    document.write('<a href="' + loc + '">Home</a>');
 </script> -->
 
-<!-- <a id="homelink">Home</a> -->
+<!-- Method 2: -->
+<a id="homelink">Home</a>
+
+
+
+<script> 
+
+</script>
+
 <h2>Sloop Debug Menu</h2>
 
 <ul>
