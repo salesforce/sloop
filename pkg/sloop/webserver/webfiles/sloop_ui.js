@@ -409,14 +409,14 @@ function createResourceBar(d) {
 
     if (d.nochangeat != null) {
         d.nochangeat.forEach(function (timestamp) {
-            // add grey tick mark at bottom of band - 1/10 of band
+            // add black tick mark at bottom of band - 1/10 of band
             el
                 .append("rect")
                 .attr("x", xAxisScale(timestamp*1000))
                 .attr("y", 9 * (yAxisBand.bandwidth() / 10))
                 .attr("height", yAxisBand.bandwidth() / 10)
                 .attr("width", 1)
-                .attr("fill", "grey")
+                .attr("fill", "black")
         });
     }
 
