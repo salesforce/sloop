@@ -6,12 +6,6 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 -->
 <html>
 <head>
-    <!-- Method 1:  -->
-    <!-- <script type="text/javascript">
-        document.write('<base href="/' + window.location.pathname.split('/')[1] + '/" >');
-    </script> -->
-
-    <!-- Method 2: -->
     <!-- Load the base URL and sets Home button reference seperately -->
     <script>
         var homeref = "/" + window.location.pathname.split('/')[1]; 
@@ -26,15 +20,6 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 </head>
 
 <body onload="loadhomeref()">
-<!-- [ <a href="/">Home</a> ]<br/><br/> -->
-
-<!-- Method 1: 
-<script type="text/javascript">
-    var loc = "/" + window.location.pathname.split('/')[1];
-    document.write('<a href="' + loc + '">Home</a>');
-</script> -->
-
-<!-- Method 2: -->
 [ <a id="homelink">Home</a> ]<br/><br/>
 
 
