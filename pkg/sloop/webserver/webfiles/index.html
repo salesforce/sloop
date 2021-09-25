@@ -75,7 +75,15 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 
             <input type="submit">
         </form>
-
+        <!-- Toggle switch to show payload changes -->
+        <div class="switch-container">
+            <p id="payloadText">Show Payload Changes</p>
+            <label class="switch"> 
+                <input type="checkbox" id="payloadCheck" onchange="payloadChecker()" checked>
+                <span class="slider round"></span>
+            </label>
+        </div>
+   
         <br><br>
 
         <h2>Links</h2>
