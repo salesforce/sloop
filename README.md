@@ -53,13 +53,12 @@ mkdir -p $GOPATH/src/github.com/salesforce
 cd $GOPATH/src/github.com/salesforce
 git clone https://github.com/salesforce/sloop.git
 cd sloop
+go env -w GO111MODULE=auto
 make
 $GOPATH/bin/sloop
 ```
 
 When complete, you should have a running Sloop version accessing the current context from your kubeConfig. Just point your browser at http://localhost:8080/
-
-**NOTE**: Before running ```make```, run ```go env``` and check that the module environment variable is set to ```GO111MODULE=auto```. If it is not run ```go env -w GO111MODULE=auto``` and then ```make```.
 
 Other makefile targets:
 
