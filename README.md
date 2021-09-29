@@ -53,6 +53,7 @@ mkdir -p $GOPATH/src/github.com/salesforce
 cd $GOPATH/src/github.com/salesforce
 git clone https://github.com/salesforce/sloop.git
 cd sloop
+go env -w GO111MODULE=auto
 make
 $GOPATH/bin/sloop
 ```
