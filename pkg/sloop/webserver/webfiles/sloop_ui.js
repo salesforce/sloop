@@ -6,13 +6,13 @@
  */
 
 const palette = {
-        baseDark: ["#2E3440", "#3B4252", "#434C5E", "#4C566A"],
-        baseLight: ["#D8DEE9", "#E5E9F0", "#ECEFF4", "#F3F3FE"],
-        primary: ["#8FBCBB", "#88C0D0", "#81A1C1", "#5E81AC"],
-        highlight: ["#BF616A", "#D08770", "#EBCB8B", "#A3BE8C",
-            "#B48EAD","#ADA8B6","#da7650","#D496A7","#ABC4AB",
-            "#A4A6D2","#91BEF2","#97B1A6","#8A9B68"],
-        severity: ['#4BD855', '#E0E000', '#D84B4B'],
+    baseDark: ["#2E3440", "#3B4252", "#434C5E", "#4C566A"],
+    baseLight: ["#D8DEE9", "#E5E9F0", "#ECEFF4", "#F3F3FE"],
+    primary: ["#8FBCBB", "#88C0D0", "#81A1C1", "#5E81AC"],
+    highlight: ["#BF616A", "#D08770", "#EBCB8B", "#A3BE8C",
+        "#B48EAD","#ADA8B6","#da7650","#D496A7","#ABC4AB",
+        "#A4A6D2","#91BEF2","#97B1A6","#8A9B68"],
+    severity: ['#4BD855', '#E0E000', '#D84B4B'],
 };
 
 
@@ -91,6 +91,16 @@ payload.then(function (result) {
     renderTooltip();
 });
 
+// Payload toggle switch on change to display payload change ticks
+function payloadChecker() {
+    if(document.getElementById("payloadCheck").checked == true) {
+        Array.from(document.getElementsByClassName("payloadChange"))
+            .map(e => e.style.display = "block");
+    } else {
+        Array.from(document.getElementsByClassName("payloadChange"))
+             .map(e => e.style.display = "none");
+    }
+}
 function render(result) {
     let data = processAndSortResources(result);
     let dataByKind, kinds, filteredData;
@@ -324,6 +334,43 @@ function bindMouseEvents(svg) {
     }).on("click", function (d) {
         showDetailedTooltip(d, d3.event, this);
     });
+
+    g.selectAll(".payloadChange").on("mouseover", function (d) {
+        if (!detailedToolTipIsVisible) {
+            let xPos = +d3.select(this).attr("x");
+            let width = +d3.select(this).attr("width");
+            let height = +d3.select(this).attr("height");
+            let thisChange = parseInt(this.getAttribute("index")) * 1000;
+            var changeBool;
+            if (d3.select(this).attr("id").localeCompare("nochange")== 0) {
+                changeBool = false;
+            } else {
+                changeBool = true;
+            }
+
+            let content = {
+                title: d.text,
+                time: thisChange, 
+                change: changeBool 
+            };
+
+            d3.select(this).attr("x", xPos - 5).attr("width", width + 10);
+            d3.select(this).attr("height", height + 10);
+            tooltip
+                .style("opacity", 1)
+                .html(getChangeContent(content));
+        }
+    }).on("mouseleave", function (d) {
+        if (!detailedToolTipIsVisible) {
+            let xPos = +d3.select(this).attr("x");
+            let width = +d3.select(this).attr("width");
+            let height = +d3.select(this).attr("height");
+
+            d3.select(this).attr("x", xPos + 5).attr("width", width-10).attr("height", height-10);
+            tooltip.style("opacity", 0)
+        }
+    });
+
 }
 
 function getHeatmapContent(d) {
@@ -352,6 +399,16 @@ function getResourceBarContent(d) {
         `Kind: <b>${d.kind}</b><br/>` +
         `Namespace: <b>${d.namespace}</b><br/>` +
         `<br/>${formatDateTime(d.time)}</div>`;
+}
+
+function getChangeContent(d) {
+    if (d.change) {
+        return `<div id="tiny-tooltip">Name: <b>${d.title}</b><br/>` +
+        `Payload change at ${formatDateTime(d.time)} </div>`
+    } else {
+        return `<div id="tiny-tooltip">Name: <b>${d.title}</b><br/>` +
+        `No payload change at ${formatDateTime(d.time)} </div>`
+    }
 }
 
 function formatDateTime(d) {
@@ -414,9 +471,12 @@ function createResourceBar(d) {
                 .append("rect")
                 .attr("x", xAxisScale(timestamp*1000))
                 .attr("y", 9 * (yAxisBand.bandwidth() / 10))
-                .attr("height", yAxisBand.bandwidth() / 10)
-                .attr("width", 1)
-                .attr("fill", "black")
+                .attr("height", yAxisBand.bandwidth() / 5)
+                .attr("width", 2)
+                .attr("fill", "white")
+                .attr("index", timestamp)
+                .classed("payloadChange", true)
+                .attr("id", "nochange")
         });
     }
 
@@ -427,8 +487,11 @@ function createResourceBar(d) {
                 .append("rect")
                 .attr("x", xAxisScale(timestamp*1000))
                 .attr("height", yAxisBand.bandwidth() / 5)
-                .attr("width", 1)
+                .attr("width", 2)
                 .attr("fill", "red")
+                .attr("index", timestamp)
+                .classed("payloadChange", true)
+                .attr("id", "change")        
         });
     }
 
