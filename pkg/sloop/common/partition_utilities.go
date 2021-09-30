@@ -86,3 +86,23 @@ func GetPartitionsInfo(db badgerwrap.DB) (map[string]*PartitionInfo, uint64) {
 
 	return partitionIDToPartitionInfoMap, totalKeyCount
 }
+
+// Return all keys within a partition with the given keyPrefix
+func GetKeysForPrefix(db badgerwrap.DB, keyPrefix string) []string {
+	var keys []string
+	keyPrefixToMatch := []byte(keyPrefix)
+	_ = db.View(func(txn badgerwrap.Txn) error {
+		iterOpt := badger.DefaultIteratorOptions
+		iterOpt.PrefetchValues = false
+		if len(keyPrefixToMatch) != 0 {
+			iterOpt.Prefix = keyPrefixToMatch
+		}
+		it := txn.NewIterator(iterOpt)
+		defer it.Close()
+		for it.Rewind(); it.ValidForPrefix(keyPrefixToMatch); it.Next() {
+			keys = append(keys, string(it.Item().Key()))
+		}
+		return nil
+	})
+	return keys
+}

@@ -101,6 +101,23 @@ function payloadChecker() {
              .map(e => e.style.display = "none");
     }
 }
+
+//  Display different query methods based on radio value
+function queryChange(radio) {
+    if (radio.value === "regex") {
+        Array.from(document.getElementsByClassName("regex"))
+            .map(e => e.style.display = "block");
+        Array.from(document.getElementsByClassName("partition"))
+            .map(e => e.style.display = "none");
+    }
+    if (radio.value === "partition") {
+        Array.from(document.getElementsByClassName("regex"))
+            .map(e => e.style.display = "none");
+        Array.from(document.getElementsByClassName("partition"))
+            .map(e => e.style.display = "block");
+    }
+}
+
 function render(result) {
     let data = processAndSortResources(result);
     let dataByKind, kinds, filteredData;

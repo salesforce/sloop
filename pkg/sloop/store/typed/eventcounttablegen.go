@@ -13,7 +13,9 @@ package typed
 
 import (
 	"fmt"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
@@ -330,4 +332,34 @@ func ResourceEventCounts_KeyPredicateFns(keyFn ...func(string) bool) func(string
 		}
 		return true
 	}
+}
+
+// Return all keys in all partitions in the given a lookback period
+func (t *ResourceEventCountsTable) GetAllKeysForGivenPartitions(db badgerwrap.DB, key *EventCountKey, maxNumberOfKeys int, lookBack int, keyPrefix string) []string {
+	var keys []string
+	var partitionList []string
+	_ = db.View(func(txn badgerwrap.Txn) error {
+		partitionList, _ = t.GetUniquePartitionList(txn)
+		return nil
+	})
+
+	count := 0
+	lookBackVal := lookBack
+
+	if len(partitionList) < lookBack{
+		lookBackVal = len(partitionList)
+	}
+
+	for i := len(partitionList) - 1; i >= len(partitionList) - lookBackVal; i-- {
+		prePart := partitionList[i]
+		key.SetPartitionId(prePart)
+		keyValue:= strings.TrimRight(key.String(), "/") + keyPrefix
+		keys = append(keys, common.GetKeysForPrefix(db, keyValue)...)
+		count += len(keys)
+		if count >= maxNumberOfKeys {
+			return keys
+		}
+	}
+
+	return keys
 }
