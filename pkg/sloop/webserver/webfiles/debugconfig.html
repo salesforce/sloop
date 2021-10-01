@@ -9,11 +9,12 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
     <script type="text/javascript">
         document.write("<base href='/" + window.location.pathname.split('/')[1] + "/' />");
     </script>
+    <script src="webfiles/debug.js"></script>
     <title>Sloop Debug Config</title>
     <link rel='shortcut icon' type='image/x-icon' href='webfiles/favicon.ico' />
 </head>
-<body>
-[ <a href="/">Home</a> ][ <a href="debug/">Debug Menu</a> ]<br/>
+<body onload="loadHomeRef();"> 
+[ <a id="homeLink">Home</a> ][ <a href="debug/">Debug Menu</a> ]<br/>
 
 <h2>Current Config</h2>
 
