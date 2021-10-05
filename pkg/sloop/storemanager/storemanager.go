@@ -28,6 +28,7 @@ var (
 	metricGcLatency                    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_latency_sec"})
 	metricDropPrefixLatency            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_drop_prefix_sec"})
 	metricGcRunning                    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_running"})
+	metricReachedSizedLimit            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_size_limit_has_hit"})
 	metricGcCleanUpPerformed           = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_cleanup_performed"})
 	metricGcDeletedNumberOfKeys        = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_deleted_num_of_keys"})
 	metricGcNumberOfKeysToDelete       = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_gc_num_of_keys_to_delete"})
@@ -374,9 +375,11 @@ func hasFilesOnDiskExceededThreshold(diskSizeBytes int64, sizeLimitBytes int, gc
 	currentDiskSize := float64(diskSizeBytes)
 	if currentDiskSize > sizeThreshold {
 		glog.Infof("Start cleaning up because current file size: %v exceeds file size threshold: %v", diskSizeBytes, sizeThreshold)
+		metricReachedSizedLimit.Set(1)
 		return true
 	}
 	glog.V(2).Infof("Can not clean up, disk size: %v is not exceeding size limit: %v yet", diskSizeBytes, uint64(sizeLimitBytes))
+	metricReachedSizedLimit.Set(0)
 	return false
 }
 
