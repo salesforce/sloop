@@ -346,14 +346,14 @@ func (t *WatchActivityTable) GetAllKeysForGivenPartitions(db badgerwrap.DB, key 
 	count := 0
 	lookBackVal := lookBack
 
-	if len(partitionList) < lookBack{
+	if len(partitionList) < lookBack {
 		lookBackVal = len(partitionList)
 	}
 
-	for i := len(partitionList) - 1; i >= len(partitionList) - lookBackVal; i-- {
+	for i := len(partitionList) - 1; i >= len(partitionList)-lookBackVal; i-- {
 		prePart := partitionList[i]
 		key.SetPartitionId(prePart)
-		keyValue:= strings.TrimRight(key.String(), "/") + keyPrefix
+		keyValue := strings.TrimRight(key.String(), "/") + keyPrefix
 		keys = append(keys, common.GetKeysForPrefix(db, keyValue)...)
 		count += len(keys)
 		if count >= maxNumberOfKeys {
