@@ -10,6 +10,7 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
         document.write("<base href='/" + window.location.pathname.split('/')[1] + "/' />");
     </script>
     <script src="webfiles/debug.js"></script>
+    <script src="webfiles/sloop_ui.js"></script>
     <title>Sloop Debug Query Badger</title>
     <link rel='shortcut icon' type='image/x-icon' href='webfiles/favicon.ico' />
 </head>
@@ -30,8 +31,31 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
         <option value="all">all</option>
     </select><br><br>
 
-    <label for="keymatch">Key RegEx Filter:</label><br>
-    <input type="text" name="keymatch" id="keymatch"><br><br>
+    <input type="radio" id="regex" name="searchOption" value="regex" onchange="queryChange(this)" checked>
+    <label for="regex">Query by Regex</label>
+    <input type="radio" id="partition" name="searchOption" value="partition" onchange="queryChange(this)">
+    <label for="partition">Query by Time</label><br><br>
+
+    <div class="regex">
+        <label for="keymatch">Key RegEx Filter:</label><br>
+        <input type="text" name="keymatch" id="keymatch"><br><br>
+    </div>
+
+    <div class="partition" style="display:none">
+        <label for="lookback">Look Back Range:</label><br/>
+        <select name="lookback" id="lookback">
+            <option value="1">1 Hour</option>
+            <option value="3">3 Hours</option>
+            <option value="6">6 Hours</option>
+            <option value="12">12 Hours</option>
+            <option value="24">1 Day</option>
+            <option value="168">1 Week</option>
+            <option value="336">2 Weeks</option>
+        </select><br><br>
+
+        <label for="urlmatch">Key Search:{Kind/Namespace/Name} </label><br/>
+        <input type="text" name="urlmatch" id="urlmatch"><br><br>
+    </div>
 
     <label for="maxrows">Max Rows:</label><br>
     <input type="text" name="maxrows" id="maxrows"><br><br>
@@ -57,8 +81,11 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 
 <script src="webfiles/filter.js"></script>
 <script>
-    setText("keymatch", "keymatch", ".*")
     setText("maxrows", "maxrows", "1000")
     setDropdown("table", "table", "watch")
+    setText("keymatch", "keymatch", ".*")
+    setDropdown("lookback", "lookback", "1")
+    setText("urlmatch", "urlmatch", "/")
+    setRadio("searchOption", "searchOption", "regex")
 </script>
 </html>

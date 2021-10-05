@@ -15,7 +15,7 @@ function getUrlVars() {
 
 function getUrlParam(parameter, defaultvalue){
     var urlparameter = defaultvalue;
-    if(window.location.href.indexOf(parameter) > -1){
+    if(window.location.href.indexOf(parameter) > -1 && decodeURIComponent(getUrlVars()[parameter]) != "" ){
         urlparameter = decodeURIComponent(getUrlVars()[parameter]);
     }
     return urlparameter;
@@ -45,6 +45,15 @@ function setText(param, elementId, defaultValue) {
     var value = getUrlParam(param, defaultValue);
     var inpt = document.getElementById(elementId);
     inpt.value = value
+    return value
+}
+
+// Look up the url parameter "param" using "defaultValue" if not found
+// then set the radio checked value to true and call the function when checked
+function setRadio(param, elementId, defaultValue) {
+    let value = getUrlParam(param, defaultValue);
+    document.getElementById(value).checked = true;
+    queryChange(document.getElementById(value));
     return value
 }
 

@@ -111,14 +111,24 @@ func viewKeyHandler(tables typed.Tables) http.HandlerFunc {
 
 func listKeysHandler(tables typed.Tables) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
-
 		table := cleanStringFromParam(request, "table", "")
-		keyMatchRegExStr := request.URL.Query().Get("keymatch")
-		keyRegEx, err := regexp.Compile(keyMatchRegExStr)
-		if err != nil {
-			logWebError(err, "Invalid regex", request, writer)
+		maxRows := numberFromParam(request, "maxrows", 1000)
+		searchOption := cleanStringFromParam(request, "searchOption", "")
+		regexSearch :=  searchOption == "regex"
+		var lookBack int
+		var keySearch string
+		var keyRegEx *regexp.Regexp
+		var err error
+		if (regexSearch) {
+			keyMatchRegExStr := request.URL.Query().Get("keymatch")
+			keyRegEx, err = regexp.Compile(keyMatchRegExStr)
+			if err != nil {
+				logWebError(err, "Invalid regex", request, writer)
+			}
+		} else {
+			lookBack = numberFromParam(request, "lookback", 336)
+			keySearch = request.URL.Query().Get("urlmatch")
 		}
-		maxRows := numberFromParam(request, "maxrows", 500)
 		var keys []string
 
 		count := 0
@@ -133,37 +143,56 @@ func listKeysHandler(tables typed.Tables) http.HandlerFunc {
 		}
 
 		err = tables.Db().View(func(txn badgerwrap.Txn) error {
+			if (regexSearch) {
+				for _, tablename := range tablesToSearch {
+					keyPrefix := ""
+					if tablename != "internal" {
+						keyPrefix = "/" + tablename + "/"
+					}
 
-			for _, tablename := range tablesToSearch {
-				keyPrefix := ""
-				if tablename != "internal" {
-					keyPrefix = "/" + tablename + "/"
-				}
+					iterOpt := badger.DefaultIteratorOptions
+					iterOpt.Prefix = []byte(keyPrefix)
+					iterOpt.AllVersions = true
+					iterOpt.InternalAccess = true
+					itr := txn.NewIterator(iterOpt)
+					defer itr.Close()
 
-				iterOpt := badger.DefaultIteratorOptions
-				iterOpt.Prefix = []byte(keyPrefix)
-				iterOpt.AllVersions = true
-				iterOpt.InternalAccess = true
-				itr := txn.NewIterator(iterOpt)
-				defer itr.Close()
-
-				// TODO: Investigate if Seek() can be used instead of rewind
-				for itr.Rewind(); itr.ValidForPrefix([]byte(keyPrefix)); itr.Next() {
-					totalCount++
-					thisKey := string(itr.Item().Key())
-					if keyRegEx.MatchString(thisKey) {
-						keys = append(keys, thisKey)
-						count += 1
-						totalSize += itr.Item().EstimatedSize()
-						if count >= maxRows {
-							glog.Infof("Number of rows : %v has reached max rows: %v", count, maxRows)
-							break
+					// TODO: Investigate if Seek() can be used instead of rewind
+					for itr.Rewind(); itr.ValidForPrefix([]byte(keyPrefix)); itr.Next() {
+						totalCount++
+						thisKey := string(itr.Item().Key())
+						if keyRegEx.MatchString(thisKey) {
+							keys = append(keys, thisKey)
+							count += 1
+							totalSize += itr.Item().EstimatedSize()
+							if count >= maxRows {
+								glog.Infof("Number of rows : %v has reached max rows: %v", count, maxRows)
+								break
+							}
 						}
 					}
 				}
-
+			} else {
+				for _, tablename := range tablesToSearch {
+					switch tablename {
+					case "watch":
+						key := &typed.WatchTableKey{}
+						keys = append(keys, tables.WatchTable().GetAllKeysForGivenPartitions(tables.Db(), key, maxRows, lookBack, keySearch)...)
+					case "eventcount":
+						key := &typed.EventCountKey{}
+						keys = append(keys, tables.EventCountTable().GetAllKeysForGivenPartitions(tables.Db(), key, maxRows, lookBack, keySearch)...)
+					case "ressum":
+						key := &typed.ResourceSummaryKey{}
+						keys = append(keys, tables.ResourceSummaryTable().GetAllKeysForGivenPartitions(tables.Db(), key, maxRows, lookBack, keySearch)...)
+					case "watchactivity":
+						key := &typed.WatchActivityKey{}
+						keys = append(keys, tables.WatchActivityTable().GetAllKeysForGivenPartitions(tables.Db(), key, maxRows, lookBack, keySearch)...)
+					}
+				}
+				count = len(keys)
+				totalSize = int64(len(keys))
+				totalCount = len(keys)
 			}
-
 			return nil
 		})
 		if err != nil {
@@ -178,6 +207,8 @@ func listKeysHandler(tables typed.Tables) http.HandlerFunc {
 			logWebError(err, "failed to parse template", request, writer)
 			return
 		}
+
+		//To-do: Fix the Total Size of Matched Keys and Keys Searched for Partition search
 		var result keysData
 		result.Keys = keys
 		result.TotalKeys = totalCount
