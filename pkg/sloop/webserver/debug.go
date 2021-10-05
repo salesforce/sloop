@@ -114,12 +114,12 @@ func listKeysHandler(tables typed.Tables) http.HandlerFunc {
 		table := cleanStringFromParam(request, "table", "")
 		maxRows := numberFromParam(request, "maxrows", 1000)
 		searchOption := cleanStringFromParam(request, "searchOption", "")
-		regexSearch :=  searchOption == "regex"
+		regexSearch := searchOption == "regex"
 		var lookBack int
 		var keySearch string
 		var keyRegEx *regexp.Regexp
 		var err error
-		if (regexSearch) {
+		if regexSearch {
 			keyMatchRegExStr := request.URL.Query().Get("keymatch")
 			keyRegEx, err = regexp.Compile(keyMatchRegExStr)
 			if err != nil {
@@ -143,7 +143,7 @@ func listKeysHandler(tables typed.Tables) http.HandlerFunc {
 		}
 
 		err = tables.Db().View(func(txn badgerwrap.Txn) error {
-			if (regexSearch) {
+			if regexSearch {
 				for _, tablename := range tablesToSearch {
 					keyPrefix := ""
 					if tablename != "internal" {
