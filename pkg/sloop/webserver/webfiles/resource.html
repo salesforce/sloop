@@ -43,12 +43,13 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
     <div id="resource_payload">
         <h2>Viewing range {{.ClickTime}} +/- {{.PlusMinusTime}}</h2>
         <table id="resource_event_table">
-            <tr>
+            <tr v-if="sortedResPayloads.length">
                 <th @click="sort('leftPayload')">Left Payload</th>
                 <th @click="sort('rightPayload')">Right Payload</th>
                 <th>Payload Link</th>
                 <th @click="sort('payloadTime')">PayloadTime &#x21C5</th>
             </tr>
+            <p v-if="!sortedResPayloads.length"><i>No payloads found for this period</i></p>
             <tr v-for="res in sortedResPayloads">
                 <td>${res.leftPayload}<input type="radio" :value="res.payload" :id="res.payloadKey" v-model="leftPayload" v-on:change="doDiff();"/></td>
                 <td>${res.rightPayload}<input type="radio" :value="res.payload" :id="res.payloadKey" v-model="rightPayload" v-on:change="doDiff();"/></td>
@@ -172,7 +173,7 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
 <div id="resource_events">
     <h2>Events</h2>
     <table id="resource_event_table">
-        <tr>
+        <tr v-if="sortedResEvents.length">
             <th>Payload Link</th>
             <th @click="sort('message')">Message &#x21C5</th>
             <th @click="sort('reason')">Reason &#x21C5</th>
@@ -181,6 +182,7 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
             <th @click="sort('firstSeen')">First seen &#x21C5</th>
             <th @click="sort('lastSeen')">Last seen &#x21C5</th>
         </tr>
+        <p v-if="!sortedResEvents.length"><i>No events found for this period</i></p>
         <tr v-for="resEvent in sortedResEvents">
             <td><a :href="resEvent.origValue | get_payload_url" target="_blank">Details</a></td>
             <td>${ resEvent.message }</td>
