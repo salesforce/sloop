@@ -378,7 +378,7 @@ func hasFilesOnDiskExceededThreshold(diskSizeBytes int64, sizeLimitBytes int, gc
 		metricReachedSizedLimit.Set(1)
 		return true
 	}
-	glog.V(2).Infof("Can not clean up, disk size: %v is not exceeding size limit: %v yet", diskSizeBytes, uint64(sizeLimitBytes))
+	glog.V(2).Infof("Can not clean up, disk size: %v is not exceeding size limit: %v yet", diskSizeBytes, uint64(sizeThreshold))
 	metricReachedSizedLimit.Set(0)
 	return false
 }
