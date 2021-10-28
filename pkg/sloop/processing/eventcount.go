@@ -84,6 +84,7 @@ func updateEventCountTable(
 		return err
 	}
 
+	metricIngestionSuccessCount.Inc()
 	return nil
 }
 
