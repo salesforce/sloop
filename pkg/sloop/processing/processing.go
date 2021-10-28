@@ -29,7 +29,7 @@ type Runner struct {
 var (
 	metricProcessingWatchtableUpdatecount = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_processing_watchtable_updatecount"})
 	metricIngestionFailureCount           = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_ingestion_failure_count"})
-	metricIngestionSuccessCount           = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_ingestion_total_count"})
+	metricIngestionSuccessCount           = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_ingestion_success_count"})
 )
 
 func NewProcessing(kubeWatchChan chan typed.KubeWatchResult, tables typed.Tables, keepMinorNodeUpdates bool, maxLookback time.Duration) *Runner {
