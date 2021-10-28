@@ -106,6 +106,7 @@ func updateKubeWatchTable(tables typed.Tables, txn badgerwrap.Txn, watchRec *typ
 		return errors.Wrap(err, "Put failed")
 	}
 
+	metricIngestionSuccessCount.Inc()
 	return nil
 }
 

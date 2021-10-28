@@ -44,6 +44,7 @@ func updateResourceSummaryTable(tables typed.Tables, txn badgerwrap.Txn, watchRe
 		return errors.Wrapf(err, "put for the key %v failed", key)
 	}
 
+	metricIngestionSuccessCount.Inc()
 	return nil
 }
 

@@ -44,6 +44,7 @@ func updateWatchActivityTable(tables typed.Tables, txn badgerwrap.Txn, watchRec 
 		activityRecord.NoChangeAt = append(activityRecord.NoChangeAt, timestamp.Unix())
 	}
 
+	metricIngestionSuccessCount.Inc()
 	return putWatchActivity(tables, txn, activityRecord, key)
 }
 

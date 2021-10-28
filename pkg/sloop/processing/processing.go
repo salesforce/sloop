@@ -28,6 +28,8 @@ type Runner struct {
 
 var (
 	metricProcessingWatchtableUpdatecount = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_processing_watchtable_updatecount"})
+	metricIngestionFailureCount           = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_ingestion_failure_count"})
+	metricIngestionSuccessCount           = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_ingestion_total_count"})
 )
 
 func NewProcessing(kubeWatchChan chan typed.KubeWatchResult, tables typed.Tables, keepMinorNodeUpdates bool, maxLookback time.Duration) *Runner {
@@ -36,6 +38,7 @@ func NewProcessing(kubeWatchChan chan typed.KubeWatchResult, tables typed.Tables
 
 func (r *Runner) processingFailed(name string, err error) {
 	glog.Errorf("Processing for %v failed with error %v", name, err)
+	metricIngestionFailureCount.Inc()
 }
 
 func (r *Runner) Start() {
