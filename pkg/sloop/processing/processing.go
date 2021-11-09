@@ -55,6 +55,7 @@ func (r *Runner) Start() {
 			if err != nil {
 				r.processingFailed("cannot extract resource metadata", err)
 			}
+			glog.V(99).Infof("watchRec metadata: %v", resourceMetadata)
 			involvedObject, err := kubeextractor.ExtractInvolvedObject(watchRec.Payload)
 			if err != nil {
 				r.processingFailed("cannot extract involved object", err)
