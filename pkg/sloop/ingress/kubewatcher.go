@@ -270,6 +270,11 @@ func (i *kubeWatcherImpl) reportAdd(kind string) func(interface{}) {
 
 func (i *kubeWatcherImpl) reportDelete(kind string) func(interface{}) {
 	return func(obj interface{}) {
+		delObj, ok := obj.(cache.DeletedFinalStateUnknown)
+		if ok {
+			obj = delObj.Obj
+		}
+
 		watchResultShell := &typed.KubeWatchResult{
 			Timestamp: ptypes.TimestampNow(),
 			Kind:      kind,
@@ -298,6 +303,7 @@ func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResul
 		glog.Error(err)
 		return
 	}
+	glog.V(99).Infof("processUpdate: obj json: %v", resourceJson)
 
 	kubeMetadata, err := kubeextractor.ExtractMetadata(resourceJson)
 	if err != nil || kubeMetadata.Namespace == "" {

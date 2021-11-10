@@ -157,6 +157,14 @@ func Test_reportDelete(t *testing.T) {
 	assert.Equal(t, typed.KubeWatchResult_DELETE, result.WatchType)
 	assert.Equal(t, string(bytes), result.Payload)
 
+	deleteObj := cache.DeletedFinalStateUnknown{
+		Key: "object-key",
+		Obj: obj,
+	}
+	report(deleteObj)
+	result = <-outChan
+	assert.Equal(t, string(bytes), result.Payload)
+
 	verifyChannelEmpty(t, outChan)
 }
 
