@@ -13,6 +13,9 @@ metadata:
     app.kubernetes.io/managed-by: "{{ .Release.Service }}"
   name: {{ .Values.name }}
 spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
   rules:
   - host: {{ .Values.ingress.host }}
     http:

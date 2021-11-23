@@ -37,7 +37,7 @@ ingress:
   host: sloop.example.com
   annotations: {}
   tls: {}
-
+  # className: nginx
 config: |-
   {
     "displayContext": "cluster",
