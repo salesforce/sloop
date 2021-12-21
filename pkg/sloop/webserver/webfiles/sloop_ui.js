@@ -39,6 +39,9 @@ let displayMaxX, displayMaxY;
 // Vertical spacing between bars
 const resourceBarVerticalSpacing = 0.2;
 
+// svg reference for rendering svg using d3
+let svg;
+
 // Since we're drawing bars on bars within the same yAxisBandwidth -
 // This margin defines the space between the resource bar - and it's containing
 // band within in the yAxisBand
@@ -49,7 +52,7 @@ let margin = {
     left: 100
 };
 
-window.onresize = initializeDimensions;
+window.onresize = loadSVG;
 
 function initializeDimensions() {
     displayMaxX = document.documentElement.clientWidth;
@@ -82,14 +85,17 @@ const compareNameFn = function (a, b) {
 };
 let cmpFn = noSortFn;
 
-payload = d3.json(dataQueryUrl);
-payload.then(function (result) {
-    initializeDimensions();
-    let svg = render(result);
-    bindMouseEvents(svg);
-    appendAxes(svg);
-    renderTooltip();
-});
+function loadSVG() {
+    payload = d3.json(dataQueryUrl);
+    payload.then(function (result) {
+        initializeDimensions();
+        svg = render(result);
+        bindMouseEvents(svg);
+        appendAxes(svg);
+        renderTooltip();
+    });
+}
+loadSVG();
 
 // Payload toggle switch on change to display payload change ticks
 function payloadChecker() {
@@ -159,7 +165,12 @@ function render(result) {
     let svgWidth = xAxisScale.range()[1] + (2 * margin.left);
     let svgHeight = yAxisBand.range()[1] + (2 * margin.top);
 
-    let svg = d3.select("#d3_here")
+    // remove existing svg references and recreate it. 
+    if(svg) {
+        svg = d3.select("#d3_here");
+        svg.selectAll('*').remove();
+    }
+    svg = d3.select("#d3_here")
         .append("svg")
         .attr("viewBox", `0 0 ${svgWidth} ${svgHeight}`)
         .classed("svg-content", true);
