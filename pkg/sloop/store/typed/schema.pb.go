@@ -319,11 +319,38 @@ func (m *WatchActivity) GetChangedAt() []int64 {
 	return nil
 }
 
+type Relationship struct {
+	FirstSeen    *timestamp.Timestamp `protobuf:"bytes,1,opt,name=firstSeen,proto3" json:"firstSeen,omitempty"`
+	LastSeen     *timestamp.Timestamp `protobuf:"bytes,2,opt,name=lastSeen,proto3" json:"lastSeen,omitempty"`
+	CreateTime   *timestamp.Timestamp `protobuf:"bytes,3,opt,name=createTime,proto3" json:"createTime,omitempty"`
+	DeletedAtEnd bool                 `protobuf:"varint,4,opt,name=deletedAtEnd,proto3" json:"deletedAtEnd,omitempty"`
+	// List of relationships.  Direction does not matter.  Examples:
+	// A Pod has a relationship to its ReplicaSet and node
+	// A ReplicaSet has a relationship to deployment
+	Relationships        []string `protobuf:"bytes,5,rep,name=relationships,proto3" json:"relationships,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (r Relationship) Reset() {
+	panic("implement me")
+}
+
+func (r Relationship) String() string {
+	panic("implement me")
+}
+
+func (r Relationship) ProtoMessage() {
+	panic("implement me")
+}
+
 func init() {
 	proto.RegisterEnum("typed.KubeWatchResult_WatchType", KubeWatchResult_WatchType_name, KubeWatchResult_WatchType_value)
 	proto.RegisterType((*KubeWatchResult)(nil), "typed.KubeWatchResult")
 	proto.RegisterType((*ResourceSummary)(nil), "typed.ResourceSummary")
 	proto.RegisterType((*EventCounts)(nil), "typed.EventCounts")
+	proto.RegisterType((*Relationship)(nil), "typed.Relationship")
 	proto.RegisterMapType((map[string]int32)(nil), "typed.EventCounts.MapReasonToCountEntry")
 	proto.RegisterType((*ResourceEventCounts)(nil), "typed.ResourceEventCounts")
 	proto.RegisterMapType((map[int64]*EventCounts)(nil), "typed.ResourceEventCounts.MapMinToEventsEntry")

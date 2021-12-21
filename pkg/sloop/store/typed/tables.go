@@ -18,6 +18,7 @@ type Tables interface {
 	EventCountTable() *ResourceEventCountsTable
 	WatchTable() *KubeWatchResultTable
 	WatchActivityTable() *WatchActivityTable
+	RelationshipTable() *RelationshipTable
 	Db() badgerwrap.DB
 	GetMinAndMaxPartition() (bool, string, string, error)
 	GetTableNames() []string
@@ -30,6 +31,7 @@ type MinMaxPartitionsGetter interface {
 }
 
 type tablesImpl struct {
+	relationshipTable 	 *RelationshipTable
 	resourceSummaryTable *ResourceSummaryTable
 	eventCountTable      *ResourceEventCountsTable
 	watchTable           *KubeWatchResultTable
@@ -39,12 +41,17 @@ type tablesImpl struct {
 
 func NewTableList(db badgerwrap.DB) Tables {
 	t := &tablesImpl{}
+	t.relationshipTable = OpenRelationshipTable()
 	t.resourceSummaryTable = OpenResourceSummaryTable()
 	t.eventCountTable = OpenResourceEventCountsTable()
 	t.watchTable = OpenKubeWatchResultTable()
 	t.watchActivityTable = OpenWatchActivityTable()
 	t.db = db
 	return t
+}
+
+func (t *tablesImpl) RelationshipTable() *RelationshipTable {
+	return t.relationshipTable
 }
 
 func (t *tablesImpl) ResourceSummaryTable() *ResourceSummaryTable {
@@ -105,11 +112,11 @@ func (t *tablesImpl) GetMinAndMaxPartitionWithTxn(txn badgerwrap.Txn) (bool, str
 }
 
 func (t *tablesImpl) GetTableNames() []string {
-	return []string{t.watchTable.tableName, t.resourceSummaryTable.tableName, t.eventCountTable.tableName, t.watchActivityTable.tableName}
+	return []string{t.watchTable.tableName, t.resourceSummaryTable.tableName, t.eventCountTable.tableName, t.watchActivityTable.tableName, t.relationshipTable.tableName}
 }
 
 func (t *tablesImpl) GetTables() []interface{} {
 	intfs := new([]interface{})
-	*intfs = append(*intfs, t.eventCountTable, t.resourceSummaryTable, t.watchTable, t.watchActivityTable)
+	*intfs = append(*intfs, t.eventCountTable, t.resourceSummaryTable, t.watchTable, t.watchActivityTable, t.relationshipTable)
 	return *intfs
 }
