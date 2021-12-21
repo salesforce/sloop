@@ -112,22 +112,22 @@ type InternalResource struct {
 }
 
 type InternalMeta struct {
-	PodName 		string `json:"name"`
+	PodName 		    string `json:"name"`
 	CreationTimestamp   string `json:"creationTimestamp"`
-	Spec 			 InternalSpec `json:"spec"`
-	namespace string `json:"namespace"`
-	uid string `json:"uid"`
+	Spec 			    InternalSpec `json:"spec"`
+	namespace           string `json:"namespace"`
+	uid string          `json:"uid"`
 }
 
 type InternalSpec struct {
-	Nodename   string `json:"nodeName"`
+	Nodename	string `json:"nodeName"`
 }
 
 type RelationShipPayload struct {
-	Kind string `json:"kind"`
-	Name string `json:"name"` // pod name
-	NameSpace string `json:"namespace"`
-	uid string `json:"uid"`
+	Kind 		string `json:"kind"`
+	Name 		string `json:"name"` // pod name
+	NameSpace 	string `json:"namespace"`
+	uid 		string `json:"uid"`
 	partitionId string `json:"partitionId"`
 }
 
