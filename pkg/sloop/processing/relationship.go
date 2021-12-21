@@ -1,10 +1,3 @@
-/*
- * Copyright (c) 2019, salesforce.com, inc.
- * All rights reserved.
- * SPDX-License-Identifier: BSD-3-Clause
- * For full license text, see LICENSE.txt file in the repo root or https://opensource.org/licenses/BSD-3-Clause
- */
-
 package processing
 
 import (
@@ -116,7 +109,7 @@ type InternalMeta struct {
 	CreationTimestamp   string `json:"creationTimestamp"`
 	Spec 			    InternalSpec `json:"spec"`
 	namespace           string `json:"namespace"`
-	uid string          `json:"uid"`
+	uid 				string `json:"uid"`
 }
 
 type InternalSpec struct {
