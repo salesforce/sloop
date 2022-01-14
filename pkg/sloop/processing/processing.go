@@ -90,6 +90,14 @@ func (r *Runner) Start() {
 			if err != nil {
 				r.processingFailed("updateResourceSummaryTable", err)
 			}
+
+			//To-Do: update relationshipTable after verifying table update logic
+			err = r.tables.Db().Update(func(txn badgerwrap.Txn) error {
+				return updateRelationshipTable(r.tables, txn, &watchRec, &resourceMetadata)
+			})
+			if err != nil {
+				r.processingFailed("updateRelationshipTable", err)
+			}
 		}
 	}()
 }

@@ -24,8 +24,12 @@ type RelationshipKey struct {
 	Uid         string
 }
 
+const (
+	relationshipTableName = "relation"
+)
+
 func (*RelationshipKey) TableName() string {
-	return "relation"
+	return relationshipTableName
 }
 
 func NewRelationshipKey(timestamp time.Time, kind string, namespace string, name string, uid string) *RelationshipKey {

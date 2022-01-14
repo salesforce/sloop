@@ -333,9 +333,10 @@ type Relationship struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (r Relationship) Reset() {
-	panic("implement me")
-}
+//func (r Relationship) Reset() {
+//	panic("implement me")
+//}
+func (m *Relationship) Reset()         { *m = Relationship{} }
 
 func (r Relationship) String() string {
 	panic("implement me")
