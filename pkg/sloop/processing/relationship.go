@@ -21,7 +21,7 @@ func updateRelationshipTable(tables typed.Tables, txn badgerwrap.Txn, watchRec *
 	}
 	// convert node -> pod relationship from watchRec
 	// get new relationship record from watch record
-	record, err := getRelationshipRec(watchRec)
+	record, err := buildRelationshipRec(watchRec)
 
 	//convert timestamp
 	ts, err := ptypes.Timestamp(watchRec.Timestamp)
@@ -47,7 +47,7 @@ func updateRelationshipTable(tables typed.Tables, txn badgerwrap.Txn, watchRec *
 }
 
 // return relationship payload entry, error if any
-func getRelationshipRec(watchRec *typed.KubeWatchResult) (string, error) {
+func buildRelationshipRec(watchRec *typed.KubeWatchResult) (string, error) {
 	var internalResource InternalResource
 	err := json.Unmarshal([]byte(watchRec.Payload), &internalResource)
 	if err != nil {
