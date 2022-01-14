@@ -40,7 +40,7 @@ func updateRelationshipTable(tables typed.Tables, txn badgerwrap.Txn, watchRec *
 	// save back to DB
 	err = tables.RelationshipTable().Set(txn, key, value)
 	if err != nil {
-		return errors.Wrapf(err, "put for the key %v failed", key)
+		return errors.Wrapf(err, "set for the key %v failed", key)
 	}
 
 	return nil
