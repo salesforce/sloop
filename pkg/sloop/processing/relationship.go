@@ -55,6 +55,9 @@ func buildRelationshipRec(watchRec *typed.KubeWatchResult) (string, error) {
 		return "", err
 	}
 	ts, err := ptypes.Timestamp(watchRec.Timestamp)
+	if err != nil {
+		return "",errors.Wrap(err, "could not convert timestamp")
+	}
 	partitionId := untyped.GetPartitionId(ts)
 	// build record value from watch record
 	var relationship RelationShipPayload
