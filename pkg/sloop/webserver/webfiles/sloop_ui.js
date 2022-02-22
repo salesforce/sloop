@@ -610,16 +610,11 @@ function showDetailedTooltip(d, event, parent) {
 $(document).ready(function() {
     //Set max allowed selected date/time to now
     const now = new Date();
-    var utcNow = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
-    var iso = utcNow.toISOString();
-    var maxDate = iso.substring(0,iso.length-5);
-    elem = document.getElementById("selectedEndTime");
-    elem.value = maxDate;
-    elem.max = maxDate;
+    const utcNow = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
 
     //Display user selected end time on ui after click submit button or refresh the page
     //Set page default to UTC time on first loading
-    var userDate = utcNow;
+    let userDate = utcNow;
     // check if selected end time happened within 3 seconds
     if (sessionStorage.getItem('setSelectedEndTime') !== null
         && ! Date.parse(sessionStorage.getItem('setSelectedEndTime')) < new Date(userDate.getTime() - 3000)){
