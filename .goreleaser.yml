@@ -20,9 +20,7 @@ archives:
 dockers:
   - goos: linux
     goarch: amd64
-    builds:
-      - sloop
-    binaries:
+    ids:
       - sloop
     extra_files:
       - pkg/sloop/webserver/webfiles
