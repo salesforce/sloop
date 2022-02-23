@@ -232,7 +232,12 @@ func Run(config WebConfig, tables typed.Tables) error {
 
 	stop := make(chan os.Signal, 1)
 
-	go func() { _ = h.ListenAndServe() }()
+	go func() {
+		err := h.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			glog.Fatal(err)
+		}
+	}()
 
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	<-stop
