@@ -10,9 +10,6 @@ WORKDIR /build
 RUN go env -w GO111MODULE=auto \
    && make
 
-
-
-
 FROM gcr.io/distroless/base
 COPY --from=build /go/bin/sloop /sloop
 # The copy statement below can be uncommented to reflect changes to any webfiles as compared
