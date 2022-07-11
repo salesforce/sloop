@@ -307,7 +307,7 @@ func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResul
 	glog.V(99).Infof("processUpdate: obj json: %v", resourceJson)
 
 	kubeMetadata, err := kubeextractor.ExtractMetadata(resourceJson)
-	result, err1 := kubeextractor.ExtractEventInfo(resourceJson)
+	EventInfo, err1 := kubeextractor.ExtractEventInfo(resourceJson)
 	if err != nil || kubeMetadata.Namespace == "" {
 		// We are only grabbing namespace here for a prometheus metric, so if metadata extract fails we just log and continue
 		glog.V(2).Infof("No namespace for resource: %v", err)
@@ -315,10 +315,10 @@ func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResul
 	if err1 != nil {
 		glog.V(2).Infof("Extract event info: %v", err1)
 	}
-	metricIngressKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, result.Reason, result.Type).Inc()
-	metricIngressKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, result.Reason, result.Type).Add(float64(len(resourceJson)))
+	metricIngressKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, EventInfo.Reason, EventInfo.Type).Inc()
+	metricIngressKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, EventInfo.Reason, EventInfo.Type).Add(float64(len(resourceJson)))
 
-	glog.V(common.GlogVerbose).Infof("Informer update (%s) - Name: %s, Namespace: %s, ResourceVersion: %s, Reason: %s, Type: %s", watchResult.WatchType, kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion, result.Reason, result.Type)
+	glog.V(common.GlogVerbose).Infof("Informer update (%s) - Name: %s, Namespace: %s, ResourceVersion: %s, Reason: %s, Type: %s", watchResult.WatchType, kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion, EventInfo.Reason, EventInfo.Type)
 	watchResult.Payload = resourceJson
 	i.writeToOutChan(watchResult)
 }
