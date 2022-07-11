@@ -214,7 +214,7 @@ func Run(config WebConfig, tables typed.Tables) error {
 	webFilesPath = config.WebFilesPath
 	server := &Server{}
 	server.mux = mux.NewRouter()
-	server.mux.HandleFunc("/metrics", redirectHandler(config.CurrentContext))
+	server.mux.HandleFunc("/", redirectHandler(config.CurrentContext))
 	subMux := server.mux.PathPrefix("/{clusterContext}/metrics").Subrouter()
 	registerPaths(subMux, config, tables)
 
