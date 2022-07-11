@@ -10,10 +10,11 @@ package ingress
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/salesforce/sloop/pkg/sloop/common"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/salesforce/sloop/pkg/sloop/common"
 
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/ptypes"
@@ -71,8 +72,8 @@ type kubeWatcherImpl struct {
 var (
 	newCrdClient = func(kubeCfg *rest.Config) (clientset.Interface, error) { return clientset.NewForConfig(kubeCfg) }
 
-	metricIngressKubewatchcount = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchcount"}, []string{"kind", "watchtype", "namespace"})
-	metricIngressKubewatchbytes = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchbytes"}, []string{"kind", "watchtype", "namespace"})
+	metricIngressKubewatchcount = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchcount"}, []string{"kind", "watchtype", "namespace", "name", "reason", "type"})
+	metricIngressKubewatchbytes = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchbytes"}, []string{"kind", "watchtype", "namespace", "name", "reason", "type"})
 	metricCrdInformerStarted    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_started"})
 	metricCrdInformerRunning    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_running"})
 )
@@ -306,14 +307,18 @@ func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResul
 	glog.V(99).Infof("processUpdate: obj json: %v", resourceJson)
 
 	kubeMetadata, err := kubeextractor.ExtractMetadata(resourceJson)
+	result, err1 := kubeextractor.ExtractEventInfo(resourceJson)
 	if err != nil || kubeMetadata.Namespace == "" {
 		// We are only grabbing namespace here for a prometheus metric, so if metadata extract fails we just log and continue
 		glog.V(2).Infof("No namespace for resource: %v", err)
 	}
-	metricIngressKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Inc()
-	metricIngressKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Add(float64(len(resourceJson)))
+	if err1 != nil {
+		glog.V(2).Infof("Extract event info: %v", err1)
+	}
+	metricIngressKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, result.Reason, result.Type).Inc()
+	metricIngressKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, result.Reason, result.Type).Add(float64(len(resourceJson)))
 
-	glog.V(common.GlogVerbose).Infof("Informer update (%s) - Name: %s, Namespace: %s, ResourceVersion: %s", watchResult.WatchType, kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion)
+	glog.V(common.GlogVerbose).Infof("Informer update (%s) - Name: %s, Namespace: %s, ResourceVersion: %s, Reason: %s, Type: %s", watchResult.WatchType, kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion, result.Reason, result.Type)
 	watchResult.Payload = resourceJson
 	i.writeToOutChan(watchResult)
 }
