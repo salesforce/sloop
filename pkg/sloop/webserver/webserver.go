@@ -222,10 +222,16 @@ func Run(config WebConfig, tables typed.Tables) error {
 	webFilesPath = config.WebFilesPath
 	server := &Server{}
 	server.mux = mux.NewRouter()
+	server.mux.Handle("/metrics", promhttp.HandlerFor(
+		prometheus.DefaultGatherer,
+		promhttp.HandlerOpts{
+			EnableOpenMetrics: true,
+		},
+	))
+	server.mux.HandleFunc("/metrics", metric_redirectHandler(config.CurrentContext))
 	server.mux.HandleFunc("/", redirectHandler(config.CurrentContext))
 	subMux := server.mux.PathPrefix("/{clusterContext}").Subrouter()
 	registerPaths(subMux, config, tables)
-	server.mux.HandleFunc("/metrics", metric_redirectHandler(config.CurrentContext))
 	addr := fmt.Sprintf("%v:%v", config.BindAddress, config.Port)
 
 	h := &http.Server{
