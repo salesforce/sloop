@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/salesforce/sloop/pkg/sloop/common"
-
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/pkg/errors"
