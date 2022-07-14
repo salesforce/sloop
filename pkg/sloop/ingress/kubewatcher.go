@@ -14,7 +14,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/pkg/errors"
@@ -72,7 +71,6 @@ type kubeWatcherImpl struct {
 type Config struct {
 	EnableGranularMetrics bool
 }
-
 
 var (
 	newCrdClient                        = func(kubeCfg *rest.Config) (clientset.Interface, error) { return clientset.NewForConfig(kubeCfg) }
