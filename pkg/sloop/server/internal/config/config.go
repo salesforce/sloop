@@ -11,13 +11,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/ghodss/yaml"
-	"github.com/golang/glog"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/ghodss/yaml"
+	"github.com/golang/glog"
+	"github.com/pkg/errors"
 
 	"github.com/salesforce/sloop/pkg/sloop/webserver"
 )
@@ -73,6 +74,7 @@ type SloopConfig struct {
 	BadgerVLogFileIOMapping  bool          `json:"badgerVLogFileIOMapping"`
 	BadgerVLogTruncate       bool          `json:"badgerVLogTruncate"`
 	EnableDeleteKeys         bool          `json:"enableDeleteKeys"`
+	EnableGranularMetrics    bool          `json:"enableGranularMetrics"`
 	BadgerDetailLogEnabled   bool          `json:"badgerDetailLogEnabled"`
 }
 
@@ -169,6 +171,7 @@ func getDefaultConfig() *SloopConfig {
 		BadgerVLogFileIOMapping:  false,
 		BadgerVLogTruncate:       true,
 		EnableDeleteKeys:         false,
+		EnableGranularMetrics:    false,
 		BadgerDetailLogEnabled:   false,
 	}
 	return &defaultConfig
