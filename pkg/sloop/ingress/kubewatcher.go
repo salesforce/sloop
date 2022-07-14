@@ -74,9 +74,9 @@ type Config struct {
 
 var (
 	newCrdClient                        = func(kubeCfg *rest.Config) (clientset.Interface, error) { return clientset.NewForConfig(kubeCfg) }
-	metricIngressGranularKubewatchcount = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_granular_kubewatchcount"}, []string{"kind", "watchtype", "namespace", "name", "InvolvedObjectkind", "reason", "type"})
+	metricIngressGranularKubewatchcount = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_event_kubewatchcount"}, []string{"kind", "watchtype", "namespace", "name", "InvolvedObjectkind", "reason", "type"})
 	metricIngressKubewatchcount         = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchcount"}, []string{"kind", "watchtype", "namespace"})
-	metricIngressGranularKubewatchbytes = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_granular_kubewatchbytes"}, []string{"kind", "watchtype", "namespace", "name", "InvolvedObjectkind", "reason", "type"})
+	metricIngressGranularKubewatchbytes = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_event_kubewatchbytes"}, []string{"kind", "watchtype", "namespace", "name", "InvolvedObjectkind", "reason", "type"})
 	metricIngressKubewatchbytes         = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchbytes"}, []string{"kind", "watchtype", "namespace"})
 	metricCrdInformerStarted            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_started"})
 	metricCrdInformerRunning            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_running"})
