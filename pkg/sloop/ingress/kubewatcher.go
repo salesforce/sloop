@@ -34,7 +34,7 @@ import (
 )
 
 /*
- This class watches for changes to many kinds of kubernetes resources and writes them to a supplied channel
+  This class watches for changes to many kinds of kubernetes resources and writes them to a supplied channel
 */
 
 type KubeWatcher interface {
@@ -75,9 +75,9 @@ type Config struct {
 var (
 	newCrdClient                        = func(kubeCfg *rest.Config) (clientset.Interface, error) { return clientset.NewForConfig(kubeCfg) }
 	metricIngressGranularKubewatchcount = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_granular_kubewatchcount"}, []string{"kind", "watchtype", "namespace", "name", "InvolvedObjectkind", "reason", "type"})
-	metricIngressKubewatchcount         = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchcount"}, []string{"kind", "watchtype", "namespace", "name"})
+	metricIngressKubewatchcount         = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchcount"}, []string{"kind", "watchtype", "namespace"})
 	metricIngressGranularKubewatchbytes = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_granular_kubewatchbytes"}, []string{"kind", "watchtype", "namespace", "name", "InvolvedObjectkind", "reason", "type"})
-	metricIngressKubewatchbytes         = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchbytes"}, []string{"kind", "watchtype", "namespace", "name"})
+	metricIngressKubewatchbytes         = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchbytes"}, []string{"kind", "watchtype", "namespace"})
 	metricCrdInformerStarted            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_started"})
 	metricCrdInformerRunning            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_running"})
 )
@@ -325,16 +325,15 @@ func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResul
 		glog.V(2).Infof("Error occured while extracting Involved Object Info: %v", err2)
 	}
 	if enableGranularmetrics {
-		if kind != "Event" {
-			metricIngressKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name).Inc()
-			metricIngressKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name).Add(float64(len(resourceJson)))
-		} else {
+		if kind == "Event" {
 			metricIngressGranularKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, InvolvedObject.Kind, EventInfo.Reason, EventInfo.Type).Inc()
 			metricIngressGranularKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, InvolvedObject.Kind, EventInfo.Reason, EventInfo.Type).Add(float64(len(resourceJson)))
 		}
+		metricIngressKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Inc()
+		metricIngressKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Add(float64(len(resourceJson)))
 	} else {
-		metricIngressKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name).Inc()
-		metricIngressKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name).Add(float64(len(resourceJson)))
+		metricIngressKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Inc()
+		metricIngressKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Add(float64(len(resourceJson)))
 	}
 
 	glog.V(common.GlogVerbose).Infof("Informer update (%s) - Name: %s, Namespace: %s, ResourceVersion: %s, Reason: %s, Type: %s", watchResult.WatchType, kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion, EventInfo.Reason, EventInfo.Type)
