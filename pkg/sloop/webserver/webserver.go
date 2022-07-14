@@ -181,14 +181,6 @@ func redirectHandler(currentContext string) http.HandlerFunc {
 	}
 }
 
-// Handler for redirecting / to /currentContext to ensure backward compatibility
-func metric_redirectHandler(currentContext string) http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		redirectURL := path.Join("/", currentContext, "/metrics")
-		http.Redirect(writer, request, redirectURL, http.StatusTemporaryRedirect)
-	}
-}
-
 // Registers paths for mux router
 func registerPaths(router *mux.Router, config WebConfig, tables typed.Tables) {
 	router.PathPrefix("/webfiles/").HandlerFunc(webFileHandler(config.CurrentContext))
@@ -222,13 +214,6 @@ func Run(config WebConfig, tables typed.Tables) error {
 	webFilesPath = config.WebFilesPath
 	server := &Server{}
 	server.mux = mux.NewRouter()
-	server.mux.Handle("/metrics", promhttp.HandlerFor(
-		prometheus.DefaultGatherer,
-		promhttp.HandlerOpts{
-			EnableOpenMetrics: true,
-		},
-	))
-	server.mux.HandleFunc("/metrics", metric_redirectHandler(config.CurrentContext))
 	server.mux.HandleFunc("/", redirectHandler(config.CurrentContext))
 	subMux := server.mux.PathPrefix("/{clusterContext}").Subrouter()
 	registerPaths(subMux, config, tables)
