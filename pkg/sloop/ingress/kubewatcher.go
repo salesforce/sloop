@@ -325,6 +325,7 @@ func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResul
 		glog.V(2).Infof("Error occured while extracting Involved Object Info: %v", err2)
 	}
 	if enableGranularmetrics {
+
 		if kind == "Event" {
 			metricIngressGranularKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, InvolvedObject.Kind, EventInfo.Reason, EventInfo.Type).Inc()
 			metricIngressGranularKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, InvolvedObject.Kind, EventInfo.Reason, EventInfo.Type).Add(float64(len(resourceJson)))
