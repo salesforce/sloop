@@ -311,17 +311,17 @@ func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResul
 		glog.V(2).Infof("No namespace for resource: %v", err)
 	}
 	if enableGranularmetrics && kind == "Event" {
-		EventInfo, err1 := kubeextractor.ExtractEventInfo(resourceJson)
-		InvolvedObject, err2 := kubeextractor.ExtractInvolvedObject(resourceJson)
+		eventInfo, err1 := kubeextractor.ExtractEventInfo(resourceJson)
+		involvedObject, err2 := kubeextractor.ExtractInvolvedObject(resourceJson)
 		if err1 != nil {
 			glog.V(2).Infof("Extract event info: %v", err1)
 		}
 		if err2 != nil {
 			glog.V(2).Infof("Error occured while extracting Involved Object Info: %v", err2)
 		}
-		metricIngressGranularKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, InvolvedObject.Kind, EventInfo.Reason, EventInfo.Type).Inc()
-		metricIngressGranularKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, InvolvedObject.Kind, EventInfo.Reason, EventInfo.Type).Add(float64(len(resourceJson)))
-		glog.V(common.GlogVerbose).Infof("Informer update (%s) - Name: %s, Namespace: %s, ResourceVersion: %s, Reason: %s, Type: %s", watchResult.WatchType, kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion, EventInfo.Reason, EventInfo.Type)
+		metricIngressGranularKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, involvedObject.Kind, eventInfo.Reason, eventInfo.Type).Inc()
+		metricIngressGranularKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, involvedObject.Kind, eventInfo.Reason, eventInfo.Type).Add(float64(len(resourceJson)))
+		glog.V(common.GlogVerbose).Infof("Informer update (%s) - Name: %s, Namespace: %s, ResourceVersion: %s, Reason: %s, Type: %s", watchResult.WatchType, kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion, eventInfo.Reason, eventInfo.Type)
 	}
 	metricIngressKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Inc()
 	metricIngressKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Add(float64(len(resourceJson)))
