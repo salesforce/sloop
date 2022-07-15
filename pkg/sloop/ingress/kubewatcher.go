@@ -34,7 +34,7 @@ import (
 )
 
 /*
-	This class watches for changes to many kinds of kubernetes resources and writes them to a supplied channel
+This class watches for changes to many kinds of kubernetes resources and writes them to a supplied channel
 */
 
 type KubeWatcher interface {
