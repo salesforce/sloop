@@ -77,7 +77,8 @@ func Test_bigPicture(t *testing.T) {
 	includeCrds := true
 	masterURL := "url"
 	kubeContext := "" // empty string makes things work
-	kw, err := NewKubeWatcherSource(kubeClient, outChan, resync, includeCrds, time.Duration(10*time.Second), masterURL, kubeContext)
+	enableGranularMetrics := true
+	kw, err := NewKubeWatcherSource(kubeClient, outChan, resync, includeCrds, time.Duration(10*time.Second), masterURL, kubeContext, enableGranularMetrics)
 	assert.NoError(t, err)
 
 	// create service and await corresponding event
@@ -109,8 +110,8 @@ func Test_getCrdList(t *testing.T) {
 
 func Test_getEventHandlerForResource(t *testing.T) {
 	kw := &kubeWatcherImpl{protection: &sync.Mutex{}}
-
-	handler, ok := kw.getEventHandlerForResource("k").(cache.ResourceEventHandlerFuncs)
+	enableGranularMetrics := true
+	handler, ok := kw.getEventHandlerForResource("k", enableGranularMetrics).(cache.ResourceEventHandlerFuncs)
 	assert.True(t, ok)
 	assert.NotNil(t, handler)
 	assert.NotNil(t, handler.AddFunc)
@@ -121,9 +122,9 @@ func Test_getEventHandlerForResource(t *testing.T) {
 func Test_reportAdd(t *testing.T) {
 	outChan := make(chan typed.KubeWatchResult, 5)
 	kw := &kubeWatcherImpl{protection: &sync.Mutex{}, outchan: outChan}
-
+	enableGranularMetrics := true
 	kind := "a"
-	report := kw.reportAdd(kind)
+	report := kw.reportAdd(kind, enableGranularMetrics)
 	assert.NotNil(t, report)
 	obj := dummyData{Namespace: "n"}
 	bytes, err := json.Marshal(obj)
@@ -144,7 +145,8 @@ func Test_reportDelete(t *testing.T) {
 	kw := &kubeWatcherImpl{protection: &sync.Mutex{}, outchan: outChan}
 
 	kind := "d"
-	report := kw.reportDelete(kind)
+	enableGranularMetrics := true
+	report := kw.reportDelete(kind, enableGranularMetrics)
 	assert.NotNil(t, report)
 	obj := dummyData{Namespace: "n"}
 	bytes, err := json.Marshal(obj)
@@ -173,7 +175,8 @@ func Test_reportUpdate(t *testing.T) {
 	kw := &kubeWatcherImpl{protection: &sync.Mutex{}, outchan: outChan}
 
 	kind := "d"
-	report := kw.reportUpdate(kind)
+	enableGranularMetrics := true
+	report := kw.reportUpdate(kind, enableGranularMetrics)
 	assert.NotNil(t, report)
 	prev := dummyData{Namespace: "p"}
 	new := dummyData{Namespace: "n"}
@@ -196,8 +199,8 @@ func Test_processUpdate(t *testing.T) {
 
 	kind := "k"
 	obj := dummyData{Namespace: "n"}
-
-	kw.processUpdate(kind, obj, &typed.KubeWatchResult{Kind: kind})
+	enableGranularMetrics := true
+	kw.processUpdate(kind, obj, &typed.KubeWatchResult{Kind: kind}, enableGranularMetrics)
 	result := <-outChan
 	assert.Equal(t, kind, result.Kind)
 	assert.NotEmpty(t, result.Payload)
@@ -223,9 +226,9 @@ func Test_existingOrStartNewCrdInformer(t *testing.T) {
 
 	crd := crdGroupVersionResourceKind{group: "g", version: "v", resource: "r", kind: "k"}
 	existing := make(map[crdGroupVersionResourceKind]*crdInformerInfo)
-
+	enableGranularMetrics := true
 	// start new informer
-	kw.existingOrStartNewCrdInformer(crd, existing, factory)
+	kw.existingOrStartNewCrdInformer(crd, existing, factory, enableGranularMetrics)
 	assert.Len(t, kw.crdInformers, 1)
 
 	for atomic.LoadInt64(&kw.activeCrdInformer) == 0 { // wait for the go routine to start
@@ -237,7 +240,7 @@ func Test_existingOrStartNewCrdInformer(t *testing.T) {
 	assert.Len(t, kw.crdInformers, 0)
 	assert.Len(t, existing, 1)
 
-	kw.existingOrStartNewCrdInformer(crd, existing, factory)
+	kw.existingOrStartNewCrdInformer(crd, existing, factory, enableGranularMetrics)
 	assert.Len(t, kw.crdInformers, 1)
 	assert.Len(t, existing, 0)
 	assert.Equal(t, int64(1), atomic.LoadInt64(&kw.activeCrdInformer))

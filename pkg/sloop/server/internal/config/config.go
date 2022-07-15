@@ -11,13 +11,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/ghodss/yaml"
-	"github.com/golang/glog"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/ghodss/yaml"
+	"github.com/golang/glog"
+	"github.com/pkg/errors"
 
 	"github.com/salesforce/sloop/pkg/sloop/webserver"
 )
@@ -73,6 +74,7 @@ type SloopConfig struct {
 	BadgerVLogFileIOMapping  bool          `json:"badgerVLogFileIOMapping"`
 	BadgerVLogTruncate       bool          `json:"badgerVLogTruncate"`
 	EnableDeleteKeys         bool          `json:"enableDeleteKeys"`
+	EnableGranularMetrics    bool          `json:"enableGranularMetrics"`
 	BadgerDetailLogEnabled   bool          `json:"badgerDetailLogEnabled"`
 }
 
@@ -119,6 +121,7 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.IntVar(&config.BadgerNumL0TablesStall, "badger-number-of-zero-tables-stall", config.BadgerNumL0TablesStall, "Number of Level 0 tables that once reached causes the DB to stall until compaction succeeds")
 	fs.BoolVar(&config.BadgerSyncWrites, "badger-sync-writes", config.BadgerSyncWrites, "Sync Writes ensures writes are synced to disk if set to true")
 	fs.BoolVar(&config.EnableDeleteKeys, "enable-delete-keys", config.EnableDeleteKeys, "Use delete prefixes instead of dropPrefix for GC")
+	fs.BoolVar(&config.EnableGranularMetrics, "enable-granular-metrics", config.EnableGranularMetrics, "default:True , allows metrics of event kind to be granular with reason, type and name")
 	fs.BoolVar(&config.BadgerVLogFileIOMapping, "badger-vlog-fileIO-mapping", config.BadgerVLogFileIOMapping, "Indicates which file loading mode should be used for the value log data, in memory constrained environments the value is recommended to be true")
 	fs.BoolVar(&config.BadgerVLogTruncate, "badger-vlog-truncate", config.BadgerVLogTruncate, "Truncate value log if badger db offset is different from badger db size")
 	fs.BoolVar(&config.BadgerDetailLogEnabled, "badger-detail-log-enabled", config.BadgerDetailLogEnabled, "Turns on detailed logging of BadgerDB")
@@ -169,6 +172,7 @@ func getDefaultConfig() *SloopConfig {
 		BadgerVLogFileIOMapping:  false,
 		BadgerVLogTruncate:       true,
 		EnableDeleteKeys:         false,
+		EnableGranularMetrics:    true,
 		BadgerDetailLogEnabled:   false,
 	}
 	return &defaultConfig

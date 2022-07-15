@@ -10,7 +10,6 @@ package ingress
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/salesforce/sloop/pkg/sloop/common"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,6 +19,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -69,60 +69,61 @@ type kubeWatcherImpl struct {
 }
 
 var (
-	newCrdClient = func(kubeCfg *rest.Config) (clientset.Interface, error) { return clientset.NewForConfig(kubeCfg) }
-
-	metricIngressKubewatchcount = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchcount"}, []string{"kind", "watchtype", "namespace"})
-	metricIngressKubewatchbytes = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchbytes"}, []string{"kind", "watchtype", "namespace"})
-	metricCrdInformerStarted    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_started"})
-	metricCrdInformerRunning    = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_running"})
+	newCrdClient                        = func(kubeCfg *rest.Config) (clientset.Interface, error) { return clientset.NewForConfig(kubeCfg) }
+	metricIngressGranularKubewatchcount = promauto.NewCounterVec(prometheus.CounterOpts{Name: "metric_ingress_event_kubewatchcount"}, []string{"kind", "watchtype", "namespace", "name", "InvolvedObjectkind", "reason", "type"})
+	metricIngressKubewatchcount         = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchcount"}, []string{"kind", "watchtype", "namespace"})
+	metricIngressGranularKubewatchbytes = promauto.NewCounterVec(prometheus.CounterOpts{Name: "metric_ingress_event_kubewatchbytes"}, []string{"kind", "watchtype", "namespace", "name", "InvolvedObjectkind", "reason", "type"})
+	metricIngressKubewatchbytes         = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchbytes"}, []string{"kind", "watchtype", "namespace"})
+	metricCrdInformerStarted            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_started"})
+	metricCrdInformerRunning            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_running"})
 )
 
 // Todo: Add additional parameters for filtering
-func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.KubeWatchResult, resync time.Duration, includeCrds bool, crdRefreshInterval time.Duration, masterURL string, kubeContext string) (KubeWatcher, error) {
+func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.KubeWatchResult, resync time.Duration, includeCrds bool, crdRefreshInterval time.Duration, masterURL string, kubeContext string, enableGranularMetrics bool) (KubeWatcher, error) {
 	kw := &kubeWatcherImpl{resync: resync, protection: &sync.Mutex{}}
 	kw.stopChan = make(chan struct{})
 	kw.crdInformers = make(map[crdGroupVersionResourceKind]*crdInformerInfo)
 	kw.outchan = outChan
 
-	kw.startWellKnownInformers(kubeClient)
+	kw.startWellKnownInformers(kubeClient, enableGranularMetrics)
 	if includeCrds {
-		err := kw.startCustomInformers(masterURL, kubeContext)
+		err := kw.startCustomInformers(masterURL, kubeContext, enableGranularMetrics)
 		if err != nil {
 			return nil, err
 		}
 
 		kw.refreshCrd = time.NewTicker(crdRefreshInterval)
-		go kw.refreshCrdInformers(masterURL, kubeContext)
+		go kw.refreshCrdInformers(masterURL, kubeContext, enableGranularMetrics)
 	}
 
 	return kw, nil
 }
 
-func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interface) {
+func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interface, enableGranularMetrics bool) {
 	i.informerFactory = informers.NewSharedInformerFactory(kubeclient, i.resync)
 
-	i.informerFactory.Apps().V1().DaemonSets().Informer().AddEventHandler(i.getEventHandlerForResource("DaemonSet"))
-	i.informerFactory.Apps().V1().Deployments().Informer().AddEventHandler(i.getEventHandlerForResource("Deployment"))
-	i.informerFactory.Apps().V1().ReplicaSets().Informer().AddEventHandler(i.getEventHandlerForResource("ReplicaSet"))
-	i.informerFactory.Apps().V1().StatefulSets().Informer().AddEventHandler(i.getEventHandlerForResource("StatefulSet"))
-	i.informerFactory.Core().V1().ConfigMaps().Informer().AddEventHandler(i.getEventHandlerForResource("ConfigMap"))
-	i.informerFactory.Core().V1().Endpoints().Informer().AddEventHandler(i.getEventHandlerForResource("Endpoint"))
-	i.informerFactory.Core().V1().Events().Informer().AddEventHandler(i.getEventHandlerForResource("Event"))
-	i.informerFactory.Autoscaling().V1().HorizontalPodAutoscalers().Informer().AddEventHandler(i.getEventHandlerForResource("HorizontalPodAutoscaler"))
-	i.informerFactory.Batch().V1().Jobs().Informer().AddEventHandler(i.getEventHandlerForResource("Job"))
-	i.informerFactory.Core().V1().Namespaces().Informer().AddEventHandler(i.getEventHandlerForResource("Namespace"))
-	i.informerFactory.Core().V1().Nodes().Informer().AddEventHandler(i.getEventHandlerForResource("Node"))
-	i.informerFactory.Core().V1().PersistentVolumeClaims().Informer().AddEventHandler(i.getEventHandlerForResource("PersistentVolumeClaim"))
-	i.informerFactory.Core().V1().PersistentVolumes().Informer().AddEventHandler(i.getEventHandlerForResource("PersistentVolume"))
-	i.informerFactory.Core().V1().Pods().Informer().AddEventHandler(i.getEventHandlerForResource("Pod"))
-	i.informerFactory.Policy().V1beta1().PodDisruptionBudgets().Informer().AddEventHandler(i.getEventHandlerForResource("PodDisruptionBudget"))
-	i.informerFactory.Core().V1().Services().Informer().AddEventHandler(i.getEventHandlerForResource("Service"))
-	i.informerFactory.Core().V1().ReplicationControllers().Informer().AddEventHandler(i.getEventHandlerForResource("ReplicationController"))
-	i.informerFactory.Storage().V1().StorageClasses().Informer().AddEventHandler(i.getEventHandlerForResource("StorageClass"))
+	i.informerFactory.Apps().V1().DaemonSets().Informer().AddEventHandler(i.getEventHandlerForResource("DaemonSet", enableGranularMetrics))
+	i.informerFactory.Apps().V1().Deployments().Informer().AddEventHandler(i.getEventHandlerForResource("Deployment", enableGranularMetrics))
+	i.informerFactory.Apps().V1().ReplicaSets().Informer().AddEventHandler(i.getEventHandlerForResource("ReplicaSet", enableGranularMetrics))
+	i.informerFactory.Apps().V1().StatefulSets().Informer().AddEventHandler(i.getEventHandlerForResource("StatefulSet", enableGranularMetrics))
+	i.informerFactory.Core().V1().ConfigMaps().Informer().AddEventHandler(i.getEventHandlerForResource("ConfigMap", enableGranularMetrics))
+	i.informerFactory.Core().V1().Endpoints().Informer().AddEventHandler(i.getEventHandlerForResource("Endpoint", enableGranularMetrics))
+	i.informerFactory.Core().V1().Events().Informer().AddEventHandler(i.getEventHandlerForResource("Event", enableGranularMetrics))
+	i.informerFactory.Autoscaling().V1().HorizontalPodAutoscalers().Informer().AddEventHandler(i.getEventHandlerForResource("HorizontalPodAutoscaler", enableGranularMetrics))
+	i.informerFactory.Batch().V1().Jobs().Informer().AddEventHandler(i.getEventHandlerForResource("Job", enableGranularMetrics))
+	i.informerFactory.Core().V1().Namespaces().Informer().AddEventHandler(i.getEventHandlerForResource("Namespace", enableGranularMetrics))
+	i.informerFactory.Core().V1().Nodes().Informer().AddEventHandler(i.getEventHandlerForResource("Node", enableGranularMetrics))
+	i.informerFactory.Core().V1().PersistentVolumeClaims().Informer().AddEventHandler(i.getEventHandlerForResource("PersistentVolumeClaim", enableGranularMetrics))
+	i.informerFactory.Core().V1().PersistentVolumes().Informer().AddEventHandler(i.getEventHandlerForResource("PersistentVolume", enableGranularMetrics))
+	i.informerFactory.Core().V1().Pods().Informer().AddEventHandler(i.getEventHandlerForResource("Pod", enableGranularMetrics))
+	i.informerFactory.Policy().V1beta1().PodDisruptionBudgets().Informer().AddEventHandler(i.getEventHandlerForResource("PodDisruptionBudget", enableGranularMetrics))
+	i.informerFactory.Core().V1().Services().Informer().AddEventHandler(i.getEventHandlerForResource("Service", enableGranularMetrics))
+	i.informerFactory.Core().V1().ReplicationControllers().Informer().AddEventHandler(i.getEventHandlerForResource("ReplicationController", enableGranularMetrics))
+	i.informerFactory.Storage().V1().StorageClasses().Informer().AddEventHandler(i.getEventHandlerForResource("StorageClass", enableGranularMetrics))
 	i.informerFactory.Start(i.stopChan)
 }
 
-func (i *kubeWatcherImpl) startCustomInformers(masterURL string, kubeContext string) error {
+func (i *kubeWatcherImpl) startCustomInformers(masterURL string, kubeContext string, enableGranularMetrics bool) error {
 
 	clientCfg := getConfig(masterURL, kubeContext)
 	kubeCfg, err := clientCfg.ClientConfig()
@@ -147,7 +148,7 @@ func (i *kubeWatcherImpl) startCustomInformers(masterURL string, kubeContext str
 	existing := i.pullCrdInformers()
 	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynamicClient, i.resync, "", nil)
 	for _, crd := range crdList {
-		i.existingOrStartNewCrdInformer(crd, existing, factory)
+		i.existingOrStartNewCrdInformer(crd, existing, factory, enableGranularMetrics)
 	}
 
 	glog.Infof("Stopping %d CRD Informers", len(existing))
@@ -165,13 +166,12 @@ func (i *kubeWatcherImpl) pullCrdInformers() map[crdGroupVersionResourceKind]*cr
 	return crdInformers
 }
 
-func (i *kubeWatcherImpl) existingOrStartNewCrdInformer(crd crdGroupVersionResourceKind, existing map[crdGroupVersionResourceKind]*crdInformerInfo, factory dynamicinformer.DynamicSharedInformerFactory) {
+func (i *kubeWatcherImpl) existingOrStartNewCrdInformer(crd crdGroupVersionResourceKind, existing map[crdGroupVersionResourceKind]*crdInformerInfo, factory dynamicinformer.DynamicSharedInformerFactory, enableGranularMetrics bool) {
 	i.protection.Lock()
 	defer i.protection.Unlock()
 	if i.stopped {
 		return
 	}
-
 	// if there is an existing informer for this crd, then keep using the existing informer
 	crdInformer, found := existing[crd]
 	if found {
@@ -183,14 +183,14 @@ func (i *kubeWatcherImpl) existingOrStartNewCrdInformer(crd crdGroupVersionResou
 	// need an informer for this crd
 	crdInformer = &crdInformerInfo{crd: crd, stopChan: make(chan struct{})}
 	i.crdInformers[crd] = crdInformer
-	i.startNewCrdInformer(crdInformer, factory)
+	i.startNewCrdInformer(crdInformer, factory, enableGranularMetrics)
 }
 
-func (i *kubeWatcherImpl) startNewCrdInformer(crdInformer *crdInformerInfo, factory dynamicinformer.DynamicSharedInformerFactory) {
+func (i *kubeWatcherImpl) startNewCrdInformer(crdInformer *crdInformerInfo, factory dynamicinformer.DynamicSharedInformerFactory, enableGranularMetrics bool) {
 	gvr := schema.GroupVersionResource{Group: crdInformer.crd.group, Version: crdInformer.crd.version, Resource: crdInformer.crd.resource}
 	kind := crdInformer.crd.kind
 	informer := factory.ForResource(gvr)
-	informer.Informer().AddEventHandler(i.getEventHandlerForResource(kind))
+	informer.Informer().AddEventHandler(i.getEventHandlerForResource(kind, enableGranularMetrics))
 
 	go func() {
 		glog.V(2).Infof("Starting CRD informer for: %s (%v)", kind, gvr)
@@ -248,15 +248,15 @@ func getCrdListV1beta1(crdClient clientset.Interface) ([]crdGroupVersionResource
 	return resources, nil
 }
 
-func (i *kubeWatcherImpl) getEventHandlerForResource(resourceKind string) cache.ResourceEventHandler {
+func (i *kubeWatcherImpl) getEventHandlerForResource(resourceKind string, enableGranularMetrics bool) cache.ResourceEventHandler {
 	return cache.ResourceEventHandlerFuncs{
-		AddFunc:    i.reportAdd(resourceKind),
-		DeleteFunc: i.reportDelete(resourceKind),
-		UpdateFunc: i.reportUpdate(resourceKind),
+		AddFunc:    i.reportAdd(resourceKind, enableGranularMetrics),
+		DeleteFunc: i.reportDelete(resourceKind, enableGranularMetrics),
+		UpdateFunc: i.reportUpdate(resourceKind, enableGranularMetrics),
 	}
 }
 
-func (i *kubeWatcherImpl) reportAdd(kind string) func(interface{}) {
+func (i *kubeWatcherImpl) reportAdd(kind string, enableGranularMetrics bool) func(interface{}) {
 	return func(obj interface{}) {
 		watchResultShell := &typed.KubeWatchResult{
 			Timestamp: ptypes.TimestampNow(),
@@ -264,11 +264,11 @@ func (i *kubeWatcherImpl) reportAdd(kind string) func(interface{}) {
 			WatchType: typed.KubeWatchResult_ADD,
 			Payload:   "",
 		}
-		i.processUpdate(kind, obj, watchResultShell)
+		i.processUpdate(kind, obj, watchResultShell, enableGranularMetrics)
 	}
 }
 
-func (i *kubeWatcherImpl) reportDelete(kind string) func(interface{}) {
+func (i *kubeWatcherImpl) reportDelete(kind string, enableGranularMetrics bool) func(interface{}) {
 	return func(obj interface{}) {
 		delObj, ok := obj.(cache.DeletedFinalStateUnknown)
 		if ok {
@@ -281,11 +281,11 @@ func (i *kubeWatcherImpl) reportDelete(kind string) func(interface{}) {
 			WatchType: typed.KubeWatchResult_DELETE,
 			Payload:   "",
 		}
-		i.processUpdate(kind, obj, watchResultShell)
+		i.processUpdate(kind, obj, watchResultShell, enableGranularMetrics)
 	}
 }
 
-func (i *kubeWatcherImpl) reportUpdate(kind string) func(interface{}, interface{}) {
+func (i *kubeWatcherImpl) reportUpdate(kind string, enableGranularMetrics bool) func(interface{}, interface{}) {
 	return func(_ interface{}, newObj interface{}) {
 		watchResultShell := &typed.KubeWatchResult{
 			Timestamp: ptypes.TimestampNow(),
@@ -293,11 +293,11 @@ func (i *kubeWatcherImpl) reportUpdate(kind string) func(interface{}, interface{
 			WatchType: typed.KubeWatchResult_UPDATE,
 			Payload:   "",
 		}
-		i.processUpdate(kind, newObj, watchResultShell)
+		i.processUpdate(kind, newObj, watchResultShell, enableGranularMetrics)
 	}
 }
 
-func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResult *typed.KubeWatchResult) {
+func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResult *typed.KubeWatchResult, enableGranularmetrics bool) {
 	resourceJson, err := i.getResourceAsJsonString(kind, obj)
 	if err != nil {
 		glog.Error(err)
@@ -309,6 +309,19 @@ func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResul
 	if err != nil || kubeMetadata.Namespace == "" {
 		// We are only grabbing namespace here for a prometheus metric, so if metadata extract fails we just log and continue
 		glog.V(2).Infof("No namespace for resource: %v", err)
+	}
+	if enableGranularmetrics && kind == "Event" {
+		eventInfo, err1 := kubeextractor.ExtractEventInfo(resourceJson)
+		involvedObject, err2 := kubeextractor.ExtractInvolvedObject(resourceJson)
+		if err1 != nil {
+			glog.V(2).Infof("Extract event info: %v", err1)
+		}
+		if err2 != nil {
+			glog.V(2).Infof("Error occured while extracting Involved Object Info: %v", err2)
+		}
+		metricIngressGranularKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, involvedObject.Kind, eventInfo.Reason, eventInfo.Type).Inc()
+		metricIngressGranularKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, involvedObject.Kind, eventInfo.Reason, eventInfo.Type).Add(float64(len(resourceJson)))
+		glog.V(common.GlogVerbose).Infof("Informer update (%s) - Name: %s, Namespace: %s, ResourceVersion: %s, Reason: %s, Type: %s", watchResult.WatchType, kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion, eventInfo.Reason, eventInfo.Type)
 	}
 	metricIngressKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Inc()
 	metricIngressKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Add(float64(len(resourceJson)))
@@ -339,10 +352,10 @@ func (i *kubeWatcherImpl) getResourceAsJsonString(kind string, obj interface{}) 
 	return string(bytes), nil
 }
 
-func (i *kubeWatcherImpl) refreshCrdInformers(masterURL string, kubeContext string) {
+func (i *kubeWatcherImpl) refreshCrdInformers(masterURL string, kubeContext string, enableGranularMetrics bool) {
 	for range i.refreshCrd.C {
 		glog.V(common.GlogVerbose).Infof("Starting to refresh CRD informers")
-		err := i.startCustomInformers(masterURL, kubeContext)
+		err := i.startCustomInformers(masterURL, kubeContext, enableGranularMetrics)
 		if err != nil {
 			glog.Errorf("Failed to refresh CRD informers: %v", err)
 		}

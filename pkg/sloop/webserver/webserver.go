@@ -11,8 +11,6 @@ import (
 	"context"
 	"expvar"
 	"fmt"
-	"github.com/salesforce/sloop/pkg/sloop/common"
-	"github.com/spf13/afero"
 	"log"
 	"mime"
 	"net/http"
@@ -24,6 +22,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/salesforce/sloop/pkg/sloop/common"
+	"github.com/spf13/afero"
 
 	"github.com/salesforce/sloop/pkg/sloop/queries"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
@@ -216,7 +217,6 @@ func Run(config WebConfig, tables typed.Tables) error {
 	server.mux.HandleFunc("/", redirectHandler(config.CurrentContext))
 	subMux := server.mux.PathPrefix("/{clusterContext}").Subrouter()
 	registerPaths(subMux, config, tables)
-
 	addr := fmt.Sprintf("%v:%v", config.BindAddress, config.Port)
 
 	h := &http.Server{
