@@ -172,7 +172,7 @@ func getDefaultConfig() *SloopConfig {
 		BadgerVLogFileIOMapping:  false,
 		BadgerVLogTruncate:       true,
 		EnableDeleteKeys:         false,
-		EnableGranularMetrics:    true,
+		EnableGranularMetrics:    false,
 		BadgerDetailLogEnabled:   false,
 	}
 	return &defaultConfig
