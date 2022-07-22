@@ -70,9 +70,8 @@ type kubeWatcherImpl struct {
 
 var (
 	newCrdClient                        = func(kubeCfg *rest.Config) (clientset.Interface, error) { return clientset.NewForConfig(kubeCfg) }
-	metricIngressGranularKubewatchcount = promauto.NewCounterVec(prometheus.CounterOpts{Name: "metric_ingress_event_kubewatchcount"}, []string{"kind", "watchtype", "namespace", "name", "InvolvedObjectkind", "reason", "type"})
+	metricIngressGranularKubewatchcount = promauto.NewCounterVec(prometheus.CounterOpts{Name: "metric_ingress_event_kubewatchcount"}, []string{"namespace", "name", "kind", "reason", "type"})
 	metricIngressKubewatchcount         = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchcount"}, []string{"kind", "watchtype", "namespace"})
-	metricIngressGranularKubewatchbytes = promauto.NewCounterVec(prometheus.CounterOpts{Name: "metric_ingress_event_kubewatchbytes"}, []string{"kind", "watchtype", "namespace", "name", "InvolvedObjectkind", "reason", "type"})
 	metricIngressKubewatchbytes         = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchbytes"}, []string{"kind", "watchtype", "namespace"})
 	metricCrdInformerStarted            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_started"})
 	metricCrdInformerRunning            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_running"})
@@ -317,11 +316,10 @@ func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResul
 			glog.V(2).Infof("Extract event info: %v", err1)
 		}
 		if err2 != nil {
-			glog.V(2).Infof("Error occured while extracting Involved Object Info: %v", err2)
+			glog.V(2).Infof("Error occurred while extracting Involved Object Info: %v", err2)
 		}
-		metricIngressGranularKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, involvedObject.Kind, eventInfo.Reason, eventInfo.Type).Inc()
-		metricIngressGranularKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace, kubeMetadata.Name, involvedObject.Kind, eventInfo.Reason, eventInfo.Type).Add(float64(len(resourceJson)))
-		glog.V(common.GlogVerbose).Infof("Informer update (%s) - Name: %s, Namespace: %s, ResourceVersion: %s, Reason: %s, Type: %s", watchResult.WatchType, kubeMetadata.Name, kubeMetadata.Namespace, kubeMetadata.ResourceVersion, eventInfo.Reason, eventInfo.Type)
+		metricIngressGranularKubewatchcount.WithLabelValues(involvedObject.Namespace, involvedObject.Name, involvedObject.Kind, eventInfo.Reason, eventInfo.Type).Inc()
+		glog.V(common.GlogVerbose).Infof("Informer update: Name: %s, Namespace: %s, Reason: %s, Type: %s", involvedObject.Name, involvedObject.Namespace, eventInfo.Reason, eventInfo.Type)
 	}
 	metricIngressKubewatchcount.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Inc()
 	metricIngressKubewatchbytes.WithLabelValues(kind, watchResult.WatchType.String(), kubeMetadata.Namespace).Add(float64(len(resourceJson)))
