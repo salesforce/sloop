@@ -18,10 +18,10 @@ import (
 )
 
 // GetKubernetesContext takes optional user preferences and returns the Kubernetes context in use
-func GetKubernetesContext(masterURL string, kubeContextPreference string, PrivilegedAccess bool) (string, error) {
+func GetKubernetesContext(masterURL string, kubeContextPreference string, privilegedAccess bool) (string, error) {
 	glog.Infof("Getting k8s context with user-defined config masterURL=%v, kubeContextPreference=%v.", masterURL, kubeContextPreference)
 	contextInUse := kubeContextPreference
-	if PrivilegedAccess {
+	if privilegedAccess {
 		clientConfig := getConfig(masterURL, kubeContextPreference)
 		// This tells us the currentContext defined in the kubeConfig which gets used if we dont have an override
 		rawConfig, err := clientConfig.RawConfig()
@@ -41,11 +41,11 @@ func GetKubernetesContext(masterURL string, kubeContextPreference string, Privil
 
 // MakeKubernetesClient takes masterURL and kubeContext (user preference should have already been resolved before calling this)
 // and returns a K8s client
-func MakeKubernetesClient(masterURL string, kubeContext string, PrivilegedAccess bool) (kubernetes.Interface, error) {
+func MakeKubernetesClient(masterURL string, kubeContext string, privilegedAccess bool) (kubernetes.Interface, error) {
 	glog.Infof("Creating k8sclient with user-defined config masterURL=%v, kubeContext=%v.", masterURL, kubeContext)
 	var config *rest.Config
 	var err error
-	if PrivilegedAccess {
+	if privilegedAccess {
 		clientConfig := getConfig(masterURL, kubeContext)
 		config, err = clientConfig.ClientConfig()
 		glog.Infof("Building k8sclient with context=%v, masterURL=%v, configFile=%v.", kubeContext, config.Host, clientConfig.ConfigAccess().GetLoadingPrecedence())
