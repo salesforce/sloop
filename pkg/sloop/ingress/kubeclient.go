@@ -17,6 +17,12 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
+// Variables assigned to facilitate unit testing
+
+var BuildConfigFromFlags = clientcmd.BuildConfigFromFlags
+var ClientConfig = clientcmd.ClientConfig.ClientConfig
+var RawConfig = clientcmd.ClientConfig.RawConfig
+
 // GetKubernetesContext takes optional user preferences and returns the Kubernetes context in use
 func GetKubernetesContext(masterURL string, kubeContextPreference string, privilegedAccess bool) (string, error) {
 	glog.Infof("Getting k8s context with user-defined config masterURL=%v, kubeContextPreference=%v.", masterURL, kubeContextPreference)
@@ -24,7 +30,7 @@ func GetKubernetesContext(masterURL string, kubeContextPreference string, privil
 	if privilegedAccess {
 		clientConfig := getConfig(masterURL, kubeContextPreference)
 		// This tells us the currentContext defined in the kubeConfig which gets used if we dont have an override
-		rawConfig, err := clientConfig.RawConfig()
+		rawConfig, err := RawConfig(clientConfig)
 		if err != nil {
 			return "", err
 		}
@@ -47,11 +53,11 @@ func MakeKubernetesClient(masterURL string, kubeContext string, privilegedAccess
 	var err error
 	if privilegedAccess {
 		clientConfig := getConfig(masterURL, kubeContext)
-		config, err = clientConfig.ClientConfig()
+		config, err = ClientConfig(clientConfig)
 		glog.Infof("Building k8sclient with context=%v, masterURL=%v, configFile=%v.", kubeContext, config.Host, clientConfig.ConfigAccess().GetLoadingPrecedence())
 	} else {
 		glog.Infof("Creating Config using BuildConfigFromFlags")
-		config, err = clientcmd.BuildConfigFromFlags(masterURL, "")
+		config, err = BuildConfigFromFlags(masterURL, "")
 		if err != nil {
 			glog.Errorf("Cannot create config using BuildConfigFromFlags")
 			return nil, err
