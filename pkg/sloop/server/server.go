@@ -45,7 +45,7 @@ func RealMain() error {
 		return errors.Wrap(err, "config validation failed")
 	}
 
-	kubeContext, err := ingress.GetKubernetesContext(conf.ApiServerHost, conf.UseKubeContext)
+	kubeContext, err := ingress.GetKubernetesContext(conf.ApiServerHost, conf.UseKubeContext, conf.PrivilegedAccess)
 	if err != nil {
 		return errors.Wrap(err, "failed to get kubernetes context")
 	}
@@ -98,7 +98,7 @@ func RealMain() error {
 	// Real kubernetes watcher
 	var kubeWatcherSource ingress.KubeWatcher
 	if !conf.DisableKubeWatcher {
-		kubeClient, err := ingress.MakeKubernetesClient(conf.ApiServerHost, kubeContext)
+		kubeClient, err := ingress.MakeKubernetesClient(conf.ApiServerHost, kubeContext, conf.PrivilegedAccess)
 		if err != nil {
 			return errors.Wrap(err, "failed to create kubernetes client")
 		}
