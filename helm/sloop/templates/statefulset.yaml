@@ -19,6 +19,8 @@ spec:
         app.kubernetes.io/name: {{ .Values.name }}
         app.kubernetes.io/instance: "{{ .Release.Name }}"
     spec:
+      tolerations:
+{{ toYaml .Values.tolerations | indent 8 }}
       containers:
       - args:
         - --config=/sloopconfig/sloop.json
