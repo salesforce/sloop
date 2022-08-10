@@ -34,7 +34,6 @@ func Test_timeRangeTable(t *testing.T) {
 	}{
 		// Valid Cases
 		{"2h", "", "", false, someQueryEndTs.Add(-2 * time.Hour), someQueryEndTs},
-		{"30m", "", "2019-03-01T16:04:00", false, someQueryEndTs.Add(-30 * time.Minute), someQueryEndTs},
 		{"1h", "", "", false, someQueryEndTs.Add(-1 * time.Hour), someQueryEndTs},
 		{"1h", "", "2019-03-01T15:04:00", false, someQueryEndTs.Add(-1 * time.Hour), someQueryEndTs},
 		{"0h", "", "", false, someQueryEndTs.Add(-1 * minLookback), someQueryEndTs},
