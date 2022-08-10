@@ -108,6 +108,10 @@ function setFiltersAndReturnQueryUrl(defaultLookback, defaultKind, defaultNamesp
         var now =  new Date().toISOString()
         selectedEndTime = now.substring(0, now.length-5)
     }
+    else{
+        var endTime = new Date(selectedEndTime);
+        selectedEndTime = endTime.toISOString().slice(0,-1)
+    }
 
     lookback =        setDropdown("lookback", "filterlookback", defaultLookback, true)
     sort =            setDropdown("sort",     "filtersort",     "start_time", false)
