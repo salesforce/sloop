@@ -35,6 +35,7 @@ func Test_timeRangeTable(t *testing.T) {
 		// Valid Cases
 		{"2h", "", "", false, someQueryEndTs.Add(-2 * time.Hour), someQueryEndTs},
 		{"1h", "", "", false, someQueryEndTs.Add(-1 * time.Hour), someQueryEndTs},
+		{"1h", "", "2019-03-01T15:04:00", false, someQueryEndTs.Add(-1 * time.Hour), someQueryEndTs},
 		{"0h", "", "", false, someQueryEndTs.Add(-1 * minLookback), someQueryEndTs},
 		{"1000h", "", "", false, someQueryEndTs.Add(-1 * someMaxLookBack), someQueryEndTs},
 		{"", fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*-45).UTC().Unix()), fmt.Sprintf("%v", someQueryEndTs.Add(time.Minute*-15).UTC().Unix()), false, someQueryEndTs.Add(time.Minute * -45), someQueryEndTs.Add(time.Minute * -15)},
@@ -58,6 +59,7 @@ func Test_timeRangeTable(t *testing.T) {
 		{"abc", "", "", true, time.Time{}, time.Time{}},
 		{"", "abc", "123", true, time.Time{}, time.Time{}},
 		{"", "123", "abc", true, time.Time{}, time.Time{}},
+		{"", "", "2019-03-01T15:04", true, time.Time{}, time.Time{}},
 	}
 	for i, thisRange := range rangeTests {
 		t.Run(fmt.Sprintf("Test id: %v, thisRange: %+v", i, thisRange), func(t *testing.T) {
