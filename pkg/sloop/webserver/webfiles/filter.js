@@ -108,7 +108,7 @@ function setFiltersAndReturnQueryUrl(defaultLookback, defaultKind, defaultNamesp
         var now =  new Date().toISOString()
         selectedEndTime = now.substring(0, now.length-5)
     }
-    else{
+    else {
         var endTime = new Date(selectedEndTime);
         selectedEndTime = endTime.toISOString().slice(0,-1)
     }
