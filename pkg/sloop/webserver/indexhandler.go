@@ -21,7 +21,7 @@ type indexData struct {
 
 func indexHandler(config WebConfig) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
-		indexTemplate, err := getTemplate(indexTemplateFile, _webfilesIndexHtml)
+		indexTemplate, err := getTemplate(indexTemplateFile, _webfiles_index_html)
 		if err != nil {
 			logWebError(err, "Template.New failed", request, writer)
 			return
