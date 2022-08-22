@@ -59,7 +59,7 @@ func Test_timeRangeTable(t *testing.T) {
 		{"abc", "", "", true, time.Time{}, time.Time{}},
 		{"", "abc", "123", true, time.Time{}, time.Time{}},
 		{"", "123", "abc", true, time.Time{}, time.Time{}},
-		{"", "", "2019-03-01T15:04", true, time.Time{}, time.Time{}},git
+		{"", "", "2019-03-01T15:04", true, time.Time{}, time.Time{}},
 	}
 	for i, thisRange := range rangeTests {
 		t.Run(fmt.Sprintf("Test id: %v, thisRange: %+v", i, thisRange), func(t *testing.T) {
