@@ -18,7 +18,9 @@ spec:
       labels:
         app.kubernetes.io/name: {{ .Values.name }}
         app.kubernetes.io/instance: "{{ .Release.Name }}"
-{{ toYaml .Values.podLabels | indent 8 }}
+        {{- with .Values.podLabels -}}
+          {{ toYaml . | nindent 8 }}
+        {{- end }}
       annotations:
 {{ toYaml .Values.podAnnotations | indent 8 }}
     spec:
