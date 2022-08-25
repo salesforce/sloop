@@ -1,6 +1,9 @@
 serviceAccountName: sloop
 ## If defined, specifies the tolerations to attach to the pods
 tolerations: []
+## If defined, specifies the labels and/or annotations to attach to the pods
+podLabels: {}
+podAnnotations: {}
 name: sloop
 replicas: 1
 image:
