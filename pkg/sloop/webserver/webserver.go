@@ -200,7 +200,6 @@ func registerPaths(router *mux.Router, config WebConfig, tables typed.Tables) {
 	router.HandleFunc("/debug/vars", expvar.Handler().ServeHTTP)
 	router.HandleFunc("/debug/", debugHandler())
 
-	router.HandleFunc("/healthz", healthHandler())
 	router.Handle("/metrics", promhttp.HandlerFor(
 		prometheus.DefaultGatherer,
 		promhttp.HandlerOpts{
@@ -214,14 +213,17 @@ func Run(config WebConfig, tables typed.Tables) error {
 	webFilesPath = config.WebFilesPath
 	server := &Server{}
 	server.mux = mux.NewRouter()
-	server.mux.HandleFunc("/", redirectHandler(config.CurrentContext))
+	server.mux.Handle("/", traceWrapper(glogWrapper(redirectHandler(config.CurrentContext))))
+	server.mux.Handle("/healthz", healthHandler())
 	subMux := server.mux.PathPrefix("/{clusterContext}").Subrouter()
 	registerPaths(subMux, config, tables)
+	subMux.Use(traceWrapper)
+	subMux.Use(glogWrapper)
 	addr := fmt.Sprintf("%v:%v", config.BindAddress, config.Port)
 
 	h := &http.Server{
 		Addr:     addr,
-		Handler:  traceWrapper(glogWrapper(server)),
+		Handler:  server,
 		ErrorLog: log.New(os.Stdout, "http: ", log.LstdFlags),
 	}
 	if config.BindAddress != "" {
