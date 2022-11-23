@@ -78,7 +78,7 @@ func (k *WatchTableKey) IsNameAlreadyDelimited() bool {
 	return false
 }
 
-//todo: need to make sure it can work as keyPrefix when some fields are empty
+// todo: need to make sure it can work as keyPrefix when some fields are empty
 func (k *WatchTableKey) String() string {
 	if k.Name == "" && k.Timestamp.IsZero() {
 		return fmt.Sprintf("/%v/%v/%v/%v/", k.TableName(), k.PartitionId, k.Kind, k.Namespace)

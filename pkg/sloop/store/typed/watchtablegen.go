@@ -293,7 +293,7 @@ func (t *KubeWatchResultTable) RangeRead(txn badgerwrap.Txn, keyPrefix *WatchTab
 	return resources, stats, nil
 }
 
-//todo: need to add unit test
+// todo: need to add unit test
 func (t *KubeWatchResultTable) GetPartitionsFromTimeRange(txn badgerwrap.Txn, startTime time.Time, endTime time.Time) ([]string, error) {
 	resources := []string{}
 	startPartition := untyped.GetPartitionId(startTime)

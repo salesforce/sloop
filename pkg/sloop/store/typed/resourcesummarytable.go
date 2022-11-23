@@ -60,7 +60,7 @@ func (k *ResourceSummaryKey) Parse(key string) error {
 	return nil
 }
 
-//todo: need to make sure it can work as keyPrefix when some fields are empty
+// todo: need to make sure it can work as keyPrefix when some fields are empty
 func (k *ResourceSummaryKey) String() string {
 	if k.Uid == "" {
 		return fmt.Sprintf("/%v/%v/%v/%v/%v", k.TableName(), k.PartitionId, k.Kind, k.Namespace, k.Name)

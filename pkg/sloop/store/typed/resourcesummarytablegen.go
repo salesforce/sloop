@@ -293,7 +293,7 @@ func (t *ResourceSummaryTable) RangeRead(txn badgerwrap.Txn, keyPrefix *Resource
 	return resources, stats, nil
 }
 
-//todo: need to add unit test
+// todo: need to add unit test
 func (t *ResourceSummaryTable) GetPartitionsFromTimeRange(txn badgerwrap.Txn, startTime time.Time, endTime time.Time) ([]string, error) {
 	resources := []string{}
 	startPartition := untyped.GetPartitionId(startTime)

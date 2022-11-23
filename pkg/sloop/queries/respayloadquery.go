@@ -110,7 +110,7 @@ func GetSeekKey(keyComparator *typed.WatchTableKey, startTime time.Time) *typed.
 	return seekKey
 }
 
-//todo: add unit tests
+// todo: add unit tests
 func getKeyComparator(params url.Values) *typed.WatchTableKey {
 	selectedNamespace := params.Get(NamespaceParam)
 	selectedName := params.Get(NameParam)
@@ -121,7 +121,7 @@ func getKeyComparator(params url.Values) *typed.WatchTableKey {
 	return typed.NewWatchTableKeyComparator(selectedKind, selectedNamespace, selectedName, time.Time{})
 }
 
-//todo: add unit tests
+// todo: add unit tests
 func getPayloadOutputList(watchRes map[typed.WatchTableKey]*typed.KubeWatchResult) []PayloadOuput {
 
 	payloadOutputList := []PayloadOuput{}
