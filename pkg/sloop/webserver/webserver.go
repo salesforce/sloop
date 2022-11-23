@@ -200,12 +200,6 @@ func registerPaths(router *mux.Router, config WebConfig, tables typed.Tables) {
 	router.HandleFunc("/debug/vars", expvar.Handler().ServeHTTP)
 	router.HandleFunc("/debug/", debugHandler())
 
-	router.Handle("/metrics", promhttp.HandlerFor(
-		prometheus.DefaultGatherer,
-		promhttp.HandlerOpts{
-			EnableOpenMetrics: true,
-		},
-	))
 	router.Handle("", indexHandler(config))
 }
 
@@ -215,6 +209,12 @@ func Run(config WebConfig, tables typed.Tables) error {
 	server.mux = mux.NewRouter()
 	server.mux.Handle("/", traceWrapper(glogWrapper(redirectHandler(config.CurrentContext))))
 	server.mux.Handle("/healthz", healthHandler())
+	server.mux.Handle("/metrics", promhttp.HandlerFor(
+		prometheus.DefaultGatherer,
+		promhttp.HandlerOpts{
+			EnableOpenMetrics: true,
+		},
+	))
 	subMux := server.mux.PathPrefix("/{clusterContext}").Subrouter()
 	registerPaths(subMux, config, tables)
 	subMux.Use(traceWrapper)
