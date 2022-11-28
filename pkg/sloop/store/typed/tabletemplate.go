@@ -275,7 +275,7 @@ func (t *ValueTypeTable) RangeRead(txn badgerwrap.Txn, keyPrefix *KeyType,
 	return resources, stats, nil
 }
 
-//todo: need to add unit test
+// todo: need to add unit test
 func (t *ValueTypeTable) GetPartitionsFromTimeRange(txn badgerwrap.Txn, startTime time.Time, endTime time.Time) ([]string, error) {
 	resources := []string{}
 	startPartition := untyped.GetPartitionId(startTime)

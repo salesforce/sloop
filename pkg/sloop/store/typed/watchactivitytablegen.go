@@ -293,7 +293,7 @@ func (t *WatchActivityTable) RangeRead(txn badgerwrap.Txn, keyPrefix *WatchActiv
 	return resources, stats, nil
 }
 
-//todo: need to add unit test
+// todo: need to add unit test
 func (t *WatchActivityTable) GetPartitionsFromTimeRange(txn badgerwrap.Txn, startTime time.Time, endTime time.Time) ([]string, error) {
 	resources := []string{}
 	startPartition := untyped.GetPartitionId(startTime)

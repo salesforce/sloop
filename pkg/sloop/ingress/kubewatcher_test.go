@@ -51,10 +51,11 @@ func reactionError(_ k8sTesting.Action) (bool, runtime.Object, error) {
 }
 
 // newTestCrdClient - provides a function pointer to create a fake clientset
-//   takes: k8sTesting.Action function pointer - adds the reaction to the fake clientset
-//   returns a function pointer
-//      takes: restConfig
-//      returns: clientset.Interface & error (always nil)
+//
+//	takes: k8sTesting.Action function pointer - adds the reaction to the fake clientset
+//	returns a function pointer
+//	   takes: restConfig
+//	   returns: clientset.Interface & error (always nil)
 func newTestCrdClient(reaction func(_ k8sTesting.Action) (bool, runtime.Object, error)) func(_ *rest.Config) (clientset.Interface, error) {
 	return func(_ *rest.Config) (clientset.Interface, error) {
 		crdClient := &clientsetFake.Clientset{}

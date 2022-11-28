@@ -24,14 +24,14 @@ const minLookback = 1 * time.Minute
 //
 // Using "lookback":
 //
-//   We first find the endTime.  If we are looking at historic data, we use the end of the last partitions.  If
-//   that is in the future, we use now().  We don't want to always use now() as that would prevent users from looking
-//   at old data as it would get clipped by maxLookBack
-//   StartTime is just endTime - lookback
+//	We first find the endTime.  If we are looking at historic data, we use the end of the last partitions.  If
+//	that is in the future, we use now().  We don't want to always use now() as that would prevent users from looking
+//	at old data as it would get clipped by maxLookBack
+//	StartTime is just endTime - lookback
 //
 // Using "start_time" and "end_time"
 //
-//   This is straight forward.  These are UTC Unix times
+//	This is straight forward.  These are UTC Unix times
 //
 // TODO: If wall clock is in the middle of the newest partition min-max time we can use it
 func computeTimeRange(params url.Values, tables typed.Tables, maxLookBack time.Duration) (time.Time, time.Time, error) {

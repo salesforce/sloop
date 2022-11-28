@@ -10,9 +10,10 @@ package webserver
 import (
 	"context"
 	"fmt"
-	"github.com/golang/glog"
 	"net/http"
 	"time"
+
+	"github.com/golang/glog"
 )
 
 const requestIDKey string = "reqId"
@@ -45,7 +46,7 @@ func glogWrapper(handler http.Handler) http.Handler {
 		before := time.Now()
 		handler.ServeHTTP(w, r)
 		requestID := getRequestId(r.Context())
-		var timeTaken = time.Since(before)
+		timeTaken := time.Since(before)
 		metricWebServerRequestLatency.Set(timeTaken.Seconds())
 		glog.Infof("reqId: %v http url: %v took: %v remote: %v useragent: %v", requestID, r.URL, timeTaken, r.RemoteAddr, r.UserAgent())
 	})
