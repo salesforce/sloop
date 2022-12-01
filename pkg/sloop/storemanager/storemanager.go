@@ -9,6 +9,10 @@ package storemanager
 
 import (
 	"fmt"
+	"math"
+	"sync"
+	"time"
+
 	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -16,9 +20,6 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/spf13/afero"
-	"math"
-	"sync"
-	"time"
 )
 
 var (
@@ -56,7 +57,6 @@ type Config struct {
 type StoreManager struct {
 	tables   typed.Tables
 	fs       *afero.Afero
-	testMode bool
 	sleeper  *SleepWithCancel
 	wg       *sync.WaitGroup
 	done     bool
@@ -74,6 +74,7 @@ func NewStoreManager(tables typed.Tables, config *Config, fs *afero.Afero) *Stor
 		done:     false,
 		donelock: &sync.Mutex{},
 		config:   config,
+		stats:    &storeStats{},
 	}
 }
 
@@ -98,7 +99,7 @@ func (sm *StoreManager) gcLoop() {
 			return
 		}
 
-		var beforeGCStats = sm.refreshStats()
+		beforeGCStats := sm.refreshStats()
 
 		metricGcRunCount.Inc()
 		before := time.Now()
@@ -116,8 +117,8 @@ func (sm *StoreManager) gcLoop() {
 		metricGcLatency.Set(time.Since(before).Seconds())
 		glog.V(common.GlogVerbose).Infof("GC finished in %v with error '%v'.  Next run in %v", time.Since(before), err, sm.config.Freq)
 
-		var afterGCEnds = sm.refreshStats()
-		var deltaStats = getDeltaStats(beforeGCStats, afterGCEnds)
+		afterGCEnds := sm.refreshStats()
+		deltaStats := getDeltaStats(beforeGCStats, afterGCEnds)
 		emitGCMetrics(deltaStats)
 		sm.sleeper.Sleep(sm.config.Freq)
 	}
@@ -135,7 +136,7 @@ func (sm *StoreManager) vlogGcLoop() {
 			return
 		}
 
-		var beforeGCStats = sm.refreshStats()
+		beforeGCStats := sm.refreshStats()
 		for {
 			before := time.Now()
 			metricValueLogGcRunning.Set(1)
@@ -147,8 +148,8 @@ func (sm *StoreManager) vlogGcLoop() {
 			if err != nil {
 				break
 			}
-			var afterGCEnds = sm.refreshStats()
-			var deltaStats = getDeltaStats(beforeGCStats, afterGCEnds)
+			afterGCEnds := sm.refreshStats()
+			deltaStats := getDeltaStats(beforeGCStats, afterGCEnds)
 			emitGCMetrics(deltaStats)
 		}
 		sm.sleeper.Sleep(sm.config.BadgerVLogGCFreq)
@@ -165,9 +166,8 @@ func (sm *StoreManager) Shutdown() {
 }
 
 func (sm *StoreManager) refreshStats() *storeStats {
-	// On startup we have 2 routines trying to do this at the same time
 	// If we have fresh results its good enough
-	if sm.stats != nil && time.Since(sm.stats.timestamp) < time.Second {
+	if time.Since(sm.stats.timestamp) < time.Second {
 		return sm.stats
 	}
 	sm.stats = generateStats(sm.config.StoreRoot, sm.tables.Db(), sm.fs)
@@ -253,7 +253,6 @@ func getPartitionsToDeleteWhenSizeConditionHasBeenMet(sizeLimitBytes int, diskSi
 }
 
 func getPartitionsToDelete(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int, diskSizeBytes int64, gcThreshold float64) ([]string, map[string]*common.PartitionInfo) {
-
 	ok, minPartition, maxPartition := getMinAndMaxPartitionsAndSetMetrics(tables)
 	if !ok {
 		return nil, nil
@@ -369,7 +368,6 @@ func cleanUpFileSizeCondition(stats *storeStats, sizeLimitBytes int, gcThreshold
 }
 
 func hasFilesOnDiskExceededThreshold(diskSizeBytes int64, sizeLimitBytes int, gcThreshold float64) bool {
-
 	// gcThreshold is the threshold when reached would trigger the garbage collection. Its because we want to proactively start GC when the size limit is about to hit.
 	sizeThreshold := gcThreshold * float64(sizeLimitBytes)
 	currentDiskSize := float64(diskSizeBytes)
