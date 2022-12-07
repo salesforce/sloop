@@ -52,19 +52,21 @@ func glogWrapper(next http.Handler) http.Handler {
 	})
 }
 
-func metricCountsDurationsWrapperChain(handler string, next http.Handler) http.HandlerFunc {
+func wrapperChain(handler string, next http.Handler) http.HandlerFunc {
 	return promhttp.InstrumentHandlerCounter(
 		metricWebServerRequestCount.MustCurryWith(prometheus.Labels{"handler": handler}),
 		promhttp.InstrumentHandlerDuration(
-			metricWebServerRequestDuration.MustCurryWith(prometheus.Labels{"handler": handler}), next))
+			metricWebServerRequestDuration.MustCurryWith(prometheus.Labels{"handler": handler}),
+			traceWrapper(
+				glogWrapper(
+					next,
+				),
+			),
+		),
+	)
 }
 
 func metricCountsWrapper(handler string, next http.Handler) http.HandlerFunc {
 	return promhttp.InstrumentHandlerCounter(
 		metricWebServerRequestCount.MustCurryWith(prometheus.Labels{"handler": handler}), next)
-}
-
-func metricDurationsWrapper(handler string, next http.Handler) http.HandlerFunc {
-	return promhttp.InstrumentHandlerDuration(
-		metricWebServerRequestDuration.MustCurryWith(prometheus.Labels{"handler": handler}), next)
 }

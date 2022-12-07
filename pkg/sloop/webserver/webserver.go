@@ -31,7 +31,6 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 
 	"github.com/golang/glog"
-	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -86,15 +85,6 @@ var (
 // This is not going to change and we don't want to pass it to every function
 // so use a static for now
 var webFilesPath string
-
-// Needed to use this to allow for graceful shutdown which is required for profiling
-type Server struct {
-	mux *mux.Router
-}
-
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.mux.ServeHTTP(w, r)
-}
 
 func logWebError(err error, note string, r *http.Request, w http.ResponseWriter) {
 	message := fmt.Sprintf("Error rendering url: %q.  Note: %v. Error: %v", r.URL, note, err)
@@ -189,56 +179,55 @@ func healthHandler() http.HandlerFunc {
 // Handler for redirecting / to /currentContext to ensure backward compatibility
 func redirectHandler(currentContext string) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
-		redirectURL := path.Join("/", currentContext)
+		redirectURL := path.Join("/", currentContext, request.URL.Path)
 		http.Redirect(writer, request, redirectURL, http.StatusTemporaryRedirect)
 	}
 }
 
-// Registers paths for mux router
-func registerPaths(router *mux.Router, config WebConfig, tables typed.Tables) {
-	router.PathPrefix("/webfiles/").Handler(metricCountsDurationsWrapperChain("webFile", webFileHandler(config.CurrentContext)))
-	router.HandleFunc("/data/backup", metricCountsDurationsWrapperChain("backup", backupHandler(tables.Db(), config.CurrentContext)))
-	router.HandleFunc("/data", metricCountsDurationsWrapperChain("query", queryHandler(tables, config.MaxLookback)))
-	router.HandleFunc("/resource", metricCountsDurationsWrapperChain("resource", resourceHandler(config.ResourceLinks, config.CurrentContext)))
-	// Debug pages
-	router.HandleFunc("/debug/listkeys/", metricCountsDurationsWrapperChain("debug", listKeysHandler(tables)))
-	router.HandleFunc("/debug/histogram/", metricCountsDurationsWrapperChain("debug", histogramHandler(tables)))
-	router.HandleFunc("/debug/tables/", metricCountsDurationsWrapperChain("debug", debugBadgerTablesHandler(tables.Db())))
-	router.HandleFunc("/debug/view", metricCountsDurationsWrapperChain("debug", viewKeyHandler(tables)))
-	router.HandleFunc("/debug/config/", metricCountsDurationsWrapperChain("debug", configHandler(config.ConfigYaml)))
-	// Badger uses the trace package, which registers /debug/requests and /debug/events
-	router.HandleFunc("/debug/requests", metricCountsDurationsWrapperChain("debug", http.HandlerFunc(trace.Traces)))
-	router.HandleFunc("/debug/events", metricCountsDurationsWrapperChain("debug", http.HandlerFunc(trace.Events)))
-	// Badger also uses expvar which exposes prometheus compatible metrics on /debug/vars
-	router.HandleFunc("/debug/vars", metricCountsDurationsWrapperChain("debug", http.HandlerFunc(expvar.Handler().ServeHTTP)))
-	router.HandleFunc("/debug/", metricCountsDurationsWrapperChain("debug", debugHandler()))
-
-	router.Handle("", metricCountsDurationsWrapperChain("index", indexHandler(config)))
-}
-
-func Run(config WebConfig, tables typed.Tables) error {
-	webFilesPath = config.WebFilesPath
-	server := &Server{}
-	server.mux = mux.NewRouter()
-	server.mux.NotFoundHandler = metricCountsDurationsWrapperChain("notFound", traceWrapper(glogWrapper(http.NotFoundHandler())))
-	server.mux.Handle("/", metricCountsDurationsWrapperChain("root", traceWrapper(glogWrapper(redirectHandler(config.CurrentContext)))))
-	server.mux.Handle("/healthz", metricCountsWrapper("healthz", healthHandler()))
-
-	server.mux.Handle("/metrics", metricCountsWrapper("metrics", promhttp.HandlerFor(
+// Registers routes on mux router
+func registerRoutes(mux *http.ServeMux, config WebConfig, tables typed.Tables) {
+	// root pages
+	mux.Handle("/", wrapperChain("root", redirectHandler(config.CurrentContext)))
+	mux.Handle("/healthz", metricCountsWrapper("healthz", healthHandler()))
+	mux.Handle("/metrics", metricCountsWrapper("metrics", promhttp.HandlerFor(
 		prometheus.DefaultGatherer,
 		promhttp.HandlerOpts{
 			EnableOpenMetrics: true,
 		},
 	)))
-	subMux := server.mux.PathPrefix("/{clusterContext}").Subrouter()
-	registerPaths(subMux, config, tables)
-	subMux.Use(traceWrapper)
-	subMux.Use(glogWrapper)
+
+	// /<currentContext> pages
+	ccPrefix := fmt.Sprintf("/%s", config.CurrentContext)
+	mux.HandleFunc(ccPrefix, wrapperChain("index", indexHandler(config)))
+	mux.HandleFunc(ccPrefix+"/webfiles/", wrapperChain("webFile", webFileHandler(config.CurrentContext)))
+	mux.HandleFunc(ccPrefix+"/data/backup", wrapperChain("backup", backupHandler(tables.Db(), config.CurrentContext)))
+	mux.HandleFunc(ccPrefix+"/data", wrapperChain("query", queryHandler(tables, config.MaxLookback)))
+	mux.HandleFunc(ccPrefix+"/resource", wrapperChain("resource", resourceHandler(config.ResourceLinks, config.CurrentContext)))
+	// Debug pages
+	mux.HandleFunc(ccPrefix+"/debug/listkeys/", wrapperChain("debug", listKeysHandler(tables)))
+	mux.HandleFunc(ccPrefix+"/debug/histogram/", wrapperChain("debug", histogramHandler(tables)))
+	mux.HandleFunc(ccPrefix+"/debug/tables/", wrapperChain("debug", debugBadgerTablesHandler(tables.Db())))
+	mux.HandleFunc(ccPrefix+"/debug/view", wrapperChain("debug", viewKeyHandler(tables)))
+	mux.HandleFunc(ccPrefix+"/debug/config/", wrapperChain("debug", configHandler(config.ConfigYaml)))
+	// Badger uses the trace package, which registers /debug/requests and /debug/events
+	mux.HandleFunc(ccPrefix+"/debug/requests", wrapperChain("debug", http.HandlerFunc(trace.Traces)))
+	mux.HandleFunc(ccPrefix+"/debug/events", wrapperChain("debug", http.HandlerFunc(trace.Events)))
+	// Badger also uses expvar which exposes prometheus compatible metrics on /debug/vars
+	mux.HandleFunc(ccPrefix+"/debug/vars", wrapperChain("debug", http.HandlerFunc(expvar.Handler().ServeHTTP)))
+	mux.HandleFunc(ccPrefix+"/debug/", wrapperChain("debug", debugHandler()))
+}
+
+func Run(config WebConfig, tables typed.Tables) error {
+	webFilesPath = config.WebFilesPath
+
+	mux := http.NewServeMux()
+	registerRoutes(mux, config, tables)
+
 	addr := fmt.Sprintf("%v:%v", config.BindAddress, config.Port)
 
 	h := &http.Server{
 		Addr:     addr,
-		Handler:  server,
+		Handler:  mux,
 		ErrorLog: log.New(os.Stdout, "http: ", log.LstdFlags),
 	}
 	if config.BindAddress != "" {
