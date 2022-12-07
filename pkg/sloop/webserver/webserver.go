@@ -67,14 +67,14 @@ type WebConfig struct {
 var (
 	metricWebServerRequestCount = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "sloop_webserver_http_requests_total",
+			Name: "sloop_http_requests_total",
 			Help: "A counter for requests to the wrapped handler.",
 		},
 		[]string{"code", "handler"},
 	)
 	metricWebServerRequestDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "sloop_webserver_http_request_duration_seconds",
+			Name:    "sloop_http_request_duration_seconds",
 			Help:    "A histogram of latencies for requests to the wrapped handler.",
 			Buckets: []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 30, 60},
 		},
