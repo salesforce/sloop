@@ -66,8 +66,21 @@ type WebConfig struct {
 }
 
 var (
-	metricWebServerRequestCount   = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_webserver_request_count"})
-	metricWebServerRequestLatency = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_webserver_request_latency_sec"})
+	metricWebServerRequestCount = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "sloop_webserver_http_requests_total",
+			Help: "A counter for requests to the wrapped handler.",
+		},
+		[]string{"code", "handler"},
+	)
+	metricWebServerRequestDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "sloop_webserver_http_request_duration_seconds",
+			Help:    "A histogram of latencies for requests to the wrapped handler.",
+			Buckets: []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 30, 60},
+		},
+		[]string{"handler"},
+	)
 )
 
 // This is not going to change and we don't want to pass it to every function
@@ -183,38 +196,40 @@ func redirectHandler(currentContext string) http.HandlerFunc {
 
 // Registers paths for mux router
 func registerPaths(router *mux.Router, config WebConfig, tables typed.Tables) {
-	router.PathPrefix("/webfiles/").HandlerFunc(webFileHandler(config.CurrentContext))
-	router.HandleFunc("/data/backup", backupHandler(tables.Db(), config.CurrentContext))
-	router.HandleFunc("/data", queryHandler(tables, config.MaxLookback))
-	router.HandleFunc("/resource", resourceHandler(config.ResourceLinks, config.CurrentContext))
+	router.PathPrefix("/webfiles/").Handler(metricCountsDurationsWrapperChain("webFile", webFileHandler(config.CurrentContext)))
+	router.HandleFunc("/data/backup", metricCountsDurationsWrapperChain("backup", backupHandler(tables.Db(), config.CurrentContext)))
+	router.HandleFunc("/data", metricCountsDurationsWrapperChain("query", queryHandler(tables, config.MaxLookback)))
+	router.HandleFunc("/resource", metricCountsDurationsWrapperChain("resource", resourceHandler(config.ResourceLinks, config.CurrentContext)))
 	// Debug pages
-	router.HandleFunc("/debug/listkeys/", listKeysHandler(tables))
-	router.HandleFunc("/debug/histogram/", histogramHandler(tables))
-	router.HandleFunc("/debug/tables/", debugBadgerTablesHandler(tables.Db()))
-	router.HandleFunc("/debug/view", viewKeyHandler(tables))
-	router.HandleFunc("/debug/config/", configHandler(config.ConfigYaml))
+	router.HandleFunc("/debug/listkeys/", metricCountsDurationsWrapperChain("debug", listKeysHandler(tables)))
+	router.HandleFunc("/debug/histogram/", metricCountsDurationsWrapperChain("debug", histogramHandler(tables)))
+	router.HandleFunc("/debug/tables/", metricCountsDurationsWrapperChain("debug", debugBadgerTablesHandler(tables.Db())))
+	router.HandleFunc("/debug/view", metricCountsDurationsWrapperChain("debug", viewKeyHandler(tables)))
+	router.HandleFunc("/debug/config/", metricCountsDurationsWrapperChain("debug", configHandler(config.ConfigYaml)))
 	// Badger uses the trace package, which registers /debug/requests and /debug/events
-	router.HandleFunc("/debug/requests", trace.Traces)
-	router.HandleFunc("/debug/events", trace.Events)
+	router.HandleFunc("/debug/requests", metricCountsDurationsWrapperChain("debug", http.HandlerFunc(trace.Traces)))
+	router.HandleFunc("/debug/events", metricCountsDurationsWrapperChain("debug", http.HandlerFunc(trace.Events)))
 	// Badger also uses expvar which exposes prometheus compatible metrics on /debug/vars
-	router.HandleFunc("/debug/vars", expvar.Handler().ServeHTTP)
-	router.HandleFunc("/debug/", debugHandler())
+	router.HandleFunc("/debug/vars", metricCountsDurationsWrapperChain("debug", http.HandlerFunc(expvar.Handler().ServeHTTP)))
+	router.HandleFunc("/debug/", metricCountsDurationsWrapperChain("debug", debugHandler()))
 
-	router.Handle("", indexHandler(config))
+	router.Handle("", metricCountsDurationsWrapperChain("index", indexHandler(config)))
 }
 
 func Run(config WebConfig, tables typed.Tables) error {
 	webFilesPath = config.WebFilesPath
 	server := &Server{}
 	server.mux = mux.NewRouter()
-	server.mux.Handle("/", traceWrapper(glogWrapper(redirectHandler(config.CurrentContext))))
-	server.mux.Handle("/healthz", healthHandler())
-	server.mux.Handle("/metrics", promhttp.HandlerFor(
+	server.mux.NotFoundHandler = metricCountsDurationsWrapperChain("notFound", traceWrapper(glogWrapper(http.NotFoundHandler())))
+	server.mux.Handle("/", metricCountsDurationsWrapperChain("root", traceWrapper(glogWrapper(redirectHandler(config.CurrentContext)))))
+	server.mux.Handle("/healthz", metricCountsWrapper("healthz", healthHandler()))
+
+	server.mux.Handle("/metrics", metricCountsWrapper("metrics", promhttp.HandlerFor(
 		prometheus.DefaultGatherer,
 		promhttp.HandlerOpts{
 			EnableOpenMetrics: true,
 		},
-	))
+	)))
 	subMux := server.mux.PathPrefix("/{clusterContext}").Subrouter()
 	registerPaths(subMux, config, tables)
 	subMux.Use(traceWrapper)

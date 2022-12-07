@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const requestIDKey string = "reqId"
@@ -27,7 +29,7 @@ func getRequestId(webContext context.Context) string {
 }
 
 // Sets a request id in the context which can be used for logging
-func traceWrapper(handler http.Handler) http.Handler {
+func traceWrapper(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestID := r.Header.Get("X-Request-Id")
 		if requestID == "" {
@@ -35,19 +37,34 @@ func traceWrapper(handler http.Handler) http.Handler {
 		}
 		ctx := context.WithValue(r.Context(), requestIDKey, requestID)
 		w.Header().Set("X-Request-Id", requestID)
-		handler.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 // Logs all HTTP requests to glog
-func glogWrapper(handler http.Handler) http.Handler {
+func glogWrapper(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		metricWebServerRequestCount.Inc()
 		before := time.Now()
-		handler.ServeHTTP(w, r)
+		next.ServeHTTP(w, r)
 		requestID := getRequestId(r.Context())
 		timeTaken := time.Since(before)
-		metricWebServerRequestLatency.Set(timeTaken.Seconds())
 		glog.Infof("reqId: %v http url: %v took: %v remote: %v useragent: %v", requestID, r.URL, timeTaken, r.RemoteAddr, r.UserAgent())
 	})
+}
+
+func metricCountsDurationsWrapperChain(handler string, next http.Handler) http.HandlerFunc {
+	return promhttp.InstrumentHandlerCounter(
+		metricWebServerRequestCount.MustCurryWith(prometheus.Labels{"handler": handler}),
+		promhttp.InstrumentHandlerDuration(
+			metricWebServerRequestDuration.MustCurryWith(prometheus.Labels{"handler": handler}), next))
+}
+
+func metricCountsWrapper(handler string, next http.Handler) http.HandlerFunc {
+	return promhttp.InstrumentHandlerCounter(
+		metricWebServerRequestCount.MustCurryWith(prometheus.Labels{"handler": handler}), next)
+}
+
+func metricDurationsWrapper(handler string, next http.Handler) http.HandlerFunc {
+	return promhttp.InstrumentHandlerDuration(
+		metricWebServerRequestDuration.MustCurryWith(prometheus.Labels{"handler": handler}), next)
 }
