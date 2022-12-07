@@ -179,7 +179,12 @@ func healthHandler() http.HandlerFunc {
 // Handler for redirecting / to /currentContext to ensure backward compatibility
 func redirectHandler(currentContext string) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
-		redirectURL := path.Join("/", currentContext, request.URL.Path)
+		if request.URL.Path != "/" {
+			writer.WriteHeader(http.StatusNotFound)
+			writer.Write([]byte(http.StatusText(http.StatusNotFound)))
+			return
+		}
+		redirectURL := path.Join("/", currentContext)
 		http.Redirect(writer, request, redirectURL, http.StatusTemporaryRedirect)
 	}
 }
