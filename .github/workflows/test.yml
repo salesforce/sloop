@@ -42,6 +42,7 @@ jobs:
           go test -v -race ./...
 
       - name: Run go mod tidy
+        # TODO: Enforce when possible.
         run: |
           go mod tidy
           git diff --exit-code -- go.mod go.sum || true
