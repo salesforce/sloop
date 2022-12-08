@@ -34,7 +34,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"golang.org/x/net/trace"
 )
@@ -63,24 +62,6 @@ type WebConfig struct {
 	LeftBarLinks     []LinkTemplate
 	CurrentContext   string
 }
-
-var (
-	metricWebServerRequestCount = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "sloop_http_requests_total",
-			Help: "A counter for requests to the wrapped handler.",
-		},
-		[]string{"code", "handler"},
-	)
-	metricWebServerRequestDuration = promauto.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "sloop_http_request_duration_seconds",
-			Help:    "A histogram of latencies for requests to the wrapped handler.",
-			Buckets: []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 30, 60},
-		},
-		[]string{"handler"},
-	)
-)
 
 // This is not going to change and we don't want to pass it to every function
 // so use a static for now
@@ -192,9 +173,10 @@ func redirectHandler(currentContext string) http.HandlerFunc {
 // Registers routes on mux router
 func registerRoutes(mux *http.ServeMux, config WebConfig, tables typed.Tables) {
 	// root pages
-	mux.Handle("/", wrapperChain("root", redirectHandler(config.CurrentContext)))
-	mux.Handle("/healthz", metricCountsWrapper("healthz", healthHandler()))
-	mux.Handle("/metrics", metricCountsWrapper("metrics", promhttp.HandlerFor(
+	mux.Handle("/", middlewareChain("root", redirectHandler(config.CurrentContext)))
+	// Only metric on endpoints scraped by bots to avoid noise in logs.
+	mux.Handle("/healthz", metricCountsMiddleware("healthz", healthHandler()))
+	mux.Handle("/metrics", metricCountsMiddleware("metrics", promhttp.HandlerFor(
 		prometheus.DefaultGatherer,
 		promhttp.HandlerOpts{
 			EnableOpenMetrics: true,
@@ -203,23 +185,23 @@ func registerRoutes(mux *http.ServeMux, config WebConfig, tables typed.Tables) {
 
 	// /<currentContext> pages
 	ccPrefix := fmt.Sprintf("/%s", config.CurrentContext)
-	mux.HandleFunc(ccPrefix, wrapperChain("index", indexHandler(config)))
-	mux.HandleFunc(ccPrefix+"/webfiles/", wrapperChain("webFile", webFileHandler(config.CurrentContext)))
-	mux.HandleFunc(ccPrefix+"/data/backup", wrapperChain("backup", backupHandler(tables.Db(), config.CurrentContext)))
-	mux.HandleFunc(ccPrefix+"/data", wrapperChain("query", queryHandler(tables, config.MaxLookback)))
-	mux.HandleFunc(ccPrefix+"/resource", wrapperChain("resource", resourceHandler(config.ResourceLinks, config.CurrentContext)))
+	mux.HandleFunc(ccPrefix, middlewareChain("index", indexHandler(config)))
+	mux.HandleFunc(ccPrefix+"/webfiles/", middlewareChain("webFile", webFileHandler(config.CurrentContext)))
+	mux.HandleFunc(ccPrefix+"/data/backup", middlewareChain("backup", backupHandler(tables.Db(), config.CurrentContext)))
+	mux.HandleFunc(ccPrefix+"/data", middlewareChain("query", queryHandler(tables, config.MaxLookback)))
+	mux.HandleFunc(ccPrefix+"/resource", middlewareChain("resource", resourceHandler(config.ResourceLinks, config.CurrentContext)))
 	// Debug pages
-	mux.HandleFunc(ccPrefix+"/debug/listkeys/", wrapperChain("debug", listKeysHandler(tables)))
-	mux.HandleFunc(ccPrefix+"/debug/histogram/", wrapperChain("debug", histogramHandler(tables)))
-	mux.HandleFunc(ccPrefix+"/debug/tables/", wrapperChain("debug", debugBadgerTablesHandler(tables.Db())))
-	mux.HandleFunc(ccPrefix+"/debug/view", wrapperChain("debug", viewKeyHandler(tables)))
-	mux.HandleFunc(ccPrefix+"/debug/config/", wrapperChain("debug", configHandler(config.ConfigYaml)))
+	mux.HandleFunc(ccPrefix+"/debug/listkeys/", middlewareChain("debug", listKeysHandler(tables)))
+	mux.HandleFunc(ccPrefix+"/debug/histogram/", middlewareChain("debug", histogramHandler(tables)))
+	mux.HandleFunc(ccPrefix+"/debug/tables/", middlewareChain("debug", debugBadgerTablesHandler(tables.Db())))
+	mux.HandleFunc(ccPrefix+"/debug/view", middlewareChain("debug", viewKeyHandler(tables)))
+	mux.HandleFunc(ccPrefix+"/debug/config/", middlewareChain("debug", configHandler(config.ConfigYaml)))
 	// Badger uses the trace package, which registers /debug/requests and /debug/events
-	mux.HandleFunc(ccPrefix+"/debug/requests", wrapperChain("debug", http.HandlerFunc(trace.Traces)))
-	mux.HandleFunc(ccPrefix+"/debug/events", wrapperChain("debug", http.HandlerFunc(trace.Events)))
+	mux.HandleFunc(ccPrefix+"/debug/requests", middlewareChain("debug", http.HandlerFunc(trace.Traces)))
+	mux.HandleFunc(ccPrefix+"/debug/events", middlewareChain("debug", http.HandlerFunc(trace.Events)))
 	// Badger also uses expvar which exposes prometheus compatible metrics on /debug/vars
-	mux.HandleFunc(ccPrefix+"/debug/vars", wrapperChain("debug", http.HandlerFunc(expvar.Handler().ServeHTTP)))
-	mux.HandleFunc(ccPrefix+"/debug/", wrapperChain("debug", debugHandler()))
+	mux.HandleFunc(ccPrefix+"/debug/vars", middlewareChain("debug", http.HandlerFunc(expvar.Handler().ServeHTTP)))
+	mux.HandleFunc(ccPrefix+"/debug/", middlewareChain("debug", debugHandler()))
 }
 
 func Run(config WebConfig, tables typed.Tables) error {
