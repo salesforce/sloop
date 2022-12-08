@@ -1,0 +1,38 @@
+name: test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - "*"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+
+      - name: Format with goimports
+        # TODO: Enforce when possible.
+        run: |
+          go run golang.org/x/tools/cmd/goimports -d --format-only . || true
+
+      - name: Run go vet
+        # TODO: Enforce when possible.
+        run: |
+          go vet ./... || true
+
+      - name: Run tests
+        run: |
+          go test -v -race ./...
