@@ -9,7 +9,7 @@ on:
       - "*"
 
 jobs:
-  check:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -36,3 +36,8 @@ jobs:
       - name: Run tests
         run: |
           go test -v -race ./...
+
+      - name: Run go mod tidy
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum || true
