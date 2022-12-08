@@ -1,4 +1,4 @@
-name: test
+name: Format, lint and test
 
 on:
   push:
@@ -26,7 +26,11 @@ jobs:
       - name: Format with goimports
         # TODO: Enforce when possible.
         run: |
-          go run golang.org/x/tools/cmd/goimports -d --format-only . || true
+          if [ "$(go run golang.org/x/tools/cmd/goimports -l --format-only . | wc -l)" -gt 0 ];
+             then
+             go run golang.org/x/tools/cmd/goimports -l --format-only .
+             exit 0
+          fi
 
       - name: Run go vet
         # TODO: Enforce when possible.
