@@ -85,7 +85,7 @@ func middlewareChain(handlerName string, next http.Handler) http.HandlerFunc {
 	)
 }
 
-func metricCountsMiddleware(handlerName string, next http.Handler) http.HandlerFunc {
+func metricCountMiddleware(handlerName string, next http.Handler) http.HandlerFunc {
 	return promhttp.InstrumentHandlerCounter(
 		metricWebServerRequestCount.MustCurryWith(prometheus.Labels{"handler": handlerName}), next)
 }

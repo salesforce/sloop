@@ -175,8 +175,8 @@ func registerRoutes(mux *http.ServeMux, config WebConfig, tables typed.Tables) {
 	// root pages
 	mux.Handle("/", middlewareChain("root", redirectHandler(config.CurrentContext)))
 	// Only metric on endpoints scraped by bots to avoid noise in logs.
-	mux.Handle("/healthz", metricCountsMiddleware("healthz", healthHandler()))
-	mux.Handle("/metrics", metricCountsMiddleware("metrics", promhttp.HandlerFor(
+	mux.Handle("/healthz", metricCountMiddleware("healthz", healthHandler()))
+	mux.Handle("/metrics", metricCountMiddleware("metrics", promhttp.HandlerFor(
 		prometheus.DefaultGatherer,
 		promhttp.HandlerOpts{
 			EnableOpenMetrics: true,
