@@ -1,0 +1,48 @@
+name: Format, lint and test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - "*"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+
+      - name: Format with goimports
+        # TODO: Enforce when possible.
+        run: |
+          if [ "$(go run golang.org/x/tools/cmd/goimports -l --format-only . | wc -l)" -gt 0 ];
+             then
+             go run golang.org/x/tools/cmd/goimports -l --format-only .
+             exit 0
+          fi
+
+      - name: Run go vet
+        # TODO: Enforce when possible.
+        run: |
+          go vet ./... || true
+
+      - name: Run tests
+        run: |
+          go test -v -race ./...
+
+      - name: Run go mod tidy
+        # TODO: Enforce when possible.
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum || true
