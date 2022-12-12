@@ -31,11 +31,9 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 
 	"github.com/golang/glog"
-	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"golang.org/x/net/trace"
 )
@@ -65,23 +63,9 @@ type WebConfig struct {
 	CurrentContext   string
 }
 
-var (
-	metricWebServerRequestCount   = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_webserver_request_count"})
-	metricWebServerRequestLatency = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_webserver_request_latency_sec"})
-)
-
 // This is not going to change and we don't want to pass it to every function
 // so use a static for now
 var webFilesPath string
-
-// Needed to use this to allow for graceful shutdown which is required for profiling
-type Server struct {
-	mux *mux.Router
-}
-
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.mux.ServeHTTP(w, r)
-}
 
 func logWebError(err error, note string, r *http.Request, w http.ResponseWriter) {
 	message := fmt.Sprintf("Error rendering url: %q.  Note: %v. Error: %v", r.URL, note, err)
@@ -176,54 +160,61 @@ func healthHandler() http.HandlerFunc {
 // Handler for redirecting / to /currentContext to ensure backward compatibility
 func redirectHandler(currentContext string) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path != "/" {
+			writer.WriteHeader(http.StatusNotFound)
+			writer.Write([]byte(http.StatusText(http.StatusNotFound)))
+			return
+		}
 		redirectURL := path.Join("/", currentContext)
 		http.Redirect(writer, request, redirectURL, http.StatusTemporaryRedirect)
 	}
 }
 
-// Registers paths for mux router
-func registerPaths(router *mux.Router, config WebConfig, tables typed.Tables) {
-	router.PathPrefix("/webfiles/").HandlerFunc(webFileHandler(config.CurrentContext))
-	router.HandleFunc("/data/backup", backupHandler(tables.Db(), config.CurrentContext))
-	router.HandleFunc("/data", queryHandler(tables, config.MaxLookback))
-	router.HandleFunc("/resource", resourceHandler(config.ResourceLinks, config.CurrentContext))
-	// Debug pages
-	router.HandleFunc("/debug/listkeys/", listKeysHandler(tables))
-	router.HandleFunc("/debug/histogram/", histogramHandler(tables))
-	router.HandleFunc("/debug/tables/", debugBadgerTablesHandler(tables.Db()))
-	router.HandleFunc("/debug/view", viewKeyHandler(tables))
-	router.HandleFunc("/debug/config/", configHandler(config.ConfigYaml))
-	// Badger uses the trace package, which registers /debug/requests and /debug/events
-	router.HandleFunc("/debug/requests", trace.Traces)
-	router.HandleFunc("/debug/events", trace.Events)
-	// Badger also uses expvar which exposes prometheus compatible metrics on /debug/vars
-	router.HandleFunc("/debug/vars", expvar.Handler().ServeHTTP)
-	router.HandleFunc("/debug/", debugHandler())
-
-	router.Handle("", indexHandler(config))
-}
-
-func Run(config WebConfig, tables typed.Tables) error {
-	webFilesPath = config.WebFilesPath
-	server := &Server{}
-	server.mux = mux.NewRouter()
-	server.mux.Handle("/", traceWrapper(glogWrapper(redirectHandler(config.CurrentContext))))
-	server.mux.Handle("/healthz", healthHandler())
-	server.mux.Handle("/metrics", promhttp.HandlerFor(
+// Registers routes on mux router
+func registerRoutes(mux *http.ServeMux, config WebConfig, tables typed.Tables) {
+	// root pages
+	mux.Handle("/", middlewareChain("root", redirectHandler(config.CurrentContext)))
+	// Only metric on endpoints scraped by bots to avoid noise in logs.
+	mux.Handle("/healthz", metricCountMiddleware("healthz", healthHandler()))
+	mux.Handle("/metrics", metricCountMiddleware("metrics", promhttp.HandlerFor(
 		prometheus.DefaultGatherer,
 		promhttp.HandlerOpts{
 			EnableOpenMetrics: true,
 		},
-	))
-	subMux := server.mux.PathPrefix("/{clusterContext}").Subrouter()
-	registerPaths(subMux, config, tables)
-	subMux.Use(traceWrapper)
-	subMux.Use(glogWrapper)
+	)))
+
+	// /<currentContext> pages
+	ccPrefix := fmt.Sprintf("/%s", config.CurrentContext)
+	mux.HandleFunc(ccPrefix, middlewareChain("index", indexHandler(config)))
+	mux.HandleFunc(ccPrefix+"/webfiles/", middlewareChain("webFile", webFileHandler(config.CurrentContext)))
+	mux.HandleFunc(ccPrefix+"/data/backup", middlewareChain("backup", backupHandler(tables.Db(), config.CurrentContext)))
+	mux.HandleFunc(ccPrefix+"/data", middlewareChain("query", queryHandler(tables, config.MaxLookback)))
+	mux.HandleFunc(ccPrefix+"/resource", middlewareChain("resource", resourceHandler(config.ResourceLinks, config.CurrentContext)))
+	// Debug pages
+	mux.HandleFunc(ccPrefix+"/debug/listkeys/", middlewareChain("debug", listKeysHandler(tables)))
+	mux.HandleFunc(ccPrefix+"/debug/histogram/", middlewareChain("debug", histogramHandler(tables)))
+	mux.HandleFunc(ccPrefix+"/debug/tables/", middlewareChain("debug", debugBadgerTablesHandler(tables.Db())))
+	mux.HandleFunc(ccPrefix+"/debug/view", middlewareChain("debug", viewKeyHandler(tables)))
+	mux.HandleFunc(ccPrefix+"/debug/config/", middlewareChain("debug", configHandler(config.ConfigYaml)))
+	// Badger uses the trace package, which registers /debug/requests and /debug/events
+	mux.HandleFunc(ccPrefix+"/debug/requests", middlewareChain("debug", http.HandlerFunc(trace.Traces)))
+	mux.HandleFunc(ccPrefix+"/debug/events", middlewareChain("debug", http.HandlerFunc(trace.Events)))
+	// Badger also uses expvar which exposes prometheus compatible metrics on /debug/vars
+	mux.HandleFunc(ccPrefix+"/debug/vars", middlewareChain("debug", http.HandlerFunc(expvar.Handler().ServeHTTP)))
+	mux.HandleFunc(ccPrefix+"/debug/", middlewareChain("debug", debugHandler()))
+}
+
+func Run(config WebConfig, tables typed.Tables) error {
+	webFilesPath = config.WebFilesPath
+
+	mux := http.NewServeMux()
+	registerRoutes(mux, config, tables)
+
 	addr := fmt.Sprintf("%v:%v", config.BindAddress, config.Port)
 
 	h := &http.Server{
 		Addr:     addr,
-		Handler:  server,
+		Handler:  mux,
 		ErrorLog: log.New(os.Stdout, "http: ", log.LstdFlags),
 	}
 	if config.BindAddress != "" {

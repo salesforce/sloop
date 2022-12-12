@@ -13,7 +13,6 @@ require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/protobuf v1.4.3
 	github.com/googleapis/gnostic v0.3.1 // indirect
-	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/jteeuwen/go-bindata v3.0.7+incompatible
