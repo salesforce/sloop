@@ -4,9 +4,9 @@ all:
 	go get ./pkg/...
 	go fmt ./pkg/...
 	go install ./pkg/...
-	go test -race -cover ./pkg/...
+	go test -cover ./pkg/...
 
-run: 
+run:
 	go install ./pkg/...
 	$(GOPATH)/bin/sloop
 
@@ -37,7 +37,7 @@ protobuf:
 	protoc -I=./pkg/sloop/store/typed/ --go_out=./pkg/sloop/store/typed/ ./pkg/sloop/store/typed/schema.proto
 
 cover:
-	go test -race ./pkg/... -coverprofile=coverage.out
+	go test ./pkg/... -coverprofile=coverage.out
 	go tool cover -html=coverage.out
 
 release:
