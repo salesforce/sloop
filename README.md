@@ -1,8 +1,8 @@
 # Sloop - Kubernetes History Visualization
 
-[![Build Status](https://travis-ci.org/salesforce/sloop.svg?branch=master)](https://travis-ci.org/salesforce/sloop)
+[![Publish Status](https://github.com/salesforce/sloop/workflows/Publish/badge.svg)](https://github.com/salesforce/sloop/actions)
+[![Build Status](https://github.com/salesforce/sloop/workflows/Test/badge.svg)](https://github.com/salesforce/sloop/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/salesforce/sloop)](https://goreportcard.com/report/github.com/salesforce/sloop)
-![Docker Pulls](https://img.shields.io/docker/pulls/sloopimage/sloop)
 
 <img src="https://github.com/salesforce/sloop/raw/master/other/sloop_logo_color_small_notext.png">
 
