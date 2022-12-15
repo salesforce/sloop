@@ -1,5 +1,7 @@
-FROM golang:1.16 as build
-RUN apt-get update && apt-get  install curl make
+FROM golang:1.19 as build
+RUN apt-get update && apt-get install curl make
+
+# https://github.com/kubernetes-sigs/aws-iam-authenticator/releases
 RUN curl -o /aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.14.6/2019-08-22/bin/linux/amd64/aws-iam-authenticator \
   && wait \
   && chmod +x /aws-iam-authenticator
@@ -7,8 +9,7 @@ RUN curl -o /aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com
 COPY . /build/
 WORKDIR /build
 
-RUN go env -w GO111MODULE=auto \
-   && make
+RUN make
 
 FROM gcr.io/distroless/base
 COPY --from=build /go/bin/sloop /sloop
