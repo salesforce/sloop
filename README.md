@@ -6,10 +6,10 @@
 
 <img src="https://github.com/salesforce/sloop/raw/master/other/sloop_logo_color_small_notext.png">
 
-----
+---
 
-Sloop monitors Kubernetes, recording histories of events and resource state changes 
-and providing visualizations to aid in debugging past events.  
+Sloop monitors Kubernetes, recording histories of events and resource state changes
+and providing visualizations to aid in debugging past events.
 
 Key features:
 
@@ -19,7 +19,7 @@ Key features:
 1. Allows you to see changes over time in a Kubernetes application.
 1. Is a self-contained service with no dependencies on distributed storage.
 
-----
+---
 
 ## Screenshots
 
@@ -39,12 +39,14 @@ Users can install sloop by using helm chart now, for instructions refer [helm re
 
 ### Precompiled Binaries
 
-- Docker: [`sloopimage/sloop`](https://hub.docker.com/r/sloopimage/sloop)
+TODO: See the [Releases](https://github.com/salesforce/sloop/releases).
 
 ### Build from Source
 
 Building Sloop from source needs a working Go environment
-with [version 1.13 or greater installed](https://golang.org/doc/install).
+with the version defined in the [go.mod](./go.mod) file or greater.
+
+See: https://golang.org/doc/install
 
 Clone the sloop repository and build using `make`:
 
@@ -53,7 +55,6 @@ mkdir -p $GOPATH/src/github.com/salesforce
 cd $GOPATH/src/github.com/salesforce
 git clone https://github.com/salesforce/sloop.git
 cd sloop
-go env -w GO111MODULE=auto
 make
 $GOPATH/bin/sloop
 ```
@@ -62,10 +63,10 @@ When complete, you should have a running Sloop version accessing the current con
 
 Other makefile targets:
 
-* *docker*: Builds a Docker image.
-* *cover*: Runs unit tests with code coverage.
-* *generate*: Updates genny templates for typed table classes.
-* *protobuf*: Generates protobuf code-gen.
+- _docker_: Builds a Docker image.
+- _cover_: Runs unit tests with code coverage.
+- _generate_: Updates genny templates for typed table classes.
+- _protobuf_: Generates protobuf code-gen.
 
 ### Local Docker Run
 
@@ -111,6 +112,7 @@ To restore from a backup, start `sloop` with the `-restore-database-file` flag s
 ## Memory Consumption
 
 Sloop's memory usage can be managed by tweaking several options:
+
 - `badger-use-lsm-only-options` If this flag is set to true, values would be collocated with the LSM tree, with value log largely acting as a write-ahead log only. Recommended value for memory constrained environments: false
 - `badger-keep-l0-in-memory` When this flag is set to true, Level 0 tables are kept in memory. This leads to better performance in writes as well as compactions. Recommended value for memory constrained environments: false
 - `badger-sync-writes` When SyncWrites is true all writes are synced to disk. Setting this to false would achieve better performance, but may cause data loss in case of crash. Recommended value for memory constrained environments: false
@@ -119,31 +121,50 @@ Sloop's memory usage can be managed by tweaking several options:
 Apart from these flags some other values can be tweaked to fit in the memory constraints. Following are some examples of setups.
 
 - Memory consumption max limit: 1GB
-``` 
-               // 0.5<<20 (524288 bytes = 0.5 Mb)               
+
+```
+               // 0.5<<20 (524288 bytes = 0.5 Mb)
                "badger-max-table-size=524288",
                "badger-number-of-compactors=1",
                "badger-number-of-level-zero-tables=1",
                "badger-number-of-zero-tables-stall=2",
 ```
+
 - Memory consumption max limit: 2GB
-``` 
-               // 16<<20 (16777216 bytes = 16 Mb)              
+
+```
+               // 16<<20 (16777216 bytes = 16 Mb)
                "badger-max-table-size=16777216",
                "badger-number-of-compactors=1",
                "badger-number-of-level-zero-tables=1",
                "badger-number-of-zero-tables-stall=2",
 ```
+
 - Memory consumption max limit: 5GB
-``` 
-               // 32<<20 (33554432 bytes = 32 Mb)             
+
+```
+               // 32<<20 (33554432 bytes = 32 Mb)
                "badger-max-table-size=33554432",
                "badger-number-of-compactors=1",
                "badger-number-of-level-zero-tables=2",
                "badger-number-of-zero-tables-stall=3",
 ```
 
-Apart from the above settings, max-disk-mb and max-look-back can be tweaked according to input data and memory constraints.  
+Apart from the above settings, max-disk-mb and max-look-back can be tweaked according to input data and memory constraints.
+
+## Prometheus
+
+Sloop uses the [Prometheus](https://prometheus.io/) library to emit metrics, which is very helpful for performance debugging.
+
+In the root of the repo is a Prometheus config file
+[prometheus.yml](./prometheus.yml).
+
+On OSX you can install Prometheus with `brew install prometheus`. Then start it from the sloop directory by running `prometheus`
+
+Open your browser to http://localhost:9090.
+
+An example of a useful query is [rate(kubewatch_event_count[5m])](<http://localhost:9090/graph?g0.range_input=1h&g0.expr=rate(kubewatch_event_count%5B1m%5D)&g0.tab=0>)
+
 ## Contributing
 
 Refer to [CONTRIBUTING.md](CONTRIBUTING.md)<br>
