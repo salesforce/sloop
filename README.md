@@ -39,12 +39,14 @@ Users can install sloop by using helm chart now, for instructions refer [helm re
 
 ### Precompiled Binaries
 
-- Docker: [`sloopimage/sloop`](https://hub.docker.com/r/sloopimage/sloop)
+TODO: See the [Releases](https://github.com/salesforce/sloop/releases).
 
 ### Build from Source
 
 Building Sloop from source needs a working Go environment
-with [version 1.13 or greater installed](https://golang.org/doc/install).
+with the version defined in the [go.mod](./go.mod) file or greater.
+
+See: https://golang.org/doc/install
 
 Clone the sloop repository and build using `make`:
 
@@ -53,7 +55,6 @@ mkdir -p $GOPATH/src/github.com/salesforce
 cd $GOPATH/src/github.com/salesforce
 git clone https://github.com/salesforce/sloop.git
 cd sloop
-go env -w GO111MODULE=auto
 make
 $GOPATH/bin/sloop
 ```
@@ -150,6 +151,19 @@ Apart from these flags some other values can be tweaked to fit in the memory con
 ```
 
 Apart from the above settings, max-disk-mb and max-look-back can be tweaked according to input data and memory constraints.
+
+## Prometheus
+
+Sloop uses the [Prometheus](https://prometheus.io/) library to emit metrics, which is very helpful for performance debugging.
+
+In the root of the repo is a Prometheus config file
+[prometheus.yml](./prometheus.yml).
+
+On OSX you can install Prometheus with `brew install prometheus`. Then start it from the sloop directory by running `prometheus`
+
+Open your browser to http://localhost:9090.
+
+An example of a useful query is [rate(kubewatch_event_count[5m])](<http://localhost:9090/graph?g0.range_input=1h&g0.expr=rate(kubewatch_event_count%5B1m%5D)&g0.tab=0>)
 
 ## Contributing
 
