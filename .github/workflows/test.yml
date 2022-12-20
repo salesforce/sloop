@@ -26,9 +26,10 @@ jobs:
       - name: Format with goimports
         # TODO: Enforce when possible.
         run: |
-          if [ "$(go run golang.org/x/tools/cmd/goimports -l --format-only . | wc -l)" -gt 0 ];
+          go install golang.org/x/tools/cmd/goimports@latest
+          if [ "$(goimports -l --format-only . | wc -l)" -gt 0 ];
              then
-             go run golang.org/x/tools/cmd/goimports -l --format-only .
+             goimports -l --format-only .
              exit 0
           fi
 
