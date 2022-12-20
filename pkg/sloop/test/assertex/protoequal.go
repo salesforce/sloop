@@ -9,8 +9,9 @@ package assertex
 
 import (
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"testing"
+
+	"github.com/golang/protobuf/proto"
 )
 
 func areProtoEqual(expected interface{}, actual interface{}) bool {

@@ -8,11 +8,12 @@
 package ingress
 
 import (
+	"io/ioutil"
+	"sync"
+
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
-	"io/ioutil"
-	"sync"
 )
 
 type FileRecorder struct {

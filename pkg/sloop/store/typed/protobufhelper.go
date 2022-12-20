@@ -8,10 +8,11 @@
 package typed
 
 import (
+	"time"
+
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
-	"time"
 )
 
 func StringToProtobufTimestamp(ts string) (*timestamp.Timestamp, error) {

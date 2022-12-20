@@ -1,11 +1,12 @@
 package ingress
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
-	"testing"
 )
 
 func TestGetKubernetesContext(t *testing.T) {

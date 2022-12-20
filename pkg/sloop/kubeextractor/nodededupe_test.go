@@ -10,9 +10,10 @@ package kubeextractor
 import (
 	"bytes"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"text/template"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const nodeTemplate = `{

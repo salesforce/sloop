@@ -8,11 +8,12 @@
 package typed
 
 import (
+	"testing"
+	"time"
+
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 var someTs = time.Date(2019, 1, 2, 3, 4, 5, 6, time.UTC)

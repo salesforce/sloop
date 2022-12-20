@@ -10,11 +10,12 @@ package queries
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/salesforce/sloop/pkg/sloop/store/typed"
-	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"net/url"
 	"reflect"
 	"time"
+
+	"github.com/salesforce/sloop/pkg/sloop/store/typed"
+	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 )
 
 type ResSummaryOutput struct {

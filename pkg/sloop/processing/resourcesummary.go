@@ -8,6 +8,8 @@
 package processing
 
 import (
+	"time"
+
 	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/ptypes"
@@ -15,7 +17,6 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"time"
 )
 
 // TODO: Split this up and add unit tests

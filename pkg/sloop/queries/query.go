@@ -9,10 +9,11 @@ package queries
 
 import (
 	"fmt"
-	"github.com/golang/glog"
-	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"net/url"
 	"time"
+
+	"github.com/golang/glog"
+	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 )
 
 // Takes in arguments from the web page, runs the query, and returns json

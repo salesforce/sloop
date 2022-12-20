@@ -9,10 +9,11 @@ package badgerwrap
 
 import (
 	"fmt"
-	"github.com/dgraph-io/badger/v2"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"testing"
+
+	"github.com/dgraph-io/badger/v2"
+	"github.com/stretchr/testify/assert"
 )
 
 // Turn then on when writing new tests, but leave off when you check in

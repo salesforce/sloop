@@ -8,13 +8,14 @@
 package queries
 
 import (
+	"testing"
+	"time"
+
 	"github.com/golang/protobuf/ptypes"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/test/assertex"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 func helper_getResSum(t *testing.T) *typed.ResourceSummary {

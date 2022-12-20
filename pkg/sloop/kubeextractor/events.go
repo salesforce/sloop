@@ -10,9 +10,10 @@ package kubeextractor
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/golang/glog"
 	"strings"
 	"time"
+
+	"github.com/golang/glog"
 )
 
 // Example Event

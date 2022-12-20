@@ -8,6 +8,8 @@
 package processing
 
 import (
+	"time"
+
 	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/ptypes"
@@ -19,7 +21,6 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"time"
 )
 
 func getLastKubeWatchResult(tables typed.Tables, txn badgerwrap.Txn, ts *timestamp.Timestamp, kind string, namespace string, name string) (*typed.KubeWatchResult, error) {

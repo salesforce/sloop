@@ -8,13 +8,14 @@
 package processing
 
 import (
+	"time"
+
 	"github.com/golang/protobuf/ptypes"
 	"github.com/pkg/errors"
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"time"
 )
 
 func updateWatchActivityTable(tables typed.Tables, txn badgerwrap.Txn, watchRec *typed.KubeWatchResult, metadata *kubeextractor.KubeMetadata) error {

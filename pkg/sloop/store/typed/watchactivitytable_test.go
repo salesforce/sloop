@@ -8,11 +8,12 @@
 package typed
 
 import (
+	"testing"
+	"time"
+
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 const (

@@ -9,11 +9,12 @@ package typed
 
 import (
 	"fmt"
+	"time"
+
 	badger "github.com/dgraph-io/badger/v2"
 	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"time"
 )
 
 type EventCountKey struct {

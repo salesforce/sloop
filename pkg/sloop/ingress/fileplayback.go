@@ -8,10 +8,11 @@
 package ingress
 
 import (
+	"io/ioutil"
+
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
-	"io/ioutil"
 )
 
 func PlayFile(outChan chan typed.KubeWatchResult, filename string) error {

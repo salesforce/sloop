@@ -1,10 +1,11 @@
 package storemanager
 
 import (
-	"github.com/spf13/afero"
-	"github.com/stretchr/testify/assert"
 	"path"
 	"testing"
+
+	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_GetDirSizeRecursive(t *testing.T) {

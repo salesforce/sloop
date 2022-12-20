@@ -9,12 +9,13 @@ package untyped
 
 import (
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/options"
 	"github.com/golang/glog"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"os"
-	"time"
 )
 
 type Config struct {

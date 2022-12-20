@@ -8,9 +8,10 @@
 package storemanager
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"

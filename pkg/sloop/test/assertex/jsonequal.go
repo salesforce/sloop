@@ -9,8 +9,9 @@ package assertex
 
 import (
 	"fmt"
-	"github.com/nsf/jsondiff"
 	"testing"
+
+	"github.com/nsf/jsondiff"
 )
 
 // This is similar functionality to assert.JSONEq() but is more useful for a couple reasons

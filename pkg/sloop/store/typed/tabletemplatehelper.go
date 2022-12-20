@@ -8,9 +8,10 @@
 package typed
 
 import (
+	"time"
+
 	"github.com/golang/glog"
 	"github.com/salesforce/sloop/pkg/sloop/common"
-	"time"
 )
 
 // The code in this file is simply here to let us compile tabletemplate.go but these are

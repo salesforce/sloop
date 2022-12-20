@@ -9,6 +9,10 @@ package processing
 
 import (
 	"fmt"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -17,9 +21,6 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/stretchr/testify/assert"
-	"strings"
-	"testing"
-	"time"
 )
 
 var (

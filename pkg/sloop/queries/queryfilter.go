@@ -10,12 +10,13 @@ package queries
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
-	"github.com/salesforce/sloop/pkg/sloop/store/typed"
-	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"net/url"
 	"sort"
 	"time"
+
+	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
+	"github.com/salesforce/sloop/pkg/sloop/store/typed"
+	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 )
 
 // Consider: Make use of resources to limit what namespaces we return.

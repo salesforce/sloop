@@ -10,12 +10,13 @@ package webserver
 import (
 	"bytes"
 	"fmt"
-	"github.com/salesforce/sloop/pkg/sloop/queries"
 	"html/template"
 	"net/http"
 	"path"
 	"strings"
 	"time"
+
+	"github.com/salesforce/sloop/pkg/sloop/queries"
 )
 
 type externalLink struct {

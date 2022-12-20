@@ -11,16 +11,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html/template"
+	"net/http"
+	"regexp"
+	"strings"
+
 	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"html/template"
-	"net/http"
-	"regexp"
-	"strings"
 )
 
 type keyView struct {

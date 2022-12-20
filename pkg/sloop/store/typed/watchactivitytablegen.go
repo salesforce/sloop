@@ -13,10 +13,11 @@ package typed
 
 import (
 	"fmt"
-	"github.com/salesforce/sloop/pkg/sloop/common"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/salesforce/sloop/pkg/sloop/common"
 
 	badger "github.com/dgraph-io/badger/v2"
 	"github.com/golang/protobuf/proto"

@@ -1,12 +1,13 @@
 package webserver
 
 import (
-	"github.com/salesforce/sloop/pkg/sloop/common"
-	"github.com/spf13/afero"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/salesforce/sloop/pkg/sloop/common"
+	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
 )
 
 const (

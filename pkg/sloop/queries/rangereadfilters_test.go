@@ -8,11 +8,12 @@
 package queries
 
 import (
+	"testing"
+	"time"
+
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 func Test_isFiltered_NotSelectedNamespace(t *testing.T) {
