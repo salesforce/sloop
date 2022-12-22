@@ -8,9 +8,10 @@
 package kubeextractor
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_ExtractInvolvedObject_OutputCorrect(t *testing.T) {

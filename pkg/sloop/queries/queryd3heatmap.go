@@ -10,15 +10,16 @@ package queries
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"sort"
+	"time"
+
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"net/url"
-	"sort"
-	"time"
 )
 
 const EmptyPartition = ""

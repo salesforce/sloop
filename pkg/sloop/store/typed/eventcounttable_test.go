@@ -8,14 +8,15 @@
 package typed
 
 import (
+	"testing"
+	"time"
+
 	badger "github.com/dgraph-io/badger/v2"
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/salesforce/sloop/pkg/sloop/test/assertex"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 const someMinute = 13

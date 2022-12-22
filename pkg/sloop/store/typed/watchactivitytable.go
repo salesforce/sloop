@@ -9,6 +9,7 @@ package typed
 
 import (
 	"fmt"
+
 	"github.com/dgraph-io/badger/v2"
 	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"

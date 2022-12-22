@@ -8,6 +8,10 @@
 package queries
 
 import (
+	"net/url"
+	"testing"
+	"time"
+
 	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
@@ -15,9 +19,6 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/salesforce/sloop/pkg/sloop/test/assertex"
 	"github.com/stretchr/testify/assert"
-	"net/url"
-	"testing"
-	"time"
 )
 
 const (

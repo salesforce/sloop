@@ -8,6 +8,9 @@
 package queries
 
 import (
+	"testing"
+	"time"
+
 	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
@@ -15,8 +18,6 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/salesforce/sloop/pkg/sloop/test/assertex"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 const somePodPayload = `{

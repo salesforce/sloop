@@ -8,9 +8,10 @@
 package storemanager
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_SleepWithCancel_TestThatSleepsAfterCancelDontCrash(t *testing.T) {

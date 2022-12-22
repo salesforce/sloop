@@ -10,11 +10,12 @@ package queries
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"time"
+
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"net/url"
-	"time"
 )
 
 type EventsData struct {

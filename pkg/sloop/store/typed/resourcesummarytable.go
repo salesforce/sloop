@@ -9,9 +9,10 @@ package typed
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
-	"time"
 )
 
 // Key is /<partition>/<kind>/<namespace>/<name>/<uid>

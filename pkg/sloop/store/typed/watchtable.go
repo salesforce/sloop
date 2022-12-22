@@ -9,10 +9,11 @@ package typed
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/salesforce/sloop/pkg/sloop/common"
 	"strconv"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 )
 
 // Key is /<partition>/<kind>/<namespace>/<name>/<timestamp>

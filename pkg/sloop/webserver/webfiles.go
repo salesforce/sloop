@@ -2,10 +2,11 @@ package webserver
 
 import (
 	"fmt"
+	"html/template"
+
 	_ "github.com/jteeuwen/go-bindata"
 	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/spf13/afero"
-	"html/template"
 )
 
 const (

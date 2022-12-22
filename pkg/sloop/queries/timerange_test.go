@@ -9,11 +9,12 @@ package queries
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/golang/protobuf/ptypes"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 var someQueryStartTs = time.Date(2019, 3, 1, 3, 4, 0, 0, time.UTC)

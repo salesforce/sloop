@@ -9,10 +9,11 @@ package main
 
 import (
 	"flag"
-	"github.com/golang/glog"
-	"github.com/salesforce/sloop/pkg/sloop/server"
 	"os"
 	"runtime/pprof"
+
+	"github.com/golang/glog"
+	"github.com/salesforce/sloop/pkg/sloop/server"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write profile to file")

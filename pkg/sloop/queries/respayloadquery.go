@@ -10,6 +10,10 @@ package queries
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"sort"
+	"time"
+
 	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/glog"
 	"github.com/salesforce/sloop/pkg/sloop/common"
@@ -17,9 +21,6 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"net/url"
-	"sort"
-	"time"
 )
 
 type ResPayLoadData struct {

@@ -8,9 +8,10 @@
 package untyped
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var someTs = time.Date(2019, 1, 2, 3, 4, 5, 6, time.UTC)

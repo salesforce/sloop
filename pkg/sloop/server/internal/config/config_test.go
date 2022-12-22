@@ -2,11 +2,12 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/ghodss/yaml"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
+
+	"github.com/ghodss/yaml"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_loadFromJSONFile_Success(t *testing.T) {

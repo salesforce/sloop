@@ -1,10 +1,11 @@
 package common
 
 import (
+	"testing"
+
 	"github.com/dgraph-io/badger/v2"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 var commonPrefix = "/commonprefix/001546405200/"

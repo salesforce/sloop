@@ -8,9 +8,10 @@
 package typed
 
 import (
+	"testing"
+
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func Test_StringToProtobufTimestamp_Success(t *testing.T) {

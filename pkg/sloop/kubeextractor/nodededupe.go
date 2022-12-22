@@ -9,6 +9,7 @@ package kubeextractor
 
 import (
 	"fmt"
+
 	"github.com/Jeffail/gabs/v2"
 	"github.com/pkg/errors"
 )

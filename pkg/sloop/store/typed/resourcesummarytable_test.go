@@ -8,14 +8,15 @@
 package typed
 
 import (
+	"testing"
+	"time"
+
 	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/salesforce/sloop/pkg/sloop/test/assertex"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 const someUid = "68510937-4ffc-11e9-8e26-1418775557c8"

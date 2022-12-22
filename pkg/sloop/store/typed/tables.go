@@ -8,9 +8,10 @@
 package typed
 
 import (
+	"sort"
+
 	"github.com/golang/glog"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"sort"
 )
 
 type Tables interface {

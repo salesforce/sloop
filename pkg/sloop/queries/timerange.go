@@ -9,13 +9,14 @@ package queries
 
 import (
 	"fmt"
+	"net/url"
+	"strconv"
+	"time"
+
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
-	"net/url"
-	"strconv"
-	"time"
 )
 
 const minLookback = 1 * time.Minute

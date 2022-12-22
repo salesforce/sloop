@@ -2,9 +2,10 @@ package common
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"path"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var files = []string{"webfiles/index.html", "webfiles/debug.html", "webfiles/filter.js", "webfiles/sloop.cs"}

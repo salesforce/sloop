@@ -9,13 +9,14 @@ package typed
 
 import (
 	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"strconv"
-	"time"
 )
 
 //go:generate genny -in=$GOFILE -out=watchtablegen.go gen "ValueType=KubeWatchResult KeyType=WatchTableKey"

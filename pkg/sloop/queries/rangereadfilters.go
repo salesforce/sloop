@@ -8,12 +8,13 @@
 package queries
 
 import (
-	"github.com/golang/protobuf/ptypes"
-	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
-	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/golang/protobuf/ptypes"
+	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
+	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 )
 
 func paramFilterResSumFn(params url.Values) func(string) bool {

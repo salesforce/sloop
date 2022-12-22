@@ -8,6 +8,9 @@
 package processing
 
 import (
+	"math"
+	"time"
+
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
@@ -16,8 +19,6 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"math"
-	"time"
 )
 
 // TODO: We are only looking for the previous event in the current partiton, but we need to look back in cases where we cross the boundary
