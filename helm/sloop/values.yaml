@@ -8,7 +8,7 @@ name: sloop
 replicas: 1
 image:
   tag: latest
-  repository: sloopimage/sloop
+  repository: ghcr.io/salesforce/sloop
   pullPolicy: IfNotPresent
 persistentVolume:
   ## If defined it will specify the storageClass for the statefulSet
