@@ -66,6 +66,10 @@ spec:
           name: sloop-data
         - mountPath: /sloopconfig/
           name: sloopconfig
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       volumes:
       - emptyDir:
           sizeLimit: {{ .Values.persistentVolume.sizeLimit }}

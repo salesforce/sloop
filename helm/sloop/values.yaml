@@ -10,6 +10,8 @@ image:
   tag: latest
   repository: ghcr.io/salesforce/sloop
   pullPolicy: IfNotPresent
+  # pullSecrets:
+  # - name: example-secret
 persistentVolume:
   # If false then an emptyDir will be used.
   enabled: true
