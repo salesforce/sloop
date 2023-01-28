@@ -8,9 +8,13 @@ name: sloop
 replicas: 1
 image:
   tag: latest
-  repository: sloopimage/sloop
+  repository: ghcr.io/salesforce/sloop
   pullPolicy: IfNotPresent
+  # pullSecrets:
+  # - name: example-secret
 persistentVolume:
+  # If false then an emptyDir will be used.
+  enabled: true
   ## If defined it will specify the storageClass for the statefulSet
   ## If undefined it will use the cluster default (typically gp2 on AWS, standard on GKE)
   #  storageClass:
