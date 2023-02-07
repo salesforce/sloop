@@ -8,6 +8,7 @@
 package ingress
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -23,6 +24,7 @@ import (
 	clientsetFake "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	dynamicFake "k8s.io/client-go/dynamic/fake"
 	kubernetesFake "k8s.io/client-go/kubernetes/fake"
@@ -84,12 +86,12 @@ func Test_bigPicture(t *testing.T) {
 
 	// create service and await corresponding event
 	ns := "ns"
-	_, err = kubeClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}})
+	_, err = kubeClient.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}, metav1.CreateOptions{})
 	if err != nil {
 		t.FailNow()
 	}
 	svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "s"}}
-	_, err = kubeClient.CoreV1().Services(ns).Create(svc)
+	_, err = kubeClient.CoreV1().Services(ns).Create(context.TODO(), svc, metav1.CreateOptions{})
 	if err != nil {
 		t.Fatalf("Error creating service: %v\n", err)
 	}
@@ -222,7 +224,11 @@ func Test_existingOrStartNewCrdInformer(t *testing.T) {
 	kw := &kubeWatcherImpl{protection: &sync.Mutex{}}
 	kw.crdInformers = make(map[crdGroupVersionResourceKind]*crdInformerInfo)
 
-	client := dynamicFake.NewSimpleDynamicClient(runtime.NewScheme())
+	gvrToListKind := map[schema.GroupVersionResource]string{
+		{Group: "g", Version: "v", Resource: "r"}: "kList",
+	}
+
+	client := dynamicFake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), gvrToListKind)
 	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(client, 30*time.Minute, "", nil)
 
 	crd := crdGroupVersionResourceKind{group: "g", version: "v", resource: "r", kind: "k"}

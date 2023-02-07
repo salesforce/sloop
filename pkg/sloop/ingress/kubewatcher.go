@@ -8,6 +8,7 @@
 package ingress
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -123,7 +124,6 @@ func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interfac
 }
 
 func (i *kubeWatcherImpl) startCustomInformers(masterURL string, kubeContext string, enableGranularMetrics bool) error {
-
 	clientCfg := getConfig(masterURL, kubeContext)
 	kubeCfg, err := clientCfg.ClientConfig()
 	if err != nil {
@@ -212,7 +212,7 @@ func stopUnwantedCrdInformers(existing map[crdGroupVersionResourceKind]*crdInfor
 }
 
 func getCrdList(crdClient clientset.Interface) ([]crdGroupVersionResourceKind, error) {
-	crdList, err := crdClient.ApiextensionsV1().CustomResourceDefinitions().List(metav1.ListOptions{})
+	crdList, err := crdClient.ApiextensionsV1().CustomResourceDefinitions().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		glog.Errorf("Failed to get CRD list from ApiextensionsV1, falling back to ApiextensionsV1beta1: %v", err)
 		return getCrdListV1beta1(crdClient)
@@ -230,7 +230,7 @@ func getCrdList(crdClient clientset.Interface) ([]crdGroupVersionResourceKind, e
 }
 
 func getCrdListV1beta1(crdClient clientset.Interface) ([]crdGroupVersionResourceKind, error) {
-	crdList, err := crdClient.ApiextensionsV1beta1().CustomResourceDefinitions().List(metav1.ListOptions{})
+	crdList, err := crdClient.ApiextensionsV1beta1().CustomResourceDefinitions().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query CRDs")
 	}
