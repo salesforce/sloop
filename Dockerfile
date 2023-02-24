@@ -11,7 +11,7 @@ WORKDIR /build
 
 RUN make
 
-FROM gcr.io/distroless/base
+FROM gcr.io/distroless/base:debug
 COPY --from=build /go/bin/sloop /sloop
 # The copy statement below can be uncommented to reflect changes to any webfiles as compared
 # to the binary version of the files in use.
