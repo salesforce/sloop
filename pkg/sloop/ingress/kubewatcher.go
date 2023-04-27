@@ -14,6 +14,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"bytes"
+	"strings"
+	"reflect"
 
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/ptypes"
@@ -32,6 +35,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"github.com/diegoholiveira/jsonlogic/v3"
 )
 
 /*
@@ -67,6 +71,7 @@ type kubeWatcherImpl struct {
 	stopped        bool
 	refreshCrd     *time.Ticker
 	currentContext string
+	exclusionRules map[string][]any
 }
 
 var (
@@ -79,11 +84,12 @@ var (
 )
 
 // Todo: Add additional parameters for filtering
-func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.KubeWatchResult, resync time.Duration, includeCrds bool, crdRefreshInterval time.Duration, masterURL string, kubeContext string, enableGranularMetrics bool) (KubeWatcher, error) {
+func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.KubeWatchResult, resync time.Duration, includeCrds bool, crdRefreshInterval time.Duration, masterURL string, kubeContext string, enableGranularMetrics bool, exclusionRules map[string][]any) (KubeWatcher, error) {
 	kw := &kubeWatcherImpl{resync: resync, protection: &sync.Mutex{}}
 	kw.stopChan = make(chan struct{})
 	kw.crdInformers = make(map[crdGroupVersionResourceKind]*crdInformerInfo)
 	kw.outchan = outChan
+	kw.exclusionRules = exclusionRules
 
 	kw.startWellKnownInformers(kubeClient, enableGranularMetrics)
 	if includeCrds {
@@ -304,6 +310,13 @@ func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResul
 	}
 	glog.V(99).Infof("processUpdate: obj json: %v", resourceJson)
 
+	eventExcluded := i.eventExcluded(kind, resourceJson)
+	if eventExcluded {
+		objName := reflect.ValueOf(obj).Elem().FieldByName("ObjectMeta").FieldByName("Name")
+		glog.V(2).Infof("Event for object excluded: %s/%s", kind, objName)
+		return
+	}
+
 	kubeMetadata, err := kubeextractor.ExtractMetadata(resourceJson)
 	if err != nil || kubeMetadata.Namespace == "" {
 		// We are only grabbing namespace here for a prometheus metric, so if metadata extract fails we just log and continue
@@ -358,6 +371,41 @@ func (i *kubeWatcherImpl) refreshCrdInformers(masterURL string, kubeContext stri
 			glog.Errorf("Failed to refresh CRD informers: %v", err)
 		}
 	}
+}
+
+func (i *kubeWatcherImpl) getExclusionRules(kind string) ([]any) {
+	kindRules, _ := i.exclusionRules[kind]
+	globalRules, _ := i.exclusionRules["_all"]
+	combinedRules := append(
+		kindRules,
+		globalRules...
+	)
+	glog.V(common.GlogVerbose).Infof("Fetched rules: %s", combinedRules)
+	return combinedRules
+}
+
+func (i *kubeWatcherImpl) eventExcluded(kind string, resourceJson string) (bool) {
+	filters := i.getExclusionRules(kind)
+	for _, logic := range filters {
+		logicJson, err := json.Marshal(logic)
+		if err != nil {
+			glog.Errorf(`Failed to parse event filtering rule "%s": %s`, logic, err)
+			return false
+		}
+		var result bytes.Buffer
+		err = jsonlogic.Apply(
+			strings.NewReader(string(logicJson)),
+			strings.NewReader(resourceJson),
+			&result,
+		)
+		resultBool := strings.Contains(result.String(), "true")
+		if resultBool {
+			truncated, _ := common.Truncate(resourceJson, 40)
+			glog.V(2).Infof(`Event matched logic: logic="%s" resource="%s"`, string(logicJson), truncated)
+			return true
+		}
+	}
+	return false
 }
 
 func (i *kubeWatcherImpl) Stop() {

@@ -165,6 +165,64 @@ Open your browser to http://localhost:9090.
 
 An example of a useful query is [rate(kubewatch_event_count[5m])](<http://localhost:9090/graph?g0.range_input=1h&g0.expr=rate(kubewatch_event_count%5B1m%5D)&g0.tab=0>)
 
+## Event filtering
+
+Events can be excluded from Sloop by adding `exclusionRules` to the config file:
+
+```
+{
+  "defaultNamespace": "default",
+  "defaultKind": "Pod",
+  "defaultLookback": "1h",
+  [...]
+  "exclusionRules": {
+    "_all": [
+      {"==": [ { "var": "metadata.namespace" }, "kube-system" ]}
+    ],
+    "Pod": [
+      {"==": [ { "var": "metadata.name" }, "sloop-0" ]}
+    ],
+    "Job": [
+      {"in": [ { "var": "metadata.name" }, [ "cron1", "cron3" ] ]}
+    ]
+  }
+}`
+
+```
+
+Adding rules can help to reduce resources consumed by Sloop and remove unwanted noise from the UI for events that are of no interest.
+
+### Limiting rules to specific kinds
+
+ * Rules under the special key `_all` are evaluated against events for objects of any kind
+ * Rules under any other key are evaluated only against objects whose kind matches the key, e.g. `Pod` only applies to pods, `Job` only applies to jobs etc.
+
+### Rule format and supported operations
+
+Rules should follow the [JsonLogic](https://jsonlogic.com) format and are evaluated against the json representation of the Kubernetes API object related to the event (see below).
+
+Available operators, such as `==` and `in` shown above, are documented [here](https://jsonlogic.com/operations.html).
+
+### Data available to rule logic
+
+Kubernetes API conventions for [objects](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#objects) require the following keys to exist in the json data for all resources, all of which can be referenced in rules:
+
+ * `metadata`
+ * `spec`
+ * `status`
+
+Some commonly useful fields under the `metadata` [object](https://pkg.go.dev/k8s.io/apimachinery/pkg/apis/meta/v1#ObjectMeta) are:
+
+ * `name`
+ * `namespace`
+ * `labels`
+
+#### Type specific data
+
+Some resources contain additional type-specific fields, for example `PersistentVolumeClaimSpec` objects have fields named `selector` and `storageClassName`.
+
+Type specific fields for each object and their corresponding keys in the object json representation are documented in the [core API](https://pkg.go.dev/k8s.io/api@v0.27.1/core/v1), e.g. for `PersistentVolumeClaimSpec` objects the documentation is [here](https://pkg.go.dev/k8s.io/api@v0.27.1/core/v1#PersistentVolumeClaimSpec).
+
 ## Contributing
 
 Refer to [CONTRIBUTING.md](CONTRIBUTING.md)<br>

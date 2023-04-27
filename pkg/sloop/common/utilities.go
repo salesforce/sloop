@@ -37,3 +37,27 @@ func Contains(stringList []string, elem string) bool {
 func GetFilePath(filePath string, fileName string) string {
 	return path.Join(filePath, fileName)
 }
+
+func Max(x int, y int) int {
+	if x < y {
+		return y
+	}
+	return x
+}
+
+func Truncate(text string, width int, delimiter ...string) (string, error) {
+	d := "..."
+	if len(delimiter) > 0 {
+		d = delimiter[0]
+	}
+	d_len := len(d)
+	if width < 0 {
+		return "", fmt.Errorf("invalid width")
+	}
+	if len(text) <= width {
+		return text, nil
+	}
+	r := []rune(text)
+	truncated := r[:(Max(width, d_len)-d_len)]
+	return string(truncated) + d, nil
+}

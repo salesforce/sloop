@@ -29,8 +29,9 @@ type SloopConfig struct {
 	// These fields can only come from command line
 	ConfigFile string
 	// These fields can only come from file because they use complex types
-	LeftBarLinks  []webserver.LinkTemplate         `json:"leftBarLinks"`
-	ResourceLinks []webserver.ResourceLinkTemplate `json:"resourceLinks"`
+	LeftBarLinks   []webserver.LinkTemplate         `json:"leftBarLinks"`
+	ResourceLinks  []webserver.ResourceLinkTemplate `json:"resourceLinks"`
+	ExclusionRules map[string][]any                 `json:"exclusionRules"`
 	// Normal fields that can come from file or cmd line
 	DisableKubeWatcher       bool          `json:"disableKubeWatch"`
 	KubeWatchResyncInterval  time.Duration `json:"kubeWatchResyncInterval"`
@@ -177,6 +178,7 @@ func getDefaultConfig() *SloopConfig {
 		EnableGranularMetrics:    false,
 		PrivilegedAccess:         true,
 		BadgerDetailLogEnabled:   false,
+		ExclusionRules:           map[string][]any{},
 	}
 	return &defaultConfig
 }
