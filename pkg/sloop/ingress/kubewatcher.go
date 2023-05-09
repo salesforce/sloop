@@ -389,7 +389,7 @@ func (i *kubeWatcherImpl) eventExcluded(kind string, resourceJson string) (bool)
 	for _, logic := range filters {
 		logicJson, err := json.Marshal(logic)
 		if err != nil {
-			glog.Errorf(`Failed to parse event filtering rule "%s": %s`, logic, err)
+			glog.Errorf(`Failed to parse event filtering rule "%s": %s`, string(logicJson), err)
 			return false
 		}
 		var result bytes.Buffer
@@ -398,6 +398,10 @@ func (i *kubeWatcherImpl) eventExcluded(kind string, resourceJson string) (bool)
 			strings.NewReader(resourceJson),
 			&result,
 		)
+		if err != nil {
+			glog.Errorf(`Failed to apply event filtering rule "%s": %s`, string(logicJson), err)
+			return false
+		}
 		resultBool := strings.Contains(result.String(), "true")
 		if resultBool {
 			truncated, _ := common.Truncate(resourceJson, 40)
