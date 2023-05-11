@@ -8,16 +8,17 @@
 package ingress
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-	"bytes"
-	"strings"
-	"reflect"
 
+	"github.com/diegoholiveira/jsonlogic/v3"
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/pkg/errors"
@@ -35,7 +36,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"github.com/diegoholiveira/jsonlogic/v3"
 )
 
 /*
@@ -373,18 +373,18 @@ func (i *kubeWatcherImpl) refreshCrdInformers(masterURL string, kubeContext stri
 	}
 }
 
-func (i *kubeWatcherImpl) getExclusionRules(kind string) ([]any) {
+func (i *kubeWatcherImpl) getExclusionRules(kind string) []any {
 	kindRules, _ := i.exclusionRules[kind]
 	globalRules, _ := i.exclusionRules["_all"]
 	combinedRules := append(
 		kindRules,
-		globalRules...
+		globalRules...,
 	)
 	glog.V(common.GlogVerbose).Infof("Fetched rules: %s", combinedRules)
 	return combinedRules
 }
 
-func (i *kubeWatcherImpl) eventExcluded(kind string, resourceJson string) (bool) {
+func (i *kubeWatcherImpl) eventExcluded(kind string, resourceJson string) bool {
 	filters := i.getExclusionRules(kind)
 	for _, logic := range filters {
 		logicJson, err := json.Marshal(logic)

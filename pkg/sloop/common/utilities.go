@@ -58,6 +58,6 @@ func Truncate(text string, width int, delimiter ...string) (string, error) {
 		return text, nil
 	}
 	r := []rune(text)
-	truncated := r[:(Max(width, d_len)-d_len)]
+	truncated := r[:(Max(width, d_len) - d_len)]
 	return string(truncated) + d, nil
 }
