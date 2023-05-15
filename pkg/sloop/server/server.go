@@ -103,7 +103,7 @@ func RealMain() error {
 			return errors.Wrap(err, "failed to create kubernetes client")
 		}
 
-		kubeWatcherSource, err = ingress.NewKubeWatcherSource(kubeClient, kubeWatchChan, conf.KubeWatchResyncInterval, conf.WatchCrds, conf.CrdRefreshInterval, conf.ApiServerHost, kubeContext, conf.EnableGranularMetrics)
+		kubeWatcherSource, err = ingress.NewKubeWatcherSource(kubeClient, kubeWatchChan, conf.KubeWatchResyncInterval, conf.WatchCrds, conf.CrdRefreshInterval, conf.ApiServerHost, kubeContext, conf.EnableGranularMetrics, conf.ExclusionRules)
 		if err != nil {
 			return errors.Wrap(err, "failed to initialize kubeWatcher")
 		}

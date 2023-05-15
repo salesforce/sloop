@@ -60,3 +60,31 @@ func Test_GetFilePath(t *testing.T) {
 	actualOutput := GetFilePath(filePrefix, fileName)
 	assert.Equal(t, expectedOutput, actualOutput)
 }
+
+func Test_Truncate_StringLongerThanWidth(t *testing.T) {
+	stringLong := "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec eget odio quis felis laoreet dictum."
+	expectedOutput := "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec eget odio quis..."
+	actualOutput, _ := Truncate(stringLong, 80)
+	assert.Equal(t, expectedOutput, actualOutput)
+}
+
+func Test_Truncate_StringShorterThanWidth(t *testing.T) {
+	stringMedium := "Lorem ipsum dolor"
+	expectedOutput := "Lorem ipsum dolor"
+	actualOutput, _ := Truncate(stringMedium, 80)
+	assert.Equal(t, expectedOutput, actualOutput)
+}
+
+func Test_Truncate_WidthShorterThanDelimiter(t *testing.T) {
+	stringShort := "Lorem"
+	expectedOutput := "..."
+	actualOutput, _ := Truncate(stringShort, 1)
+	assert.Equal(t, expectedOutput, actualOutput)
+}
+
+func Test_Truncate_StringEmpty(t *testing.T) {
+	stringEmpty := ""
+	expectedOutput := ""
+	actualOutput, _ := Truncate(stringEmpty, 1)
+	assert.Equal(t, expectedOutput, actualOutput)
+}

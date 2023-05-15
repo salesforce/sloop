@@ -81,7 +81,8 @@ func Test_bigPicture(t *testing.T) {
 	masterURL := "url"
 	kubeContext := "" // empty string makes things work
 	enableGranularMetrics := true
-	kw, err := NewKubeWatcherSource(kubeClient, outChan, resync, includeCrds, time.Duration(10*time.Second), masterURL, kubeContext, enableGranularMetrics)
+	exclusionRules := map[string][]any{}
+	kw, err := NewKubeWatcherSource(kubeClient, outChan, resync, includeCrds, time.Duration(10*time.Second), masterURL, kubeContext, enableGranularMetrics, exclusionRules)
 	assert.NoError(t, err)
 
 	// create service and await corresponding event
@@ -96,6 +97,81 @@ func Test_bigPicture(t *testing.T) {
 		t.Fatalf("Error creating service: %v\n", err)
 	}
 	_ = <-outChan
+
+	kw.Stop()
+}
+
+// As above but specify non-default exclusion rules to exclude events for service named s2
+func Test_bigPictureWithExclusionRules(t *testing.T) {
+	newCrdClient = newTestCrdClient(reactionListOfOne) // force startCustomInformers() to use a fake clientset
+
+	kubeClient := kubernetesFake.NewSimpleClientset()
+	outChan := make(chan typed.KubeWatchResult, 5)
+	resync := 30 * time.Minute
+	includeCrds := true
+	masterURL := "url"
+	kubeContext := "" // empty string makes things work
+	enableGranularMetrics := true
+	exclusionRules := map[string][]any{
+		"_all": []any{
+			map[string]any{
+				"==": []any{
+					map[string]any{
+						"var": "metadata.name",
+					},
+					"s2",
+				},
+			},
+		},
+	}
+
+	kw, err := NewKubeWatcherSource(kubeClient, outChan, resync, includeCrds, time.Duration(10*time.Second), masterURL, kubeContext, enableGranularMetrics, exclusionRules)
+	assert.NoError(t, err)
+
+	// create namespace
+	ns := "ns"
+	_, err = kubeClient.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}, metav1.CreateOptions{})
+	if err != nil {
+		t.FailNow()
+	}
+
+	// create first service
+	svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "s1"}}
+	_, err = kubeClient.CoreV1().Services(ns).Create(context.TODO(), svc, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("Error creating service: %v\n", err)
+	}
+
+	// create second service, corresponding event should be excluded by exclusion rule
+	svc = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "s2"}}
+	_, err = kubeClient.CoreV1().Services(ns).Create(context.TODO(), svc, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("Error creating service: %v\n", err)
+	}
+
+	// create third service
+	svc = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "s3"}}
+	_, err = kubeClient.CoreV1().Services(ns).Create(context.TODO(), svc, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("Error creating service: %v\n", err)
+	}
+
+	eventCount := 0
+loop:
+	for {
+		select {
+		case <-time.After(1 * time.Second):
+			break loop
+		case result, ok := <-outChan:
+			if ok {
+				eventCount++
+				assert.NotContains(t, result.Payload, `"name":"s2"`)
+			} else {
+				t.Fatalf("Channel closed unexpectedly: %v\n", ok)
+			}
+		}
+	}
+	assert.Equal(t, 3, eventCount) // assert no event for service named s2
 
 	kw.Stop()
 }
