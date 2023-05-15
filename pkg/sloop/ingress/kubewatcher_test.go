@@ -157,7 +157,7 @@ func Test_bigPictureWithExclusionRules(t *testing.T) {
 	}
 
 	eventCount := 0
-	loop:
+loop:
 	for {
 		select {
 		case <-time.After(1 * time.Second):
