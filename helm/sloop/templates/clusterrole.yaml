@@ -91,7 +91,7 @@ rules:
 {{- with .Values.clusterRole.apiGroups }}
   - apiGroups:
 {{- range . }}
-      - {{ . }}
+      - {{ . | quote }}
 {{- end }}
     resources:
       - '*'
