@@ -10,6 +10,7 @@ require (
 	github.com/golang/glog v1.0.0
 	github.com/golang/protobuf v1.5.2
 	github.com/jteeuwen/go-bindata v3.0.7+incompatible
+	github.com/klauspost/compress v1.16.5
 	github.com/nsf/jsondiff v0.0.0-20190712045011-8443391ee9b6
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.14.0
