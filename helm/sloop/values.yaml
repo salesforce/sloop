@@ -1,3 +1,9 @@
+global:
+  product: core-paas
+  component: sloop
+  environment: development
+  region: local
+
 serviceAccountName: sloop
 ## If defined, specifies the tolerations to attach to the pods
 tolerations: []
@@ -14,14 +20,20 @@ image:
   # - name: example-secret
 persistentVolume:
   # If false then an emptyDir will be used.
-  enabled: true
+  enabled: false
   ## If defined it will specify the storageClass for the statefulSet
   ## If undefined it will use the cluster default (typically gp2 on AWS, standard on GKE)
   #  storageClass:
   size: 10Gi
   dataAccessMode: ReadWriteOnce
   sizeLimit: 12Gi
-resources: {}
+resources:
+  requests:
+    cpu: 100m
+    memory: 640Mi
+  limits:
+    cpu: 500m
+    memory: 1024Mi
 service:
   port: 80
   targetPort: 8080
@@ -50,7 +62,7 @@ ingress:
 config: |-
   {
     "displayContext": "cluster",
-    "defaultNamespace": "default",
+    "defaultNamespace": "core-paas",
     "defaultKind": "Pod",
     "defaultLookback": "1h",
     "leftBarLinks": [

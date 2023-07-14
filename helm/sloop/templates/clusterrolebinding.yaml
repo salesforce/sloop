@@ -1,12 +1,9 @@
+{{- $name := include "base.name" . -}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  labels:
-    app.kubernetes.io/name: {{ .Values.name }}
-    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-  name: {{ .Values.name }}
+  labels: {{ include "base.labels.mulesoft" . | nindent 4 }}
+  name: {{ $name }}
 roleRef: 
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

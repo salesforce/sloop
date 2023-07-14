@@ -35,7 +35,7 @@ Sloop can be installed using any of these options:
 
 ### Helm Chart
 
-Users can install sloop by using helm chart now, for instructions refer [helm readme](helm/sloop/README.md)
+Users can install sloop by using helm chart now, for instructions refer [helm readme](helm/core-paas-sloop/README.md)
 
 ### Precompiled Binaries
 
