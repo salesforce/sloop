@@ -1,11 +1,8 @@
+{{- $name := include "base.name" . -}}
 apiVersion: v1
 kind: Service
 metadata:
-  labels:
-    app.kubernetes.io/name: {{ .Values.name }}
-    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-    app.kubernetes.io/instance: "{{ .Release.Name }}"
-    app.kubernetes.io/managed-by: "{{ .Release.Service }}"
+  labels: {{ include "base.labels.mulesoft" . | nindent 4 }}
   name: {{ .Values.name }}
 spec:
   ports:

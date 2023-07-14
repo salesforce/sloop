@@ -1,3 +1,4 @@
+{{- $name := include "base.name" . -}}
 {{- if .Values.ingress.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -6,11 +7,7 @@ metadata:
   {{- range $key, $value := .Values.ingress.annotations }}
     {{ $key }}: {{ $value | quote }}
   {{- end }}
-  labels:
-    app.kubernetes.io/name: {{ .Values.name }}
-    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-    app.kubernetes.io/instance: "{{ .Release.Name }}"
-    app.kubernetes.io/managed-by: "{{ .Release.Service }}"
+  labels: {{ include "base.labels.mulesoft" . | nindent 4 }}
   name: {{ .Values.name }}
 spec:
   {{- if .Values.ingress.className }}

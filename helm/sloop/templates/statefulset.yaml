@@ -1,28 +1,19 @@
+{{- $name := include "base.name" . -}}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  labels:
-    app.kubernetes.io/name: {{ .Values.name }}
-    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-    app.kubernetes.io/instance: "{{ .Release.Name }}"
-    app.kubernetes.io/managed-by: "{{ .Release.Service }}"
-  name: {{ .Values.name }}
+  labels: {{ include "base.labels.mulesoft" . | nindent 4 }}
+  name: {{ $name }}
 spec:
-  serviceName: {{ .Values.name }}
+  serviceName: {{ $name }}
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ .Values.name }}
+      app: {{ $name }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ .Values.name }}
-        app.kubernetes.io/instance: "{{ .Release.Name }}"
-        {{- with .Values.podLabels -}}
-          {{ toYaml . | nindent 8 }}
-        {{- end }}
-      annotations:
-{{ toYaml .Values.podAnnotations | indent 8 }}
+        {{ include "base.labels.mulesoft" . | indent 8 | trim }}
     spec:
       tolerations:
 {{ toYaml .Values.tolerations | indent 8 }}
@@ -64,13 +55,22 @@ spec:
         volumeMounts:
         - mountPath: /data/
           name: sloop-data
+        - mountPath: /tmp/
+          name: sloop-tmp
         - mountPath: /sloopconfig/
           name: sloopconfig
       {{- with .Values.image.pullSecrets }}
+      securityContext:
+        runAsUser: 1005
+        fsGroup: 1005
+        runAsNonRoot: true
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
+      - emptyDir:
+          sizeLimit: 2Gi
+        name: sloop-tmp
       - emptyDir:
           sizeLimit: {{ .Values.persistentVolume.sizeLimit }}
         name: sloop-data
