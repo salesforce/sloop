@@ -15,6 +15,7 @@ spec:
       labels:
         {{ include "base.labels.mulesoft" . | indent 8 | trim }}
     spec:
+{{ include "base.image.pull-secret-name" . | indent 6 }}
       tolerations:
 {{ toYaml .Values.tolerations | indent 8 }}
       containers:
@@ -82,6 +83,7 @@ spec:
   volumeClaimTemplates:
   - metadata:
      name: sloop-data
+     namespace: {{ .Values.persistentVolume.namespace | quote }}
     spec:
      accessModes:
        - {{ .Values.persistentVolume.dataAccessMode | quote }}

@@ -20,13 +20,14 @@ image:
   # - name: example-secret
 persistentVolume:
   # If false then an emptyDir will be used.
-  enabled: false
+  enabled: true
   ## If defined it will specify the storageClass for the statefulSet
   ## If undefined it will use the cluster default (typically gp2 on AWS, standard on GKE)
-  #  storageClass:
+  storageClass: gp2
   size: 10Gi
   dataAccessMode: ReadWriteOnce
   sizeLimit: 12Gi
+  namespace: core-paas
 resources:
   requests:
     cpu: 100m
