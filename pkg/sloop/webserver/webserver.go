@@ -23,6 +23,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/spf13/afero"
 
@@ -116,11 +117,25 @@ func backupHandler(db badgerwrap.DB, currentContext string) http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=sloop-%s-%d.bak", currentContext, since))
-		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=sloop-%s-%d.bak.zst", currentContext, since))
+		// The 'Content-Length' header is not set, because we do not know the size of the backup before we write it to the body.
+		w.Header().Set("Content-Encoding", "zstd")
+		w.Header().Set("Content-Type", "application/zstd")
 		w.Header().Set("Transfer-Encoding", "chunked")
 
-		_, err = db.Backup(w, since)
+		zw, err := zstd.NewWriter(w)
+		if err != nil {
+			logWebError(err, "Error configuring compression", r, w)
+			return
+		}
+
+		_, err = db.Backup(zw, since)
+		if err != nil {
+			logWebError(err, "Error writing backup", r, w)
+			return
+		}
+
+		err = zw.Close()
 		if err != nil {
 			logWebError(err, "Error writing backup", r, w)
 			return
