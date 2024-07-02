@@ -1,21 +1,16 @@
-FROM golang:1.19 as build
+FROM golang:1.19 AS build
+WORKDIR /go
+
 RUN apt-get update && apt-get install -y curl make
 
-# https://github.com/kubernetes-sigs/aws-iam-authenticator/releases
-RUN curl -o /aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.14.6/2019-08-22/bin/linux/amd64/aws-iam-authenticator \
-  && wait \
-  && chmod +x /aws-iam-authenticator
+COPY go.mod go.sum ./
+RUN go mod tidy
 
-COPY . /build/
-WORKDIR /build
+COPY . .
+RUN make linux
 
-RUN make
 
 FROM gcr.io/distroless/base
 COPY --from=build /go/bin/sloop /sloop
-# The copy statement below can be uncommented to reflect changes to any webfiles as compared
-# to the binary version of the files in use.
-# COPY pkg/sloop/webserver/webfiles /webfiles
-COPY --from=build /aws-iam-authenticator /aws-iam-authenticator
-ENV PATH="/:${PATH}"
 CMD ["/sloop"]
+
