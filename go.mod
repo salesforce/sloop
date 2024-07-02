@@ -1,6 +1,6 @@
 module github.com/salesforce/sloop
 
-go 1.19
+go 1.21
 
 require (
 	github.com/Jeffail/gabs/v2 v2.2.0

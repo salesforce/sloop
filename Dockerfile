@@ -1,5 +1,5 @@
-FROM golang:1.19 AS build
-WORKDIR /go
+FROM golang:1.21 AS build
+WORKDIR /go/sloop
 
 RUN apt-get update && apt-get install -y curl make
 
