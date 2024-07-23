@@ -18,7 +18,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/diegoholiveira/jsonlogic/v3"
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/pkg/errors"
