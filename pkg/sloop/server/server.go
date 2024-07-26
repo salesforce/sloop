@@ -31,7 +31,7 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/webserver"
 )
 
-const alsologtostderr = "alsologtostderr"
+const logtostderr = "logtostderr"
 
 func RealMain() error {
 	defer glog.Flush()
@@ -187,14 +187,14 @@ func RealMain() error {
 }
 
 // By default glog will not print anything to console, which can confuse users
-// This will turn it on unless user sets it explicitly (with --alsologtostderr=false)
+// This will turn it on unless user sets it explicitly (with --logtostderr=false)
 func setupStdErrLogging() {
 	for _, arg := range os.Args[1:] {
-		if strings.Contains(arg, alsologtostderr) {
+		if strings.Contains(arg, logtostderr) {
 			return
 		}
 	}
-	err := flag.Set("alsologtostderr", "true")
+	err := flag.Set("logtostderr", "true")
 	if err != nil {
 		panic(err)
 	}
