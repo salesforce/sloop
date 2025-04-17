@@ -120,7 +120,6 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.Int64Var(&config.BadgerVLogFileSize, "badger-vlog-file-size", config.BadgerVLogFileSize, "Max size in bytes per value log file. 0 = use badger default")
 	fs.UintVar(&config.BadgerVLogMaxEntries, "badger-vlog-max-entries", config.BadgerVLogMaxEntries, "Max number of entries per value log files. 0 = use badger default")
 	fs.BoolVar(&config.BadgerUseLSMOnlyOptions, "badger-use-lsm-only-options", config.BadgerUseLSMOnlyOptions, "Sets a higher valueThreshold so values would be collocated with LSM tree reducing vlog disk usage")
-	fs.BoolVar(&config.BadgerEnableEventLogging, "badger-enable-event-logging", config.BadgerEnableEventLogging, "Turns on badger event logging")
 	fs.IntVar(&config.BadgerNumOfCompactors, "badger-number-of-compactors", config.BadgerNumOfCompactors, "Number of compactors for badger")
 	fs.IntVar(&config.BadgerNumL0Tables, "badger-number-of-level-zero-tables", config.BadgerNumL0Tables, "Number of level zero tables for badger")
 	fs.IntVar(&config.BadgerNumL0TablesStall, "badger-number-of-zero-tables-stall", config.BadgerNumL0TablesStall, "Number of Level 0 tables that once reached causes the DB to stall until compaction succeeds")

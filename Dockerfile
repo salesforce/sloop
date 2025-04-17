@@ -1,4 +1,4 @@
-FROM golang:1.19 as build
+FROM golang:1.24 as build
 RUN apt-get update && apt-get install -y curl make
 
 # https://github.com/kubernetes-sigs/aws-iam-authenticator/releases
