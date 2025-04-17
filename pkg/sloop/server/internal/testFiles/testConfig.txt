@@ -35,7 +35,6 @@
 	"badgerVLogFileSize": 0,
 	"badgerVLogMaxEntries": 200000,
 	"badgerUseLSMOnlyOptions": true,
-	"badgerEnableEventLogging": false,
 	"badgerNumOfCompactors": 0,
 	"badgerSyncWrites": true,
 	"badgerVLogFileIOMapping": false,

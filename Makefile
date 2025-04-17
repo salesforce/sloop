@@ -8,10 +8,14 @@ all:
 
 run:
 	go install ./pkg/...
-	$(GOPATH)/bin/sloop
+	# $(GOPATH)/bin/sloop
+	sloop
 
 linux:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install -ldflags "-s" -installsuffix cgo -v ./pkg/...
+
+mac:
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go install -ldflags "-s" -installsuffix cgo -v ./pkg/...
 
 goreleaser:
 	 @if [ ! -f "$(GOPATH)/bin/goreleaser" ];then \

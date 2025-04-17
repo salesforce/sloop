@@ -19,23 +19,22 @@ import (
 )
 
 type Config struct {
-	RootPath                 string
-	ConfigPartitionDuration  time.Duration
-	BadgerMaxTableSize       int64
-	BadgerKeepL0InMemory     bool
-	BadgerVLogFileSize       int64
-	BadgerVLogMaxEntries     uint
-	BadgerUseLSMOnlyOptions  bool
-	BadgerEnableEventLogging bool
-	BadgerNumOfCompactors    int
-	BadgerNumL0Tables        int
-	BadgerNumL0TablesStall   int
-	BadgerSyncWrites         bool
-	BadgerLevelOneSize       int64
-	BadgerLevSizeMultiplier  int
-	BadgerVLogFileIOMapping  bool
-	BadgerDetailLogEnabled   bool
-	BadgerVLogTruncate       bool
+	RootPath                string
+	ConfigPartitionDuration time.Duration
+	BadgerMaxTableSize      int64
+	BadgerKeepL0InMemory    bool
+	BadgerVLogFileSize      int64
+	BadgerVLogMaxEntries    uint
+	BadgerUseLSMOnlyOptions bool
+	BadgerNumOfCompactors   int
+	BadgerNumL0Tables       int
+	BadgerNumL0TablesStall  int
+	BadgerSyncWrites        bool
+	BadgerLevelOneSize      int64
+	BadgerLevSizeMultiplier int
+	BadgerVLogFileIOMapping bool
+	BadgerDetailLogEnabled  bool
+	BadgerVLogTruncate      bool
 }
 
 func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error) {
@@ -54,10 +53,6 @@ func OpenStore(factory badgerwrap.Factory, config *Config) (badgerwrap.DB, error
 		opts = badger.LSMOnlyOptions(config.RootPath)
 	} else {
 		opts = badger.DefaultOptions(config.RootPath)
-	}
-
-	if config.BadgerEnableEventLogging {
-		opts = opts.WithEventLogging(true)
 	}
 
 	if config.BadgerMaxTableSize != 0 {

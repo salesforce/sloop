@@ -33,51 +33,50 @@ type SloopConfig struct {
 	ResourceLinks  []webserver.ResourceLinkTemplate `json:"resourceLinks"`
 	ExclusionRules map[string][]any                 `json:"exclusionRules"`
 	// Normal fields that can come from file or cmd line
-	DisableKubeWatcher       bool          `json:"disableKubeWatch"`
-	KubeWatchResyncInterval  time.Duration `json:"kubeWatchResyncInterval"`
-	WebFilesPath             string        `json:"webfilesPath"`
-	BindAddress              string        `json:"bindAddress"`
-	Port                     int           `json:"port"`
-	StoreRoot                string        `json:"storeRoot"`
-	MaxLookback              time.Duration `json:"maxLookBack"`
-	MaxDiskMb                int           `json:"maxDiskMb"`
-	DebugPlaybackFile        string        `json:"debugPlaybackFile"`
-	DebugRecordFile          string        `json:"debugRecordFile"`
-	DeletionBatchSize        int           `json:"deletionBatchSize"`
-	UseMockBadger            bool          `json:"mockBadger"`
-	DisableStoreManager      bool          `json:"disableStoreManager"`
-	CleanupFrequency         time.Duration `json:"cleanupFrequency" validate:"min=1h,max=120h"`
-	KeepMinorNodeUpdates     bool          `json:"keepMinorNodeUpdates"`
-	DefaultNamespace         string        `json:"defaultNamespace"`
-	DefaultKind              string        `json:"defaultKind"`
-	DefaultLookback          string        `json:"defaultLookback"`
-	UseKubeContext           string        `json:"context"`
-	DisplayContext           string        `json:"displayContext"`
-	ApiServerHost            string        `json:"apiServerHost"`
-	WatchCrds                bool          `json:"watchCrds"`
-	CrdRefreshInterval       time.Duration `json:"crdRefreshInterval"`
-	ThresholdForGC           float64       `json:"threshold for GC"`
-	RestoreDatabaseFile      string        `json:"restoreDatabaseFile"`
-	BadgerDiscardRatio       float64       `json:"badgerDiscardRatio"`
-	BadgerVLogGCFreq         time.Duration `json:"badgerVLogGCFreq"`
-	BadgerMaxTableSize       int64         `json:"badgerMaxTableSize"`
-	BadgerLevelOneSize       int64         `json:"badgerLevelOneSize"`
-	BadgerLevSizeMultiplier  int           `json:"badgerLevSizeMultiplier"`
-	BadgerKeepL0InMemory     bool          `json:"badgerKeepL0InMemory"`
-	BadgerVLogFileSize       int64         `json:"badgerVLogFileSize"`
-	BadgerVLogMaxEntries     uint          `json:"badgerVLogMaxEntries"`
-	BadgerUseLSMOnlyOptions  bool          `json:"badgerUseLSMOnlyOptions"`
-	BadgerEnableEventLogging bool          `json:"badgerEnableEventLogging"`
-	BadgerNumOfCompactors    int           `json:"badgerNumOfCompactors"`
-	BadgerNumL0Tables        int           `json:"badgerNumLevelZeroTables"`
-	BadgerNumL0TablesStall   int           `json:"badgerNumLevelZeroTablesStall"`
-	BadgerSyncWrites         bool          `json:"badgerSyncWrites"`
-	BadgerVLogFileIOMapping  bool          `json:"badgerVLogFileIOMapping"`
-	BadgerVLogTruncate       bool          `json:"badgerVLogTruncate"`
-	EnableDeleteKeys         bool          `json:"enableDeleteKeys"`
-	EnableGranularMetrics    bool          `json:"enableGranularMetrics"`
-	PrivilegedAccess         bool          `json:"PrivilegedAccess"`
-	BadgerDetailLogEnabled   bool          `json:"badgerDetailLogEnabled"`
+	DisableKubeWatcher      bool          `json:"disableKubeWatch"`
+	KubeWatchResyncInterval time.Duration `json:"kubeWatchResyncInterval"`
+	WebFilesPath            string        `json:"webfilesPath"`
+	BindAddress             string        `json:"bindAddress"`
+	Port                    int           `json:"port"`
+	StoreRoot               string        `json:"storeRoot"`
+	MaxLookback             time.Duration `json:"maxLookBack"`
+	MaxDiskMb               int           `json:"maxDiskMb"`
+	DebugPlaybackFile       string        `json:"debugPlaybackFile"`
+	DebugRecordFile         string        `json:"debugRecordFile"`
+	DeletionBatchSize       int           `json:"deletionBatchSize"`
+	UseMockBadger           bool          `json:"mockBadger"`
+	DisableStoreManager     bool          `json:"disableStoreManager"`
+	CleanupFrequency        time.Duration `json:"cleanupFrequency" validate:"min=1h,max=120h"`
+	KeepMinorNodeUpdates    bool          `json:"keepMinorNodeUpdates"`
+	DefaultNamespace        string        `json:"defaultNamespace"`
+	DefaultKind             string        `json:"defaultKind"`
+	DefaultLookback         string        `json:"defaultLookback"`
+	UseKubeContext          string        `json:"context"`
+	DisplayContext          string        `json:"displayContext"`
+	ApiServerHost           string        `json:"apiServerHost"`
+	WatchCrds               bool          `json:"watchCrds"`
+	CrdRefreshInterval      time.Duration `json:"crdRefreshInterval"`
+	ThresholdForGC          float64       `json:"threshold for GC"`
+	RestoreDatabaseFile     string        `json:"restoreDatabaseFile"`
+	BadgerDiscardRatio      float64       `json:"badgerDiscardRatio"`
+	BadgerVLogGCFreq        time.Duration `json:"badgerVLogGCFreq"`
+	BadgerMaxTableSize      int64         `json:"badgerMaxTableSize"`
+	BadgerLevelOneSize      int64         `json:"badgerLevelOneSize"`
+	BadgerLevSizeMultiplier int           `json:"badgerLevSizeMultiplier"`
+	BadgerKeepL0InMemory    bool          `json:"badgerKeepL0InMemory"`
+	BadgerVLogFileSize      int64         `json:"badgerVLogFileSize"`
+	BadgerVLogMaxEntries    uint          `json:"badgerVLogMaxEntries"`
+	BadgerUseLSMOnlyOptions bool          `json:"badgerUseLSMOnlyOptions"`
+	BadgerNumOfCompactors   int           `json:"badgerNumOfCompactors"`
+	BadgerNumL0Tables       int           `json:"badgerNumLevelZeroTables"`
+	BadgerNumL0TablesStall  int           `json:"badgerNumLevelZeroTablesStall"`
+	BadgerSyncWrites        bool          `json:"badgerSyncWrites"`
+	BadgerVLogFileIOMapping bool          `json:"badgerVLogFileIOMapping"`
+	BadgerVLogTruncate      bool          `json:"badgerVLogTruncate"`
+	EnableDeleteKeys        bool          `json:"enableDeleteKeys"`
+	EnableGranularMetrics   bool          `json:"enableGranularMetrics"`
+	PrivilegedAccess        bool          `json:"PrivilegedAccess"`
+	BadgerDetailLogEnabled  bool          `json:"badgerDetailLogEnabled"`
 }
 
 func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
@@ -117,7 +116,6 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.Int64Var(&config.BadgerVLogFileSize, "badger-vlog-file-size", config.BadgerVLogFileSize, "Max size in bytes per value log file. 0 = use badger default")
 	fs.UintVar(&config.BadgerVLogMaxEntries, "badger-vlog-max-entries", config.BadgerVLogMaxEntries, "Max number of entries per value log files. 0 = use badger default")
 	fs.BoolVar(&config.BadgerUseLSMOnlyOptions, "badger-use-lsm-only-options", config.BadgerUseLSMOnlyOptions, "Sets a higher valueThreshold so values would be collocated with LSM tree reducing vlog disk usage")
-	fs.BoolVar(&config.BadgerEnableEventLogging, "badger-enable-event-logging", config.BadgerEnableEventLogging, "Turns on badger event logging")
 	fs.IntVar(&config.BadgerNumOfCompactors, "badger-number-of-compactors", config.BadgerNumOfCompactors, "Number of compactors for badger")
 	fs.IntVar(&config.BadgerNumL0Tables, "badger-number-of-level-zero-tables", config.BadgerNumL0Tables, "Number of level zero tables for badger")
 	fs.IntVar(&config.BadgerNumL0TablesStall, "badger-number-of-zero-tables-stall", config.BadgerNumL0TablesStall, "Number of Level 0 tables that once reached causes the DB to stall until compaction succeeds")
@@ -132,53 +130,52 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 
 func getDefaultConfig() *SloopConfig {
 	defaultConfig := SloopConfig{
-		ConfigFile:               "",
-		DisableKubeWatcher:       false,
-		KubeWatchResyncInterval:  30 * time.Minute,
-		WebFilesPath:             "./pkg/sloop/webserver/webfiles",
-		BindAddress:              "",
-		Port:                     8080,
-		StoreRoot:                "./data",
-		MaxLookback:              time.Duration(14*24) * time.Hour,
-		MaxDiskMb:                32 * 1024,
-		DebugPlaybackFile:        "",
-		DebugRecordFile:          "",
-		DeletionBatchSize:        1000,
-		UseMockBadger:            false,
-		DisableStoreManager:      false,
-		CleanupFrequency:         time.Minute * 30,
-		KeepMinorNodeUpdates:     false,
-		DefaultNamespace:         "default",
-		DefaultKind:              "_all",
-		DefaultLookback:          "1h",
-		UseKubeContext:           "",
-		DisplayContext:           "",
-		ApiServerHost:            "",
-		WatchCrds:                true,
-		CrdRefreshInterval:       time.Duration(5 * time.Minute),
-		ThresholdForGC:           0.8,
-		RestoreDatabaseFile:      "",
-		BadgerDiscardRatio:       0.99,
-		BadgerVLogGCFreq:         time.Minute * 1,
-		BadgerMaxTableSize:       0,
-		BadgerLevelOneSize:       0,
-		BadgerLevSizeMultiplier:  0,
-		BadgerKeepL0InMemory:     true,
-		BadgerVLogFileSize:       0,
-		BadgerVLogMaxEntries:     200000,
-		BadgerUseLSMOnlyOptions:  true,
-		BadgerEnableEventLogging: false,
-		BadgerNumOfCompactors:    0,
-		BadgerNumL0Tables:        0,
-		BadgerNumL0TablesStall:   0,
-		BadgerSyncWrites:         true,
-		BadgerVLogFileIOMapping:  false,
-		BadgerVLogTruncate:       true,
-		EnableDeleteKeys:         false,
-		EnableGranularMetrics:    false,
-		PrivilegedAccess:         true,
-		BadgerDetailLogEnabled:   false,
-		ExclusionRules:           map[string][]any{},
+		ConfigFile:              "",
+		DisableKubeWatcher:      false,
+		KubeWatchResyncInterval: 30 * time.Minute,
+		WebFilesPath:            "./pkg/sloop/webserver/webfiles",
+		BindAddress:             "",
+		Port:                    8080,
+		StoreRoot:               "./data",
+		MaxLookback:             time.Duration(14*24) * time.Hour,
+		MaxDiskMb:               32 * 1024,
+		DebugPlaybackFile:       "",
+		DebugRecordFile:         "",
+		DeletionBatchSize:       1000,
+		UseMockBadger:           false,
+		DisableStoreManager:     false,
+		CleanupFrequency:        time.Minute * 30,
+		KeepMinorNodeUpdates:    false,
+		DefaultNamespace:        "default",
+		DefaultKind:             "_all",
+		DefaultLookback:         "1h",
+		UseKubeContext:          "",
+		DisplayContext:          "",
+		ApiServerHost:           "",
+		WatchCrds:               true,
+		CrdRefreshInterval:      time.Duration(5 * time.Minute),
+		ThresholdForGC:          0.8,
+		RestoreDatabaseFile:     "",
+		BadgerDiscardRatio:      0.99,
+		BadgerVLogGCFreq:        time.Minute * 1,
+		BadgerMaxTableSize:      0,
+		BadgerLevelOneSize:      0,
+		BadgerLevSizeMultiplier: 0,
+		BadgerKeepL0InMemory:    true,
+		BadgerVLogFileSize:      0,
+		BadgerVLogMaxEntries:    200000,
+		BadgerUseLSMOnlyOptions: true,
+		BadgerNumOfCompactors:   0,
+		BadgerNumL0Tables:       0,
+		BadgerNumL0TablesStall:  0,
+		BadgerSyncWrites:        true,
+		BadgerVLogFileIOMapping: false,
+		BadgerVLogTruncate:      true,
+		EnableDeleteKeys:        false,
+		EnableGranularMetrics:   false,
+		PrivilegedAccess:        true,
+		BadgerDetailLogEnabled:  false,
+		ExclusionRules:          map[string][]any{},
 	}
 	return &defaultConfig
 }
