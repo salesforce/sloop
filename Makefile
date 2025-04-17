@@ -17,6 +17,8 @@ linux:
 mac:
 	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go install -ldflags "-s" -installsuffix cgo -v ./pkg/...
 
+
+
 goreleaser:
 	 @if [ ! -f "$(GOPATH)/bin/goreleaser" ];then \
    		curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh -s -- -b "$(GOPATH)/bin/"; \

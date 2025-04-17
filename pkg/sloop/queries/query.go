@@ -46,7 +46,7 @@ func RunQuery(queryName string, params url.Values, tables typed.Tables, maxLookB
 
 	fn, ok := funcMap[queryName]
 	if !ok {
-		return []byte{}, fmt.Errorf("Query not found: " + queryName)
+		return []byte{}, fmt.Errorf("Query not found: %s", queryName)
 	}
 	ret, err := fn(params, tables, startTime, endTime, requestId)
 	if err != nil {
