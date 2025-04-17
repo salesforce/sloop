@@ -8,7 +8,8 @@ name: sloop
 replicas: 1
 image:
   tag: latest
-  repository: ghcr.io/salesforce/sloop
+  #repository: ghcr.io/salesforce/sloop
+  repository: sloop
   pullPolicy: IfNotPresent
   # pullSecrets:
   # - name: example-secret

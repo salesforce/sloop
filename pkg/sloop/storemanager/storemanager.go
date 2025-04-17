@@ -191,7 +191,7 @@ func doCleanup(tables typed.Tables, timeLimit time.Duration, sizeLimitBytes int,
 			for _, er := range errMessages {
 				errMsg += er + ","
 			}
-			return false, totalNumOfDeletedKeys, totalNumOfKeysToDelete, fmt.Errorf(errMsg)
+			return false, totalNumOfDeletedKeys, totalNumOfKeysToDelete, fmt.Errorf("%s", errMsg)
 		}
 
 		glog.V(common.GlogVerbose).Infof("Removed number of keys so far: %v ", totalNumOfDeletedKeys)
