@@ -126,6 +126,7 @@ func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interfac
 	i.informerFactory.Core().V1().Services().Informer().AddEventHandler(i.getEventHandlerForResource("Service", enableGranularMetrics))
 	i.informerFactory.Core().V1().ReplicationControllers().Informer().AddEventHandler(i.getEventHandlerForResource("ReplicationController", enableGranularMetrics))
 	i.informerFactory.Storage().V1().StorageClasses().Informer().AddEventHandler(i.getEventHandlerForResource("StorageClass", enableGranularMetrics))
+	i.informerFactory.Admissionregistration().V1().MutatingWebhookConfigurations().Informer().AddEventHandler(i.getEventHandlerForResource("MutatingWebhookConfiguration", enableGranularMetrics))
 	i.informerFactory.Start(i.stopChan)
 }
 
