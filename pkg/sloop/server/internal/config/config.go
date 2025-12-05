@@ -76,6 +76,7 @@ type SloopConfig struct {
 	BadgerVLogTruncate       bool          `json:"badgerVLogTruncate"`
 	EnableDeleteKeys         bool          `json:"enableDeleteKeys"`
 	EnableGranularMetrics    bool          `json:"enableGranularMetrics"`
+	EnableUserMetrics        bool          `json:"enableUserMetrics"`
 	PrivilegedAccess         bool          `json:"PrivilegedAccess"`
 	BadgerDetailLogEnabled   bool          `json:"badgerDetailLogEnabled"`
 }
@@ -124,6 +125,7 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.BoolVar(&config.BadgerSyncWrites, "badger-sync-writes", config.BadgerSyncWrites, "Sync Writes ensures writes are synced to disk if set to true")
 	fs.BoolVar(&config.EnableDeleteKeys, "enable-delete-keys", config.EnableDeleteKeys, "Use delete prefixes instead of dropPrefix for GC")
 	fs.BoolVar(&config.EnableGranularMetrics, "enable-granular-metrics", config.EnableGranularMetrics, "default:True , allows metrics of event kind to be granular with reason, type and name")
+	fs.BoolVar(&config.EnableUserMetrics, "enable-user-metrics", config.EnableUserMetrics, "Enable collection of user metrics from request headers")
 	fs.BoolVar(&config.PrivilegedAccess, "allow-privileged-access", config.PrivilegedAccess, "default:True , allows sloop to access kube root path")
 	fs.BoolVar(&config.BadgerVLogFileIOMapping, "badger-vlog-fileIO-mapping", config.BadgerVLogFileIOMapping, "Indicates which file loading mode should be used for the value log data, in memory constrained environments the value is recommended to be true")
 	fs.BoolVar(&config.BadgerVLogTruncate, "badger-vlog-truncate", config.BadgerVLogTruncate, "Truncate value log if badger db offset is different from badger db size")
@@ -176,6 +178,7 @@ func getDefaultConfig() *SloopConfig {
 		BadgerVLogTruncate:       true,
 		EnableDeleteKeys:         false,
 		EnableGranularMetrics:    false,
+		EnableUserMetrics:        false,
 		PrivilegedAccess:         true,
 		BadgerDetailLogEnabled:   false,
 		ExclusionRules:           map[string][]any{},

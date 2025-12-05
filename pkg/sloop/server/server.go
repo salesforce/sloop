@@ -147,17 +147,18 @@ func RealMain() error {
 	}
 
 	webConfig := webserver.WebConfig{
-		BindAddress:      conf.BindAddress,
-		Port:             conf.Port,
-		WebFilesPath:     conf.WebFilesPath,
-		ConfigYaml:       conf.ToYaml(),
-		MaxLookback:      conf.MaxLookback,
-		DefaultNamespace: conf.DefaultNamespace,
-		DefaultLookback:  conf.DefaultLookback,
-		DefaultResources: conf.DefaultKind,
-		ResourceLinks:    conf.ResourceLinks,
-		LeftBarLinks:     conf.LeftBarLinks,
-		CurrentContext:   displayContext,
+		BindAddress:       conf.BindAddress,
+		Port:              conf.Port,
+		WebFilesPath:      conf.WebFilesPath,
+		ConfigYaml:        conf.ToYaml(),
+		MaxLookback:       conf.MaxLookback,
+		DefaultNamespace:  conf.DefaultNamespace,
+		DefaultLookback:   conf.DefaultLookback,
+		DefaultResources:  conf.DefaultKind,
+		ResourceLinks:     conf.ResourceLinks,
+		LeftBarLinks:      conf.LeftBarLinks,
+		CurrentContext:    displayContext,
+		EnableUserMetrics: conf.EnableUserMetrics,
 	}
 	err = webserver.Run(webConfig, tables)
 	if err != nil {

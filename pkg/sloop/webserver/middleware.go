@@ -17,6 +17,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/salesforce/sloop/pkg/sloop/server/server_metrics"
 )
 
 const requestIDKey string = "reqId"
@@ -71,6 +73,20 @@ func glogMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// userMetricsMiddleware collects user metrics from request headers
+func userMetricsMiddleware(handlerName string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Call the next handler first
+		next.ServeHTTP(w, r)
+
+		// Collect metrics after the request is processed
+		additionalTags := map[string]string{
+			"handler": handlerName,
+		}
+		server_metrics.PublishHeaderMetrics(&r.Header, additionalTags, enableUserMetrics)
+	})
+}
+
 func middlewareChain(handlerName string, next http.Handler) http.HandlerFunc {
 	return promhttp.InstrumentHandlerCounter(
 		metricWebServerRequestCount.MustCurryWith(prometheus.Labels{"handler": handlerName}),
@@ -78,7 +94,7 @@ func middlewareChain(handlerName string, next http.Handler) http.HandlerFunc {
 			metricWebServerRequestDuration.MustCurryWith(prometheus.Labels{"handler": handlerName}),
 			traceMiddleware(
 				glogMiddleware(
-					next,
+					userMetricsMiddleware(handlerName, next),
 				),
 			),
 		),
@@ -87,5 +103,6 @@ func middlewareChain(handlerName string, next http.Handler) http.HandlerFunc {
 
 func metricCountMiddleware(handlerName string, next http.Handler) http.HandlerFunc {
 	return promhttp.InstrumentHandlerCounter(
-		metricWebServerRequestCount.MustCurryWith(prometheus.Labels{"handler": handlerName}), next)
+		metricWebServerRequestCount.MustCurryWith(prometheus.Labels{"handler": handlerName}),
+		userMetricsMiddleware(handlerName, next))
 }

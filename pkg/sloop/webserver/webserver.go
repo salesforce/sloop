@@ -51,22 +51,24 @@ const (
 )
 
 type WebConfig struct {
-	BindAddress      string
-	Port             int
-	WebFilesPath     string
-	DefaultNamespace string
-	DefaultLookback  string
-	DefaultResources string
-	MaxLookback      time.Duration
-	ConfigYaml       string
-	ResourceLinks    []ResourceLinkTemplate
-	LeftBarLinks     []LinkTemplate
-	CurrentContext   string
+	BindAddress       string
+	Port              int
+	WebFilesPath      string
+	DefaultNamespace  string
+	DefaultLookback   string
+	DefaultResources  string
+	MaxLookback       time.Duration
+	ConfigYaml        string
+	ResourceLinks     []ResourceLinkTemplate
+	LeftBarLinks      []LinkTemplate
+	CurrentContext    string
+	EnableUserMetrics bool
 }
 
 // This is not going to change and we don't want to pass it to every function
 // so use a static for now
 var webFilesPath string
+var enableUserMetrics bool
 
 func logWebError(err error, note string, r *http.Request, w http.ResponseWriter) {
 	message := fmt.Sprintf("Error rendering url: %q.  Note: %v. Error: %v", r.URL, note, err)
@@ -221,6 +223,7 @@ func registerRoutes(mux *http.ServeMux, config WebConfig, tables typed.Tables) {
 
 func Run(config WebConfig, tables typed.Tables) error {
 	webFilesPath = config.WebFilesPath
+	enableUserMetrics = config.EnableUserMetrics
 
 	mux := http.NewServeMux()
 	registerRoutes(mux, config, tables)
