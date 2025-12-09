@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -79,10 +80,26 @@ func userMetricsMiddleware(handlerName string, next http.Handler) http.Handler {
 		// Call the next handler first
 		next.ServeHTTP(w, r)
 
-		// Collect metrics after the request is processed
-		additionalTags := map[string]string{
-			"handler": handlerName,
+		// Extract cluster/context from path (first segment after leading slash)
+		cluster := ""
+		pathParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
+		if len(pathParts) > 0 && pathParts[0] != "" {
+			cluster = pathParts[0]
 		}
+
+		// Extract query parameters - always include all built-in labels (empty string if not present)
+		// Prometheus requires all labels to be provided for each metric observation
+		queryParams := r.URL.Query()
+		additionalTags := map[string]string{
+			server_metrics.LabelHandler:   handlerName,
+			server_metrics.LabelCluster:   cluster,
+			server_metrics.LabelQuery:     queryParams.Get("query"),
+			server_metrics.LabelNamespace: queryParams.Get("namespace"),
+			server_metrics.LabelKind:      queryParams.Get("kind"),
+			server_metrics.LabelName:      queryParams.Get("namematch"),
+			server_metrics.LabelLookback:  queryParams.Get("lookback"),
+		}
+
 		server_metrics.PublishHeaderMetrics(&r.Header, additionalTags, enableUserMetrics)
 	})
 }

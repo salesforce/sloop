@@ -20,6 +20,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 
+	"github.com/salesforce/sloop/pkg/sloop/server/server_metrics"
 	"github.com/salesforce/sloop/pkg/sloop/webserver"
 )
 
@@ -29,9 +30,10 @@ type SloopConfig struct {
 	// These fields can only come from command line
 	ConfigFile string
 	// These fields can only come from file because they use complex types
-	LeftBarLinks   []webserver.LinkTemplate         `json:"leftBarLinks"`
-	ResourceLinks  []webserver.ResourceLinkTemplate `json:"resourceLinks"`
-	ExclusionRules map[string][]any                 `json:"exclusionRules"`
+	LeftBarLinks       []webserver.LinkTemplate           `json:"leftBarLinks"`
+	ResourceLinks      []webserver.ResourceLinkTemplate   `json:"resourceLinks"`
+	ExclusionRules     map[string][]any                   `json:"exclusionRules"`
+	UserMetricsHeaders []server_metrics.UserMetricsConfig `json:"userMetricsHeaders"`
 	// Normal fields that can come from file or cmd line
 	DisableKubeWatcher       bool          `json:"disableKubeWatch"`
 	KubeWatchResyncInterval  time.Duration `json:"kubeWatchResyncInterval"`

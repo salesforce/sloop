@@ -18,6 +18,7 @@ import (
 
 	"github.com/salesforce/sloop/pkg/sloop/ingress"
 	"github.com/salesforce/sloop/pkg/sloop/server/internal/config"
+	"github.com/salesforce/sloop/pkg/sloop/server/server_metrics"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 
@@ -144,6 +145,11 @@ func RealMain() error {
 	displayContext := kubeContext
 	if conf.DisplayContext != "" {
 		displayContext = conf.DisplayContext
+	}
+
+	// Initialize user metrics if enabled
+	if conf.EnableUserMetrics {
+		server_metrics.InitUserMetrics(conf.UserMetricsHeaders)
 	}
 
 	webConfig := webserver.WebConfig{
