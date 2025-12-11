@@ -18,6 +18,7 @@ import (
 
 	"github.com/salesforce/sloop/pkg/sloop/ingress"
 	"github.com/salesforce/sloop/pkg/sloop/server/internal/config"
+	"github.com/salesforce/sloop/pkg/sloop/server/server_metrics"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
 
@@ -146,18 +147,24 @@ func RealMain() error {
 		displayContext = conf.DisplayContext
 	}
 
+	// Initialize user metrics if enabled
+	if conf.EnableUserMetrics {
+		server_metrics.InitUserMetrics(conf.UserMetricsHeaders)
+	}
+
 	webConfig := webserver.WebConfig{
-		BindAddress:      conf.BindAddress,
-		Port:             conf.Port,
-		WebFilesPath:     conf.WebFilesPath,
-		ConfigYaml:       conf.ToYaml(),
-		MaxLookback:      conf.MaxLookback,
-		DefaultNamespace: conf.DefaultNamespace,
-		DefaultLookback:  conf.DefaultLookback,
-		DefaultResources: conf.DefaultKind,
-		ResourceLinks:    conf.ResourceLinks,
-		LeftBarLinks:     conf.LeftBarLinks,
-		CurrentContext:   displayContext,
+		BindAddress:       conf.BindAddress,
+		Port:              conf.Port,
+		WebFilesPath:      conf.WebFilesPath,
+		ConfigYaml:        conf.ToYaml(),
+		MaxLookback:       conf.MaxLookback,
+		DefaultNamespace:  conf.DefaultNamespace,
+		DefaultLookback:   conf.DefaultLookback,
+		DefaultResources:  conf.DefaultKind,
+		ResourceLinks:     conf.ResourceLinks,
+		LeftBarLinks:      conf.LeftBarLinks,
+		CurrentContext:    displayContext,
+		EnableUserMetrics: conf.EnableUserMetrics,
 	}
 	err = webserver.Run(webConfig, tables)
 	if err != nil {
