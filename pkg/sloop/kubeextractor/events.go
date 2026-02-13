@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/salesforce/sloop/pkg/sloop/common"
 )
 
 // Example Event
@@ -91,14 +92,14 @@ func ExtractEventInfo(payload string) (*EventInfo, error) {
 
 	fs, err := time.Parse(time.RFC3339, internalResource.FirstTimestamp)
 	if err != nil {
-		glog.Errorf("Could not parse first timestamp %v\n", internalResource.FirstTimestamp)
+		glog.V(common.LogLevelDebug).Infof("Could not parse first timestamp %v", internalResource.FirstTimestamp)
 		fs = time.Time{}
 	}
 
 	ls, err := time.Parse(time.RFC3339, internalResource.LastTimestamp)
 	if err != nil {
-		glog.Errorf("Could not parse last timestamp %v\n", internalResource.LastTimestamp)
-		fs = time.Time{}
+		glog.V(common.LogLevelDebug).Infof("Could not parse last timestamp %v", internalResource.LastTimestamp)
+		ls = time.Time{}
 	}
 
 	return &EventInfo{

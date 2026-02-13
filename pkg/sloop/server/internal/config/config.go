@@ -20,6 +20,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 
+	"github.com/salesforce/sloop/pkg/sloop/common"
 	"github.com/salesforce/sloop/pkg/sloop/server/server_metrics"
 	"github.com/salesforce/sloop/pkg/sloop/webserver"
 )
@@ -257,17 +258,17 @@ func loadFromFile(filename string, config *SloopConfig) *SloopConfig {
 func getConfigFilePath() string {
 	configFileFlag := getConfigFlag()
 	if configFileFlag != "" {
-		glog.Infof("Config flag: %s", configFileFlag)
+		glog.V(common.LogLevelDebug).Infof("Config flag: %s", configFileFlag)
 		return configFileFlag
 	}
 
 	configFileOS := os.Getenv(sloopConfigEnvVar)
 	if configFileOS != "" {
-		glog.Infof("Config env: %s", configFileOS)
+		glog.V(common.LogLevelDebug).Infof("Config env: %s", configFileOS)
 		return configFileOS
 	}
 
-	glog.Infof("Default config set")
+	glog.V(common.LogLevelDebug).Info("Default config set")
 	return ""
 }
 
