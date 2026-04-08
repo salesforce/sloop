@@ -27,17 +27,16 @@ type DedupEntry struct {
 // DedupState manages in-memory deduplication state for all resources.
 // It decides whether incoming watch events should be written to the watch table.
 type DedupState struct {
-	mu                  sync.RWMutex
-	entries             map[string]*DedupEntry
-	snapshotInterval    time.Duration
-	enabled             bool
-	skippedCount        int64
-	snapshotCount       int64
-	changedCount        int64
-	addedCount          int64
-	deletedCount        int64
+	mu               sync.RWMutex
+	entries          map[string]*DedupEntry
+	snapshotInterval time.Duration
+	enabled          bool
+	skippedCount     int64
+	snapshotCount    int64
+	changedCount     int64
+	addedCount       int64
+	deletedCount     int64
 }
-
 
 // NewDedupState creates a new deduplication state manager
 func NewDedupState(enabled bool, snapshotInterval time.Duration) *DedupState {
@@ -111,12 +110,12 @@ func (ds *DedupState) GetStats() map[string]int64 {
 	defer ds.mu.RUnlock()
 
 	return map[string]int64{
-		"skipped":    ds.skippedCount,
-		"snapshot":   ds.snapshotCount,
-		"changed":    ds.changedCount,
-		"added":      ds.addedCount,
-		"deleted":    ds.deletedCount,
-		"tracked":    int64(len(ds.entries)),
+		"skipped":  ds.skippedCount,
+		"snapshot": ds.snapshotCount,
+		"changed":  ds.changedCount,
+		"added":    ds.addedCount,
+		"deleted":  ds.deletedCount,
+		"tracked":  int64(len(ds.entries)),
 	}
 }
 

@@ -95,9 +95,9 @@ func (r *Runner) Start() {
 				r.processingFailed("updateWatchActivityTable", err)
 			}
 
-		err = r.tables.Db().Update(func(txn badgerwrap.Txn) error {
-			return updateKubeWatchTable(r.tables, txn, &watchRec, &resourceMetadata, r.keepMinorNodeUpdates, r.dedupState, r.dedupSnapshotInterval)
-		})
+			err = r.tables.Db().Update(func(txn badgerwrap.Txn) error {
+				return updateKubeWatchTable(r.tables, txn, &watchRec, &resourceMetadata, r.keepMinorNodeUpdates, r.dedupState, r.dedupSnapshotInterval)
+			})
 			if err != nil {
 				r.processingFailed("updateKubeWatchTable", err)
 			}

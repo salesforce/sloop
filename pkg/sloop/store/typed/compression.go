@@ -14,15 +14,15 @@ import (
 )
 
 var (
-	zstdEncoder     *zstd.Encoder
-	zstdDecoder     *zstd.Decoder
-	zstdInitOnce    sync.Once
-	zstdInitErr     error
-
-	// ValueCompressionEnabled controls whether new writes are compressed.
-	// Reads always auto-detect compressed vs raw data for backward compatibility.
-	ValueCompressionEnabled bool
+	zstdEncoder  *zstd.Encoder
+	zstdDecoder  *zstd.Decoder
+	zstdInitOnce sync.Once
+	zstdInitErr  error
 )
+
+// ValueCompressionEnabled controls whether new writes are compressed.
+// Reads always auto-detect compressed vs raw data for backward compatibility.
+var ValueCompressionEnabled bool
 
 var zstdMagic = [4]byte{0x28, 0xB5, 0x2F, 0xFD}
 
