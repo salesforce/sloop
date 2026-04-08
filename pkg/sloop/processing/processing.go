@@ -20,21 +20,38 @@ import (
 )
 
 type Runner struct {
-	kubeWatchChan        chan typed.KubeWatchResult
-	tables               typed.Tables
-	inputWg              *sync.WaitGroup
-	keepMinorNodeUpdates bool
-	maxLookback          time.Duration
+	kubeWatchChan         chan typed.KubeWatchResult
+	tables                typed.Tables
+	inputWg               *sync.WaitGroup
+	keepMinorNodeUpdates  bool
+	maxLookback           time.Duration
+	dedupState            *DedupState
+	dedupSnapshotInterval time.Duration
 }
 
 var (
 	metricProcessingWatchtableUpdatecount = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_processing_watchtable_updatecount"})
 	metricIngestionFailureCount           = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_ingestion_failure_count"})
 	metricIngestionSuccessCount           = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_ingestion_success_count"})
+	metricDedupSkippedCount               = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_dedup_skipped_count", Help: "Number of payload writes skipped due to deduplication"})
+	metricDedupSnapshotCount              = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_dedup_snapshot_count", Help: "Number of snapshot writes (same hash after interval)"})
+	metricDedupChangedCount               = promauto.NewCounter(prometheus.CounterOpts{Name: "sloop_dedup_changed_count", Help: "Number of changed payload writes"})
 )
 
-func NewProcessing(kubeWatchChan chan typed.KubeWatchResult, tables typed.Tables, keepMinorNodeUpdates bool, maxLookback time.Duration) *Runner {
-	return &Runner{kubeWatchChan: kubeWatchChan, tables: tables, inputWg: &sync.WaitGroup{}, keepMinorNodeUpdates: keepMinorNodeUpdates, maxLookback: maxLookback}
+func NewProcessing(kubeWatchChan chan typed.KubeWatchResult, tables typed.Tables, keepMinorNodeUpdates bool, maxLookback time.Duration, enablePayloadDedup bool, dedupSnapshotInterval time.Duration) *Runner {
+	var dedupState *DedupState
+	if enablePayloadDedup {
+		dedupState = NewDedupState(true, dedupSnapshotInterval)
+	}
+	return &Runner{
+		kubeWatchChan:         kubeWatchChan,
+		tables:                tables,
+		inputWg:               &sync.WaitGroup{},
+		keepMinorNodeUpdates:  keepMinorNodeUpdates,
+		maxLookback:           maxLookback,
+		dedupState:            dedupState,
+		dedupSnapshotInterval: dedupSnapshotInterval,
+	}
 }
 
 func (r *Runner) processingFailed(name string, err error) {
@@ -78,9 +95,9 @@ func (r *Runner) Start() {
 				r.processingFailed("updateWatchActivityTable", err)
 			}
 
-			err = r.tables.Db().Update(func(txn badgerwrap.Txn) error {
-				return updateKubeWatchTable(r.tables, txn, &watchRec, &resourceMetadata, r.keepMinorNodeUpdates)
-			})
+		err = r.tables.Db().Update(func(txn badgerwrap.Txn) error {
+			return updateKubeWatchTable(r.tables, txn, &watchRec, &resourceMetadata, r.keepMinorNodeUpdates, r.dedupState, r.dedupSnapshotInterval)
+		})
 			if err != nil {
 				r.processingFailed("updateKubeWatchTable", err)
 			}

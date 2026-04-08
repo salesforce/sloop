@@ -46,6 +46,11 @@ func (t *WatchActivityTable) Set(txn badgerwrap.Txn, key string, value *WatchAct
 		return errors.Wrapf(err, "protobuf marshal for table %v failed", t.tableName)
 	}
 
+	outb, err = CompressValue(outb)
+	if err != nil {
+		return errors.Wrapf(err, "compression for table %v failed", t.tableName)
+	}
+
 	err = txn.Set([]byte(key), outb)
 	if err != nil {
 		return errors.Wrapf(err, "set for table %v failed", t.tableName)
@@ -70,6 +75,11 @@ func (t *WatchActivityTable) Get(txn badgerwrap.Txn, key string) (*WatchActivity
 	valueBytes, err := item.ValueCopy([]byte{})
 	if err != nil {
 		return nil, errors.Wrapf(err, "value copy failed for table %v", t.tableName)
+	}
+
+	valueBytes, err = DecompressValue(valueBytes)
+	if err != nil {
+		return nil, errors.Wrapf(err, "decompression failed for table %v", t.tableName)
 	}
 
 	retValue := &WatchActivity{}
@@ -270,6 +280,10 @@ func (t *WatchActivityTable) RangeRead(txn badgerwrap.Txn, keyPrefix *WatchActiv
 			stats.RowsPassedKeyPredicateCount += 1
 
 			valueBytes, err := itr.Item().ValueCopy([]byte{})
+			if err != nil {
+				return nil, stats, err
+			}
+			valueBytes, err = DecompressValue(valueBytes)
 			if err != nil {
 				return nil, stats, err
 			}

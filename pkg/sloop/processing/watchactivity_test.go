@@ -88,7 +88,7 @@ func Test_updateWatchActivityTable(t *testing.T) {
 
 	// add a KubeWatchResult
 	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
-		return updateKubeWatchTable(tables, txn, watchRec, &metadata, true)
+		return updateKubeWatchTable(tables, txn, watchRec, &metadata, true, nil, 30*time.Minute)
 	})
 	assert.Nil(t, err)
 
