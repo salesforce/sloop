@@ -82,6 +82,9 @@ type SloopConfig struct {
 	EnableUserMetrics        bool          `json:"enableUserMetrics"`
 	PrivilegedAccess         bool          `json:"PrivilegedAccess"`
 	BadgerDetailLogEnabled   bool          `json:"badgerDetailLogEnabled"`
+	EnablePayloadDedup       bool          `json:"enablePayloadDedup"`
+	DedupSnapshotInterval    time.Duration `json:"dedupSnapshotInterval"`
+	EnableValueCompression   bool          `json:"enableValueCompression"`
 }
 
 func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
@@ -133,6 +136,9 @@ func registerFlags(fs *flag.FlagSet, config *SloopConfig) {
 	fs.BoolVar(&config.BadgerVLogFileIOMapping, "badger-vlog-fileIO-mapping", config.BadgerVLogFileIOMapping, "Indicates which file loading mode should be used for the value log data, in memory constrained environments the value is recommended to be true")
 	fs.BoolVar(&config.BadgerVLogTruncate, "badger-vlog-truncate", config.BadgerVLogTruncate, "Truncate value log if badger db offset is different from badger db size")
 	fs.BoolVar(&config.BadgerDetailLogEnabled, "badger-detail-log-enabled", config.BadgerDetailLogEnabled, "Turns on detailed logging of BadgerDB")
+	fs.BoolVar(&config.EnablePayloadDedup, "enable-payload-dedup", config.EnablePayloadDedup, "Enable payload deduplication to skip unchanged resource writes")
+	fs.DurationVar(&config.DedupSnapshotInterval, "dedup-snapshot-interval", config.DedupSnapshotInterval, "Snapshot interval for dedup")
+	fs.BoolVar(&config.EnableValueCompression, "enable-value-compression", config.EnableValueCompression, "Enable zstd compression for stored values (reduces disk usage by 50-60%%)")
 }
 
 func getDefaultConfig() *SloopConfig {
@@ -184,6 +190,9 @@ func getDefaultConfig() *SloopConfig {
 		EnableUserMetrics:        false,
 		PrivilegedAccess:         true,
 		BadgerDetailLogEnabled:   false,
+		EnablePayloadDedup:       false,
+		DedupSnapshotInterval:    30 * time.Minute,
+		EnableValueCompression:   false,
 		ExclusionRules:           map[string][]any{},
 	}
 	return &defaultConfig
@@ -230,6 +239,13 @@ func (c *SloopConfig) Validate() error {
 	if c.CleanupFrequency < time.Minute*15 {
 		return fmt.Errorf("CleanupFrequency can not be less than 15 minutes.  Badger is lazy about freeing space " +
 			"on disk so we need to give it time to avoid over-correction")
+	}
+	if c.DedupSnapshotInterval < 0 {
+		return fmt.Errorf("DedupSnapshotInterval can not be negative, got %v", c.DedupSnapshotInterval)
+	}
+	if c.EnablePayloadDedup && c.DedupSnapshotInterval == 0 {
+		return fmt.Errorf("DedupSnapshotInterval must be > 0 when EnablePayloadDedup is true " +
+			"(otherwise no periodic snapshot is taken and data is never refreshed on disk)")
 	}
 	return nil
 }

@@ -102,7 +102,7 @@ func helper_runWatchTableProcessingOnInputs(t *testing.T, inRecs []*typed.KubeWa
 			kubeMetadata, err := kubeextractor.ExtractMetadata(watchRec.Payload)
 			assert.Nil(t, err)
 
-			return updateKubeWatchTable(tables, txn, watchRec, &kubeMetadata, keepMinorNodeUpdates)
+			return updateKubeWatchTable(tables, txn, watchRec, &kubeMetadata, keepMinorNodeUpdates, nil, 30*time.Minute)
 		})
 		assert.Nil(t, err)
 	}
@@ -216,7 +216,7 @@ func Test_getLastKubeWatchResult(t *testing.T) {
 	watchRec := typed.KubeWatchResult{Kind: kubeextractor.NodeKind, WatchType: typed.KubeWatchResult_UPDATE, Timestamp: ts, Payload: somePodPayload}
 	metadata := &kubeextractor.KubeMetadata{Name: "someName", Namespace: "someNamespace"}
 	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
-		return updateKubeWatchTable(tables, txn, &watchRec, metadata, true)
+		return updateKubeWatchTable(tables, txn, &watchRec, metadata, true, nil, 30*time.Minute)
 	})
 	assert.Nil(t, err)
 
@@ -246,7 +246,7 @@ func Test_GetUidForWatchEntry(t *testing.T) {
 	watchRec := typed.KubeWatchResult{Kind: kubeextractor.PodKind, WatchType: typed.KubeWatchResult_UPDATE, Timestamp: ts, Payload: somePodPayload}
 	metadata := &kubeextractor.KubeMetadata{Name: "someName", Namespace: "someNamespace"}
 	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
-		return updateKubeWatchTable(tables, txn, &watchRec, metadata, true)
+		return updateKubeWatchTable(tables, txn, &watchRec, metadata, true, nil, 30*time.Minute)
 	})
 	assert.Nil(t, err)
 

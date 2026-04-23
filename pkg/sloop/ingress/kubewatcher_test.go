@@ -156,22 +156,22 @@ func Test_bigPictureWithExclusionRules(t *testing.T) {
 		t.Fatalf("Error creating service: %v\n", err)
 	}
 
+	expectedEvents := 3
 	eventCount := 0
-loop:
-	for {
+	deadline := time.After(10 * time.Second)
+	for eventCount < expectedEvents {
 		select {
-		case <-time.After(1 * time.Second):
-			break loop
+		case <-deadline:
+			t.Fatalf("Timed out waiting for events: got %d, expected %d", eventCount, expectedEvents)
 		case result, ok := <-outChan:
-			if ok {
-				eventCount++
-				assert.NotContains(t, result.Payload, `"name":"s2"`)
-			} else {
-				t.Fatalf("Channel closed unexpectedly: %v\n", ok)
+			if !ok {
+				t.Fatalf("Channel closed unexpectedly")
 			}
+			eventCount++
+			assert.NotContains(t, result.Payload, `"name":"s2"`)
 		}
 	}
-	assert.Equal(t, 3, eventCount) // assert no event for service named s2
+	assert.Equal(t, expectedEvents, eventCount)
 
 	kw.Stop()
 }

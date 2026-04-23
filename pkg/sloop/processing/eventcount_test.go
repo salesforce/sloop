@@ -242,7 +242,7 @@ func addEventCount(t *testing.T, tables typed.Tables, timeStamp *timestamp.Times
 
 	metadata := &kubeextractor.KubeMetadata{Name: "someName", Namespace: "someNamespace"}
 	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
-		updateKubeWatchTable(tables, txn, &watchRec, metadata, true)
+		updateKubeWatchTable(tables, txn, &watchRec, metadata, true, nil, 30*time.Minute)
 		// For dedupe to work we need a record written to the watch table
 		err2 := updateEventCountTable(tables, txn, &watchRec, &resourceMetadata, &involvedObject, someMaxLookback)
 		if err2 != nil {
@@ -251,7 +251,7 @@ func addEventCount(t *testing.T, tables typed.Tables, timeStamp *timestamp.Times
 
 		kubeMetadata, err := kubeextractor.ExtractMetadata(watchRec.Payload)
 		assert.Nil(t, err)
-		err2 = updateKubeWatchTable(tables, txn, &watchRec, &kubeMetadata, false)
+		err2 = updateKubeWatchTable(tables, txn, &watchRec, &kubeMetadata, false, nil, 30*time.Minute)
 		return err2
 	})
 	assert.Nil(t, err)
@@ -523,7 +523,7 @@ func Test_updateEventCountTable_NoUid_Success(t *testing.T) {
 	watchRec := typed.KubeWatchResult{Kind: kubeextractor.PodKind, WatchType: typed.KubeWatchResult_UPDATE, Timestamp: ts, Payload: someNamePodPayload}
 	metadata := &kubeextractor.KubeMetadata{Name: "somePodName", Namespace: "someNamespace"}
 	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
-		return updateKubeWatchTable(tables, txn, &watchRec, metadata, true)
+		return updateKubeWatchTable(tables, txn, &watchRec, metadata, true, nil, 30*time.Minute)
 	})
 	assert.Nil(t, err)
 
@@ -562,7 +562,7 @@ func Test_updateEventCountTable_NoUid_Failure(t *testing.T) {
 	watchRec := typed.KubeWatchResult{Kind: kubeextractor.PodKind, WatchType: typed.KubeWatchResult_UPDATE, Timestamp: ts, Payload: somePodPayload}
 	metadata := &kubeextractor.KubeMetadata{Name: "RandomName", Namespace: "someNamespace"}
 	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
-		return updateKubeWatchTable(tables, txn, &watchRec, metadata, true)
+		return updateKubeWatchTable(tables, txn, &watchRec, metadata, true, nil, 30*time.Minute)
 	})
 	assert.Nil(t, err)
 

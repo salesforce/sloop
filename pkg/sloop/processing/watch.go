@@ -83,7 +83,7 @@ func doesNodeHaveMajorUpdates(tables typed.Tables, txn badgerwrap.Txn, watchRec 
 	return diff, nil
 }
 
-func updateKubeWatchTable(tables typed.Tables, txn badgerwrap.Txn, watchRec *typed.KubeWatchResult, metadata *kubeextractor.KubeMetadata, keepMinorNodeUpdates bool) error {
+func updateKubeWatchTable(tables typed.Tables, txn badgerwrap.Txn, watchRec *typed.KubeWatchResult, metadata *kubeextractor.KubeMetadata, keepMinorNodeUpdates bool, dedupState *DedupState, snapshotInterval time.Duration) error {
 	metricProcessingWatchtableUpdatecount.Inc()
 
 	key, err := toWatchTableKey(watchRec.Timestamp, watchRec.Kind, metadata.Namespace, metadata.Name)
@@ -99,6 +99,27 @@ func updateKubeWatchTable(tables typed.Tables, txn badgerwrap.Txn, watchRec *typ
 		if !hasUpdates {
 			glog.V(2).Infof("Not inserting node %v because it has no major updates", key.String())
 			return nil
+		}
+	}
+
+	if dedupState != nil && watchRec.Kind != kubeextractor.NodeKind {
+		hash, err := kubeextractor.ComputePayloadHash(watchRec.Payload)
+		if err != nil {
+			return errors.Wrap(err, "Failed to compute payload hash")
+		}
+
+		now := time.Now()
+		shouldWrite, reason := dedupState.ShouldWrite(metadata.Namespace, watchRec.Kind, metadata.Name, hash, now, snapshotInterval)
+		if !shouldWrite {
+			glog.V(2).Infof("Dedup skip %s/%s (hash unchanged, reason: %s)", watchRec.Kind, metadata.Name, reason)
+			metricDedupSkippedCount.Inc()
+			return nil
+		}
+
+		if reason == "snapshot" {
+			metricDedupSnapshotCount.Inc()
+		} else if reason == "changed" {
+			metricDedupChangedCount.Inc()
 		}
 	}
 
