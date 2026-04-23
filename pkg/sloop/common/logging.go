@@ -1,4 +1,3 @@
-
 package common
 
 import "github.com/golang/glog"

@@ -46,6 +46,11 @@ func RealMain() error {
 		return errors.Wrap(err, "config validation failed")
 	}
 
+	typed.ValueCompressionEnabled = conf.EnableValueCompression
+	if conf.EnableValueCompression {
+		glog.Infof("Value compression enabled (zstd)")
+	}
+
 	kubeContext, err := ingress.GetKubernetesContext(conf.ApiServerHost, conf.UseKubeContext, conf.PrivilegedAccess)
 	if err != nil {
 		return errors.Wrap(err, "failed to get kubernetes context")
@@ -93,7 +98,7 @@ func RealMain() error {
 	}
 
 	tables := typed.NewTableList(db)
-	processor := processing.NewProcessing(kubeWatchChan, tables, conf.KeepMinorNodeUpdates, conf.MaxLookback)
+	processor := processing.NewProcessing(kubeWatchChan, tables, conf.KeepMinorNodeUpdates, conf.MaxLookback, conf.EnablePayloadDedup, conf.DedupSnapshotInterval)
 	processor.Start()
 
 	// Real kubernetes watcher
