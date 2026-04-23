@@ -240,6 +240,13 @@ func (c *SloopConfig) Validate() error {
 		return fmt.Errorf("CleanupFrequency can not be less than 15 minutes.  Badger is lazy about freeing space " +
 			"on disk so we need to give it time to avoid over-correction")
 	}
+	if c.DedupSnapshotInterval < 0 {
+		return fmt.Errorf("DedupSnapshotInterval can not be negative, got %v", c.DedupSnapshotInterval)
+	}
+	if c.EnablePayloadDedup && c.DedupSnapshotInterval == 0 {
+		return fmt.Errorf("DedupSnapshotInterval must be > 0 when EnablePayloadDedup is true " +
+			"(otherwise no periodic snapshot is taken and data is never refreshed on disk)")
+	}
 	return nil
 }
 
