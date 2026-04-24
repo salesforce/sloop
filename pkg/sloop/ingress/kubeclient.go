@@ -54,6 +54,10 @@ func MakeKubernetesClient(masterURL string, kubeContext string, privilegedAccess
 	if privilegedAccess {
 		clientConfig := getConfig(masterURL, kubeContext)
 		config, err = ClientConfig(clientConfig)
+		if err != nil {
+			glog.Errorf("Cannot create config from client config: %v", err)
+			return nil, err
+		}
 		glog.Infof("Building k8sclient with context=%v, masterURL=%v, configFile=%v.", kubeContext, config.Host, clientConfig.ConfigAccess().GetLoadingPrecedence())
 	} else {
 		glog.Infof("Creating Config using BuildConfigFromFlags")

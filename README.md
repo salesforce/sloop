@@ -73,8 +73,8 @@ Other makefile targets:
 To run from Docker you need to host mount your kubeconfig:
 
 ```shell script
-make docker-snapshot
-docker run --rm -it -p 8080:8080 -v ~/.kube/:/kube/ -e KUBECONFIG=/kube/config sloop
+make docker-build
+docker run --rm -it -p 8080:8080 -v ~/.kube/:/kube/ -e KUBECONFIG=/kube/config salesforce/sloop:latest
 ```
 
 In this mode, data is written to a memory-backed volume and is discarded after each run. To preserve the data, you can host-mount /data with something like `-v /data/:/some_path_on_host/`

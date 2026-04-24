@@ -1,4 +1,4 @@
-.PHONY:all run linux docker generate tidy protobuf cover docker-push
+.PHONY:all run linux docker docker-build generate tidy protobuf cover docker-push
 
 all:
 	go get ./pkg/...
@@ -19,10 +19,13 @@ goreleaser:
    	 fi
 
 docker-snapshot: goreleaser
-	$(GOPATH)/bin/goreleaser release --snapshot --rm-dist
+	$(GOPATH)/bin/goreleaser release --snapshot --clean
+
+docker-build:
+	docker build -t salesforce/sloop:latest .
 
 docker: goreleaser
-	$(GOPATH)/bin/goreleaser release --rm-dist --skip-publish
+	$(GOPATH)/bin/goreleaser release --clean --skip-publish
 
 generate:
 	go generate ./pkg/...
