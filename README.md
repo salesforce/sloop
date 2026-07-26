@@ -39,7 +39,7 @@ Users can install sloop by using helm chart now, for instructions refer [helm re
 
 ### Precompiled Binaries
 
-TODO: See the [Releases](https://github.com/salesforce/sloop/releases).
+Precompiled binaries are published on the [Releases](https://github.com/salesforce/sloop/releases) page.
 
 ### Build from Source
 
