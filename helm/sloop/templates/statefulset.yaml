@@ -31,6 +31,11 @@ spec:
         - --config=/sloopconfig/sloop.json
         command:
         - /sloop
+        {{- if .Values.remoteKubeconfigSecret }}
+        env:
+        - name: KUBECONFIG
+          value: /remote-kube/config
+        {{- end }}
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         name: sloop
@@ -66,6 +71,11 @@ spec:
           name: sloop-data
         - mountPath: /sloopconfig/
           name: sloopconfig
+        {{- if .Values.remoteKubeconfigSecret }}
+        - mountPath: /remote-kube/
+          name: remote-kube
+          readOnly: true
+        {{- end }}
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -77,6 +87,11 @@ spec:
       - configMap:
           name: {{ .Values.name }}
         name: sloopconfig
+      {{- if .Values.remoteKubeconfigSecret }}
+      - name: remote-kube
+        secret:
+          secretName: {{ .Values.remoteKubeconfigSecret }}
+      {{- end }}
       serviceAccountName: {{ .Values.serviceAccountName }}
 {{- if .Values.persistentVolume.enabled }}
   volumeClaimTemplates:

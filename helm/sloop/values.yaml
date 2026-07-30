@@ -6,6 +6,12 @@ podLabels: {}
 podAnnotations: {}
 name: sloop
 replicas: 1
+## If set, mounts this Secret (expected to hold a kubeconfig under the key
+## "config") at /remote-kube and points sloop's KUBECONFIG at it, so this
+## instance watches the cluster described by that kubeconfig instead of the
+## cluster it runs on. Used to watch node-less clusters (e.g. a management
+## plane) from a cluster that has nodes.
+remoteKubeconfigSecret: ""
 image:
   tag: latest
   repository: ghcr.io/salesforce/sloop
