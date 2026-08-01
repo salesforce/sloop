@@ -39,11 +39,35 @@ type dummyData struct {
 
 // when fake client tries to list CRDs, return a list with one defined
 func reactionListOfOne(_ k8sTesting.Action) (bool, runtime.Object, error) {
-	versions := []apiextensionsv1.CustomResourceDefinitionVersion{{Name: "v1"}}
+	versions := []apiextensionsv1.CustomResourceDefinitionVersion{{Name: "v1", Served: true, Storage: true}}
 	name := apiextensionsv1.CustomResourceDefinitionNames{Plural: "things", Kind: "k"}
 	spec := apiextensionsv1.CustomResourceDefinitionSpec{Group: "g", Versions: versions, Names: name}
 	crd := apiextensionsv1.CustomResourceDefinition{Spec: spec}
 	list := apiextensionsv1.CustomResourceDefinitionList{Items: []apiextensionsv1.CustomResourceDefinition{crd}}
+	return true, &list, nil
+}
+
+// when fake client tries to list CRDs, return one CRD that serves two
+// versions (storage version listed second) plus one CRD with no served
+// version at all: getCrdList must pick exactly the storage version of the
+// first and skip the second entirely.
+func reactionMultiVersion(_ k8sTesting.Action) (bool, runtime.Object, error) {
+	dual := apiextensionsv1.CustomResourceDefinition{Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+		Group: "g",
+		Names: apiextensionsv1.CustomResourceDefinitionNames{Plural: "things", Kind: "k"},
+		Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
+			{Name: "v1alpha1", Served: true, Storage: false},
+			{Name: "v1", Served: true, Storage: true},
+		},
+	}}
+	unserved := apiextensionsv1.CustomResourceDefinition{Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+		Group: "g2",
+		Names: apiextensionsv1.CustomResourceDefinitionNames{Plural: "others", Kind: "o"},
+		Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
+			{Name: "v1", Served: false, Storage: true},
+		},
+	}}
+	list := apiextensionsv1.CustomResourceDefinitionList{Items: []apiextensionsv1.CustomResourceDefinition{dual, unserved}}
 	return true, &list, nil
 }
 
@@ -185,6 +209,15 @@ func Test_getCrdList(t *testing.T) {
 	crdList, err = getCrdList(crdClient)
 	assert.Len(t, crdList, 1)
 	assert.NoError(t, err)
+
+	// One informer per CRD, on the served storage version; CRDs with no
+	// served version are skipped entirely.
+	crdClient, _ = newTestCrdClient(reactionMultiVersion)(&rest.Config{})
+	crdList, err = getCrdList(crdClient)
+	assert.NoError(t, err)
+	assert.Len(t, crdList, 1)
+	assert.Equal(t, "v1", crdList[0].version)
+	assert.Equal(t, "k", crdList[0].kind)
 }
 
 func Test_getEventHandlerForResource(t *testing.T) {
