@@ -81,6 +81,7 @@ var (
 	metricIngressKubewatchbytes         = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchbytes"}, []string{"kind", "watchtype"})
 	metricCrdInformerStarted            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_started"})
 	metricCrdInformerRunning            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_running"})
+	metricCrdInformerWatchErrors        = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_crd_informer_watch_errors"}, []string{"kind", "group", "version"})
 )
 
 // Todo: Add additional parameters for filtering
@@ -93,12 +94,18 @@ func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.Ku
 
 	kw.startWellKnownInformers(kubeClient, enableGranularMetrics)
 	if includeCrds {
-		err := kw.startCustomInformers(masterURL, kubeContext, enableGranularMetrics)
-		if err != nil {
-			return nil, err
-		}
-
+		// Arm the ticker BEFORE the first attempt: startCustomInformers fails
+		// wholesale on a transient CRD List error, and bailing out here meant
+		// the ticker was never created, so CRD watching stayed off for the
+		// life of the process while the well-known informers kept running and
+		// /healthz stayed green. With the ticker armed first, the refresh
+		// loop retries discovery every crdRefreshInterval until it succeeds.
+		// The goroutine is started only after the first attempt returns, so
+		// two startCustomInformers calls never race over the informer map.
 		kw.refreshCrd = time.NewTicker(crdRefreshInterval)
+		if err := kw.startCustomInformers(masterURL, kubeContext, enableGranularMetrics); err != nil {
+			glog.Errorf("Initial CRD discovery failed, retrying every %v: %v", crdRefreshInterval, err)
+		}
 		go kw.refreshCrdInformers(masterURL, kubeContext, enableGranularMetrics)
 	}
 
@@ -197,6 +204,18 @@ func (i *kubeWatcherImpl) startNewCrdInformer(crdInformer *crdInformerInfo, fact
 	kind := crdInformer.crd.kind
 	informer := factory.ForResource(gvr)
 	informer.Informer().AddEventHandler(i.getEventHandlerForResource(kind, enableGranularMetrics))
+	// Reflector list/watch failures are otherwise invisible: Run() never
+	// returns an error and retries forever, and metricCrdInformerRunning is
+	// incremented before Run(), so a permanently failing informer (RBAC
+	// denied, unreachable apiserver) looks healthy from the outside while
+	// recording nothing. Count and log the failures so an empty database can
+	// be traced to its cause.
+	if err := informer.Informer().SetWatchErrorHandler(func(_ *cache.Reflector, err error) {
+		metricCrdInformerWatchErrors.WithLabelValues(kind, gvr.Group, gvr.Version).Inc()
+		glog.Errorf("CRD informer list/watch failed for %s (%v): %v", kind, gvr, err)
+	}); err != nil {
+		glog.Errorf("Failed to install watch error handler for %s (%v): %v", kind, gvr, err)
+	}
 
 	go func() {
 		glog.V(2).Infof("Starting CRD informer for: %s (%v)", kind, gvr)
@@ -227,11 +246,33 @@ func getCrdList(crdClient clientset.Interface) ([]crdGroupVersionResourceKind, e
 
 	var resources []crdGroupVersionResourceKind
 	for _, crd := range crdList.Items {
+		// Watch exactly one served version per CRD. The apiserver returns the
+		// same objects through every served version, so watching all of them
+		// wrote each object N times (observed: 220 watch events for 110
+		// Projects on a v1+v1alpha1 CRD), and an unserved version has no
+		// endpoint at all - its informer 404-loops forever while being
+		// counted as running. Prefer the storage version when it is served,
+		// else fall back to the first served one.
+		chosen := ""
 		for _, version := range crd.Spec.Versions {
-			gvrk := crdGroupVersionResourceKind{group: crd.Spec.Group, version: version.Name, resource: crd.Spec.Names.Plural, kind: crd.Spec.Names.Kind}
-			glog.V(2).Infof("CRD: group: %s, version: %s, kind: %s, plural:%s, singular:%s, short names:%v", crd.Spec.Group, version.Name, crd.Spec.Names.Kind, crd.Spec.Names.Plural, crd.Spec.Names.Singular, crd.Spec.Names.ShortNames)
-			resources = append(resources, gvrk)
+			if !version.Served {
+				continue
+			}
+			if chosen == "" {
+				chosen = version.Name
+			}
+			if version.Storage {
+				chosen = version.Name
+				break
+			}
 		}
+		if chosen == "" {
+			glog.V(2).Infof("CRD %s kind %s has no served versions; skipping", crd.Spec.Group, crd.Spec.Names.Kind)
+			continue
+		}
+		gvrk := crdGroupVersionResourceKind{group: crd.Spec.Group, version: chosen, resource: crd.Spec.Names.Plural, kind: crd.Spec.Names.Kind}
+		glog.V(2).Infof("CRD: group: %s, version: %s, kind: %s, plural:%s, singular:%s, short names:%v", crd.Spec.Group, chosen, crd.Spec.Names.Kind, crd.Spec.Names.Plural, crd.Spec.Names.Singular, crd.Spec.Names.ShortNames)
+		resources = append(resources, gvrk)
 	}
 	return resources, nil
 }
@@ -245,11 +286,28 @@ func getCrdListV1beta1(crdClient clientset.Interface) ([]crdGroupVersionResource
 	// duplicated code (see getCrdList), the types for crdList are different
 	var resources []crdGroupVersionResourceKind
 	for _, crd := range crdList.Items {
+		// See getCrdList: watch exactly one served version per CRD,
+		// preferring the storage version.
+		chosen := ""
 		for _, version := range crd.Spec.Versions {
-			gvrk := crdGroupVersionResourceKind{group: crd.Spec.Group, version: version.Name, resource: crd.Spec.Names.Plural, kind: crd.Spec.Names.Kind}
-			glog.V(2).Infof("CRD: group: %s, version: %s, kind: %s, plural:%s, singular:%s, short names:%v", crd.Spec.Group, version.Name, crd.Spec.Names.Kind, crd.Spec.Names.Plural, crd.Spec.Names.Singular, crd.Spec.Names.ShortNames)
-			resources = append(resources, gvrk)
+			if !version.Served {
+				continue
+			}
+			if chosen == "" {
+				chosen = version.Name
+			}
+			if version.Storage {
+				chosen = version.Name
+				break
+			}
 		}
+		if chosen == "" {
+			glog.V(2).Infof("CRD %s kind %s has no served versions; skipping", crd.Spec.Group, crd.Spec.Names.Kind)
+			continue
+		}
+		gvrk := crdGroupVersionResourceKind{group: crd.Spec.Group, version: chosen, resource: crd.Spec.Names.Plural, kind: crd.Spec.Names.Kind}
+		glog.V(2).Infof("CRD: group: %s, version: %s, kind: %s, plural:%s, singular:%s, short names:%v", crd.Spec.Group, chosen, crd.Spec.Names.Kind, crd.Spec.Names.Plural, crd.Spec.Names.Singular, crd.Spec.Names.ShortNames)
+		resources = append(resources, gvrk)
 	}
 	return resources, nil
 }
