@@ -109,20 +109,28 @@ func RealMain() error {
 	var kubeWatcherMu sync.Mutex
 	if !conf.DisableKubeWatcher {
 		go func() {
-			kubeClient, err := ingress.MakeKubernetesClient(conf.ApiServerHost, kubeContext, conf.PrivilegedAccess)
-			if err != nil {
-				glog.Errorf("failed to create kubernetes client: %v", err)
-				return
+			// Retry forever instead of giving up on the first error: a
+			// transient API-server failure at startup (throttling, TLS
+			// timeout - common on management planes during a rollout, which
+			// is exactly when sloop starts) previously left the process
+			// running healthily for its whole life with zero watchers and an
+			// empty database, and nothing ever retried.
+			const retryDelay = time.Minute
+			for attempt := 1; ; attempt++ {
+				kubeClient, err := ingress.MakeKubernetesClient(conf.ApiServerHost, kubeContext, conf.PrivilegedAccess)
+				if err == nil {
+					var kw ingress.KubeWatcher
+					kw, err = ingress.NewKubeWatcherSource(kubeClient, kubeWatchChan, conf.KubeWatchResyncInterval, conf.WatchCrds, conf.CrdRefreshInterval, conf.ApiServerHost, kubeContext, conf.EnableGranularMetrics, conf.ExclusionRules)
+					if err == nil {
+						kubeWatcherMu.Lock()
+						kubeWatcherSource = kw
+						kubeWatcherMu.Unlock()
+						return
+					}
+				}
+				glog.Errorf("failed to initialize kubeWatcher (attempt %d, retrying in %v): %v", attempt, retryDelay, err)
+				time.Sleep(retryDelay)
 			}
-
-			kw, err := ingress.NewKubeWatcherSource(kubeClient, kubeWatchChan, conf.KubeWatchResyncInterval, conf.WatchCrds, conf.CrdRefreshInterval, conf.ApiServerHost, kubeContext, conf.EnableGranularMetrics, conf.ExclusionRules)
-			if err != nil {
-				glog.Errorf("failed to initialize kubeWatcher: %v", err)
-				return
-			}
-			kubeWatcherMu.Lock()
-			kubeWatcherSource = kw
-			kubeWatcherMu.Unlock()
 		}()
 	}
 
