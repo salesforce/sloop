@@ -122,25 +122,32 @@ func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.Ku
 // in the snapshots too. Removing it shrinks the caches, the badger store and
 // the backups at once.
 //
-// The informer owns these objects, so mutating in place is safe and avoids the
-// deep copy a non-mutating transform would need.
+// Mutating in place is safe ONLY on an object's first pass, while the informer
+// still owns it exclusively. The transform is not called once per object: the
+// DeltaFIFO applies it to every delta unconditionally, including Sync deltas
+// from the periodic resync and the tombstones a post-watch-gap relist produces.
+// Both of those carry the pointer already stored in the indexer - the same one
+// the handler goroutine may be marshaling right now - so a second write is a
+// data race. For unstructured objects (every CRD) SetManagedFields(nil) is a
+// map delete, and a map write concurrent with the json.Marshal walking that map
+// is a fatal, unrecoverable runtime abort, not a recoverable panic.
+//
+// So write only when there is something to remove. After the first pass the
+// field is gone, which makes every later pass a pure read.
 func stripManagedFields(obj any) (any, error) {
-	// A relist after a watch gap delivers deletions as tombstones; strip the
-	// object inside rather than letting it through untouched.
-	if tombstone, ok := obj.(cache.DeletedFinalStateUnknown); ok {
-		inner, err := stripManagedFields(tombstone.Obj)
-		if err != nil {
-			return obj, nil
-		}
-		tombstone.Obj = inner
-		return tombstone, nil
+	// A tombstone's inner object has already been through this transform on its
+	// way into the store, and is still the store's pointer; leave it alone.
+	if _, ok := obj.(cache.DeletedFinalStateUnknown); ok {
+		return obj, nil
 	}
 	accessor, err := meta.Accessor(obj)
 	if err != nil {
 		// Not a Kubernetes object; pass it through rather than dropping it.
 		return obj, nil
 	}
-	accessor.SetManagedFields(nil)
+	if len(accessor.GetManagedFields()) > 0 {
+		accessor.SetManagedFields(nil)
+	}
 	return obj, nil
 }
 
