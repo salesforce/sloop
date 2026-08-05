@@ -23,6 +23,7 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	clientsetFake "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/dynamicinformer"
@@ -366,4 +367,42 @@ func Test_existingOrStartNewCrdInformer(t *testing.T) {
 	for atomic.LoadInt64(&kw.activeCrdInformer) != 0 { // wait for the go routine to exit
 		time.Sleep(time.Millisecond)
 	}
+}
+
+func Test_stripManagedFields(t *testing.T) {
+	managed := []metav1.ManagedFieldsEntry{{Manager: "kubectl", Operation: metav1.ManagedFieldsOperationApply}}
+
+	// Typed object.
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "p1", ManagedFields: managed}}
+	out, err := stripManagedFields(pod)
+	assert.Nil(t, err)
+	assert.Empty(t, out.(*corev1.Pod).ManagedFields)
+	assert.Equal(t, "p1", out.(*corev1.Pod).Name)
+
+	// Unstructured object, as delivered by the CRD (dynamic) informers.
+	custom := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "resourcemanager.gdc.goog/v1alpha1",
+		"kind":       "Project",
+		"metadata": map[string]any{
+			"name":          "proj1",
+			"managedFields": []any{map[string]any{"manager": "kubectl"}},
+		},
+	}}
+	out, err = stripManagedFields(custom)
+	assert.Nil(t, err)
+	md := out.(*unstructured.Unstructured).Object["metadata"].(map[string]any)
+	_, stillThere := md["managedFields"]
+	assert.False(t, stillThere)
+	assert.Equal(t, "proj1", md["name"])
+
+	// Tombstone from a relist after a watch gap.
+	tombPod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "p2", ManagedFields: managed}}
+	out, err = stripManagedFields(cache.DeletedFinalStateUnknown{Key: "ns/p2", Obj: tombPod})
+	assert.Nil(t, err)
+	assert.Empty(t, out.(cache.DeletedFinalStateUnknown).Obj.(*corev1.Pod).ManagedFields)
+
+	// Non-Kubernetes payload passes through instead of being dropped.
+	out, err = stripManagedFields("not-an-object")
+	assert.Nil(t, err)
+	assert.Equal(t, "not-an-object", out)
 }

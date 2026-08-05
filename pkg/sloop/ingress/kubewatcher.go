@@ -28,6 +28,7 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -112,28 +113,69 @@ func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.Ku
 	return kw, nil
 }
 
+// stripManagedFields drops metadata.managedFields before an object enters the
+// informer cache. Every informer keeps a decoded copy of every object it
+// watches, and sloop only ever consumes the event stream - no Lister or Store
+// read exists - so the cache is pure overhead that still has to be paid for.
+// managedFields is a large, purely administrative part of that: on a GDC
+// management plane it was 11% of recorded payload bytes, and it is dead weight
+// in the snapshots too. Removing it shrinks the caches, the badger store and
+// the backups at once.
+//
+// The informer owns these objects, so mutating in place is safe and avoids the
+// deep copy a non-mutating transform would need.
+func stripManagedFields(obj any) (any, error) {
+	// A relist after a watch gap delivers deletions as tombstones; strip the
+	// object inside rather than letting it through untouched.
+	if tombstone, ok := obj.(cache.DeletedFinalStateUnknown); ok {
+		inner, err := stripManagedFields(tombstone.Obj)
+		if err != nil {
+			return obj, nil
+		}
+		tombstone.Obj = inner
+		return tombstone, nil
+	}
+	accessor, err := meta.Accessor(obj)
+	if err != nil {
+		// Not a Kubernetes object; pass it through rather than dropping it.
+		return obj, nil
+	}
+	accessor.SetManagedFields(nil)
+	return obj, nil
+}
+
+// watchInformer wires one informer up to sloop: strip managedFields on the way
+// in, then emit each event. SetTransform must be installed before the informer
+// starts, so it goes first.
+func (i *kubeWatcherImpl) watchInformer(informer cache.SharedIndexInformer, kind string, enableGranularMetrics bool) {
+	if err := informer.SetTransform(stripManagedFields); err != nil {
+		glog.Errorf("Failed to install managedFields transform for %s: %v", kind, err)
+	}
+	informer.AddEventHandler(i.getEventHandlerForResource(kind, enableGranularMetrics))
+}
+
 func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interface, enableGranularMetrics bool) {
 	i.informerFactory = informers.NewSharedInformerFactory(kubeclient, i.resync)
 
-	i.informerFactory.Apps().V1().DaemonSets().Informer().AddEventHandler(i.getEventHandlerForResource("DaemonSet", enableGranularMetrics))
-	i.informerFactory.Apps().V1().Deployments().Informer().AddEventHandler(i.getEventHandlerForResource("Deployment", enableGranularMetrics))
-	i.informerFactory.Apps().V1().ReplicaSets().Informer().AddEventHandler(i.getEventHandlerForResource("ReplicaSet", enableGranularMetrics))
-	i.informerFactory.Apps().V1().StatefulSets().Informer().AddEventHandler(i.getEventHandlerForResource("StatefulSet", enableGranularMetrics))
-	i.informerFactory.Core().V1().ConfigMaps().Informer().AddEventHandler(i.getEventHandlerForResource("ConfigMap", enableGranularMetrics))
-	i.informerFactory.Core().V1().Endpoints().Informer().AddEventHandler(i.getEventHandlerForResource("Endpoint", enableGranularMetrics))
-	i.informerFactory.Core().V1().Events().Informer().AddEventHandler(i.getEventHandlerForResource("Event", enableGranularMetrics))
-	i.informerFactory.Autoscaling().V1().HorizontalPodAutoscalers().Informer().AddEventHandler(i.getEventHandlerForResource("HorizontalPodAutoscaler", enableGranularMetrics))
-	i.informerFactory.Batch().V1().Jobs().Informer().AddEventHandler(i.getEventHandlerForResource("Job", enableGranularMetrics))
-	i.informerFactory.Core().V1().Namespaces().Informer().AddEventHandler(i.getEventHandlerForResource("Namespace", enableGranularMetrics))
-	i.informerFactory.Core().V1().Nodes().Informer().AddEventHandler(i.getEventHandlerForResource("Node", enableGranularMetrics))
-	i.informerFactory.Core().V1().PersistentVolumeClaims().Informer().AddEventHandler(i.getEventHandlerForResource("PersistentVolumeClaim", enableGranularMetrics))
-	i.informerFactory.Core().V1().PersistentVolumes().Informer().AddEventHandler(i.getEventHandlerForResource("PersistentVolume", enableGranularMetrics))
-	i.informerFactory.Core().V1().Pods().Informer().AddEventHandler(i.getEventHandlerForResource("Pod", enableGranularMetrics))
-	i.informerFactory.Policy().V1().PodDisruptionBudgets().Informer().AddEventHandler(i.getEventHandlerForResource("PodDisruptionBudget", enableGranularMetrics))
-	i.informerFactory.Core().V1().Services().Informer().AddEventHandler(i.getEventHandlerForResource("Service", enableGranularMetrics))
-	i.informerFactory.Core().V1().ReplicationControllers().Informer().AddEventHandler(i.getEventHandlerForResource("ReplicationController", enableGranularMetrics))
-	i.informerFactory.Storage().V1().StorageClasses().Informer().AddEventHandler(i.getEventHandlerForResource("StorageClass", enableGranularMetrics))
-	i.informerFactory.Admissionregistration().V1().MutatingWebhookConfigurations().Informer().AddEventHandler(i.getEventHandlerForResource("MutatingWebhookConfiguration", enableGranularMetrics))
+	i.watchInformer(i.informerFactory.Apps().V1().DaemonSets().Informer(), "DaemonSet", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Apps().V1().Deployments().Informer(), "Deployment", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Apps().V1().ReplicaSets().Informer(), "ReplicaSet", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Apps().V1().StatefulSets().Informer(), "StatefulSet", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().ConfigMaps().Informer(), "ConfigMap", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().Endpoints().Informer(), "Endpoint", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().Events().Informer(), "Event", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Autoscaling().V1().HorizontalPodAutoscalers().Informer(), "HorizontalPodAutoscaler", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Batch().V1().Jobs().Informer(), "Job", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().Namespaces().Informer(), "Namespace", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().Nodes().Informer(), "Node", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().PersistentVolumeClaims().Informer(), "PersistentVolumeClaim", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().PersistentVolumes().Informer(), "PersistentVolume", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().Pods().Informer(), "Pod", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Policy().V1().PodDisruptionBudgets().Informer(), "PodDisruptionBudget", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().Services().Informer(), "Service", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().ReplicationControllers().Informer(), "ReplicationController", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Storage().V1().StorageClasses().Informer(), "StorageClass", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Admissionregistration().V1().MutatingWebhookConfigurations().Informer(), "MutatingWebhookConfiguration", enableGranularMetrics)
 	i.informerFactory.Start(i.stopChan)
 }
 
@@ -203,7 +245,7 @@ func (i *kubeWatcherImpl) startNewCrdInformer(crdInformer *crdInformerInfo, fact
 	gvr := schema.GroupVersionResource{Group: crdInformer.crd.group, Version: crdInformer.crd.version, Resource: crdInformer.crd.resource}
 	kind := crdInformer.crd.kind
 	informer := factory.ForResource(gvr)
-	informer.Informer().AddEventHandler(i.getEventHandlerForResource(kind, enableGranularMetrics))
+	i.watchInformer(informer.Informer(), kind, enableGranularMetrics)
 	// Reflector list/watch failures are otherwise invisible: Run() never
 	// returns an error and retries forever, and metricCrdInformerRunning is
 	// incremented before Run(), so a permanently failing informer (RBAC
