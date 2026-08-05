@@ -12,8 +12,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
+	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
+	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -201,4 +204,48 @@ func Test_parseTimestampString(t *testing.T) {
 	result, err = parseTimestampString(str)
 	assert.NotNil(t, err)
 	assert.Equal(t, result.Format(""), "")
+}
+
+func Test_getEndOfTime_HistoricDataAnchorsToNewestRecord(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	db, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
+	assert.Nil(t, err)
+	tables := typed.NewTableList(db)
+
+	// A record well in the past (e.g. a restored backup), 27 minutes into its partition
+	newestRecordTs := time.Date(2019, 3, 1, 18, 27, 0, 0, time.UTC)
+	olderRecordTs := newestRecordTs.Add(-10 * time.Minute)
+	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
+		for i, ts := range []time.Time{olderRecordTs, newestRecordTs} {
+			pts, _ := ptypes.TimestampProto(ts)
+			key := typed.NewResourceSummaryKey(ts, "Pod", "ns", fmt.Sprintf("name%v", i), "uid")
+			setErr := tables.ResourceSummaryTable().Set(txn, key.String(), &typed.ResourceSummary{CreateTime: pts, LastSeen: pts})
+			if setErr != nil {
+				return setErr
+			}
+		}
+		return nil
+	})
+	assert.Nil(t, err)
+
+	// Anchored to the newest record, not the partition end (19:00)
+	assert.Equal(t, newestRecordTs, getEndOfTime(tables))
+}
+
+func Test_getEndOfTime_NoSummariesFallsBackToPartitionEnd(t *testing.T) {
+	untyped.TestHookSetPartitionDuration(time.Hour)
+	db, err := (&badgerwrap.MockFactory{}).Open(badger.DefaultOptions(""))
+	assert.Nil(t, err)
+	tables := typed.NewTableList(db)
+
+	// Only a watch record exists, so there is no resource summary to anchor to
+	recordTs := time.Date(2019, 3, 1, 18, 27, 0, 0, time.UTC)
+	pts, _ := ptypes.TimestampProto(recordTs)
+	err = tables.Db().Update(func(txn badgerwrap.Txn) error {
+		key := typed.NewWatchTableKey(untyped.GetPartitionId(recordTs), "Pod", "ns", "name", recordTs)
+		return tables.WatchTable().Set(txn, key.String(), &typed.KubeWatchResult{Kind: "Pod", Timestamp: pts, Payload: "{}"})
+	})
+	assert.Nil(t, err)
+
+	assert.Equal(t, time.Date(2019, 3, 1, 19, 0, 0, 0, time.UTC), getEndOfTime(tables))
 }

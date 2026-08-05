@@ -26,6 +26,12 @@ type TimelineRow struct {
 
 type ViewOptions struct {
 	Sort string `json:"sort"`
+	// The effective query window in unix seconds, after computeTimeRange clamped the
+	// requested range to the data available in the store. The UI uses this for the
+	// timeline axis and to display the real end time (which differs from the requested
+	// one when viewing restored/old data).
+	QueryStart int64 `json:"query_start"`
+	QueryEnd   int64 `json:"query_end"`
 }
 
 type Overlay struct {

@@ -2,5 +2,5 @@ apiVersion: v2
 appVersion: "1.0"
 description: Sloop is a kubernetes history visualization tool.
 name: sloop
-version: 0.2.0
+version: 0.4.0
 icon: https://raw.githubusercontent.com/salesforce/sloop/master/other/sloop_logo_color.png

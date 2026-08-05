@@ -17,6 +17,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
+	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
 )
 
 const minLookback = 1 * time.Minute
@@ -106,8 +107,11 @@ func computeTimeRangeInternal(params url.Values, endOfTime time.Time, maxLookBac
 
 }
 
-// This looks at our store, and if it has data finds the newest partition, then finds the end time of that
-// But if that is in the future we return now
+// This looks at our store, and if it has data finds the end of recorded data.
+// If the newest partition is still being written (its end is in the future) that is now.
+// Otherwise (historic data, e.g. a restored backup) it is the newest record in that
+// partition - the partition boundary itself can be up to an hour past the last record,
+// which would leave a dead zone at the end of the view.
 // This bit of logic is needed for queries with a lookback to determine a good end time
 func getEndOfTime(tables typed.Tables) time.Time {
 	now := time.Now()
@@ -120,7 +124,7 @@ func getEndOfTime(tables typed.Tables) time.Time {
 		return now
 	}
 
-	_, endTimeOfNewestPartition, err := untyped.GetTimeRangeForPartition(maxPartition)
+	startTimeOfNewestPartition, endTimeOfNewestPartition, err := untyped.GetTimeRangeForPartition(maxPartition)
 	if err != nil {
 		glog.Errorf("Error getting MinAndMaxPartition: %v", err)
 		return now
@@ -129,9 +133,42 @@ func getEndOfTime(tables typed.Tables) time.Time {
 	// The newest partition ends in the future, so use now instead
 	if endTimeOfNewestPartition.After(now) {
 		return now
-	} else {
-		return endTimeOfNewestPartition
 	}
+
+	newestRecordTime, found := getNewestRecordTime(tables, startTimeOfNewestPartition, endTimeOfNewestPartition)
+	if found {
+		return newestRecordTime
+	}
+	return endTimeOfNewestPartition
+}
+
+// getNewestRecordTime returns the latest lastSeen across the resource summaries of the newest
+// partition. Resource summaries track every non-Event watch, so this is the end of recorded
+// data to within about a minute. The scan covers a single partition of the ressum table -
+// the same order of work the heatmap query does for every partition it renders.
+func getNewestRecordTime(tables typed.Tables, partitionStart time.Time, partitionEnd time.Time) (time.Time, bool) {
+	newest := time.Time{}
+	err := tables.Db().View(func(txn badgerwrap.Txn) error {
+		resSums, _, rangeErr := tables.ResourceSummaryTable().RangeRead(txn, nil, nil, nil, partitionStart, partitionEnd)
+		if rangeErr != nil {
+			return rangeErr
+		}
+		for _, resSum := range resSums {
+			lastSeen, tsErr := ptypes.Timestamp(resSum.LastSeen)
+			if tsErr == nil && lastSeen.After(newest) {
+				newest = lastSeen
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		glog.Errorf("Error finding newest record in partition: %v", err)
+		return time.Time{}, false
+	}
+	if newest.IsZero() {
+		return time.Time{}, false
+	}
+	return newest, true
 }
 
 func getDurationFromLookback(lookbackVal string) (time.Duration, error) {

@@ -124,13 +124,35 @@ function queryChange(radio) {
     }
 }
 
+// Show the end of the displayed window (from the server's effective query range) in the
+// end-time box, converted to the box's local-time convention. The stored value is left
+// alone: an empty stored value keeps tracking the newest data on reload.
+function updateEndTimeBox(endUnixSeconds) {
+    let endDate = new Date(endUnixSeconds * 1000);
+    endDate.setMinutes(endDate.getMinutes() - endDate.getTimezoneOffset());
+    endDate.setMilliseconds(null);
+    document.getElementById('selectedEndTime').value = endDate.toISOString().slice(0, -1);
+}
+
 function render(result) {
     let data = processAndSortResources(result);
     let dataByKind, kinds, filteredData;
 
+    // Prefer the server-computed effective query window for the time axis: it reflects any
+    // clamping to the data available in the store, so when viewing a restored backup the
+    // axis ends at the newest recorded data instead of stretching to the requested time
+    let viewOptions = result.view_options || {};
+    let queryWindow = null;
+    if (viewOptions.query_start && viewOptions.query_end) {
+        queryWindow = [viewOptions.query_start * 1000, viewOptions.query_end * 1000];
+        updateEndTimeBox(viewOptions.query_end);
+    }
 
     if (!data) {
         xAxisScale = d3.scaleUtc().range([margin.left, displayMaxX - margin.left]);
+        if (queryWindow) {
+            xAxisScale.domain(queryWindow);
+        }
         yAxisBand = d3.scaleBand().padding(resourceBarVerticalSpacing);
 
         topAxisDrawFunc = d3.axisTop(xAxisScale);
@@ -144,7 +166,7 @@ function render(result) {
         severityColorGenFunc = d3.scaleLinear().domain([0, 1, 2]).range(palette.severity);
 
         xAxisScale = d3.scaleUtc()
-            .domain([d3.min(data, d => d.start), d3.max(data, d => d.end)])
+            .domain(queryWindow || [d3.min(data, d => d.start), d3.max(data, d => d.end)])
             .range([margin.left, displayMaxX - margin.left]);
 
         yAxisBand = d3.scaleBand()
@@ -608,28 +630,24 @@ function showDetailedTooltip(d, event, parent) {
 }
 
 $(document).ready(function() {
-    //Set max allowed selected date/time to now
-    const now = new Date();
-    const utcNow = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
-
-    //Display user selected end time on ui after click submit button or refresh the page
-    //Set page default to UTC time on first loading
-    let userDate = utcNow;
-    // check if selected end time happened within 3 seconds
-    if (sessionStorage.getItem('setSelectedEndTime') !== null
-        && ! Date.parse(sessionStorage.getItem('setSelectedEndTime')) < new Date(userDate.getTime() - 3000)){
-        userDate = new Date(sessionStorage.getItem('selectedEndTime'));
+    // Display the user-selected end time after submit/refresh. When none is stored, the
+    // box stays empty until the data loads, then shows the server's effective end time
+    // (the end of recorded data) - see updateEndTimeBox()
+    let storedEndTime = sessionStorage.getItem('selectedEndTime');
+    if (storedEndTime) {
+        let userDate = new Date(storedEndTime);
+        userDate.setMinutes(userDate.getMinutes() - userDate.getTimezoneOffset());
+        userDate.setMilliseconds(null);
+        document.getElementById('selectedEndTime').value = userDate.toISOString().slice(0, -1);
     }
-    userDate.setMinutes(userDate.getMinutes() - userDate.getTimezoneOffset());
-    userDate.setMilliseconds(null);
-    document.getElementById('selectedEndTime').value = userDate.toISOString().slice(0, -1);
 
-    $('#now').click(function(){
-        const resetNow = new Date();
-        resetNow.setMilliseconds(null);
-        document.getElementById('selectedEndTime').value = resetNow.toISOString().slice(0, -1);
+    // "Latest" re-anchors the view to the end of recorded data: clear the explicit end
+    // time and resubmit, so the server picks the newest data in the store as the window
+    // end and the box is refilled with it once the data loads
+    $('#latest').click(function(){
         sessionStorage.removeItem('selectedEndTime');
-        sessionStorage.setItem('selectedEndTime', resetNow.toISOString().slice(0, -1));
+        document.getElementById('selectedEndTime').value = '';
+        this.form.submit();
     });
 
 });

@@ -43,3 +43,13 @@ html, body {
     color: white;
     cursor:pointer;
 }
+
+#describe_output {
+    font-family: Menlo, Consolas, monospace;
+    font-size: 12px;
+    background-color: whitesmoke;
+    border: 1px solid lightgrey;
+    padding: 8px;
+    overflow: auto;
+    max-height: 600px;
+}

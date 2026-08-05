@@ -141,6 +141,16 @@ input[type="button"] {
 	font-size: 0.80em;
 }
 
+/* End-time row: keep the datetime input and the Latest button on one line without clipping */
+#selectedEndTime {
+	width: 185px;
+}
+
+#latest {
+	width: auto;
+	padding: 0 8px;
+}
+
 input[type="text"] {
 	width: 245px;
 	height: 1.3rem;

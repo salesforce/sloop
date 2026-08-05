@@ -14,6 +14,7 @@ import (
 	"log"
 	"mime"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"path"
@@ -218,7 +219,27 @@ func registerRoutes(mux *http.ServeMux, config WebConfig, tables typed.Tables) {
 	mux.HandleFunc(ccPrefix+"/debug/events", middlewareChain("debug", http.HandlerFunc(trace.Events)))
 	// Badger also uses expvar which exposes prometheus compatible metrics on /debug/vars
 	mux.HandleFunc(ccPrefix+"/debug/vars", middlewareChain("debug", http.HandlerFunc(expvar.Handler().ServeHTTP)))
+	registerPprof(mux, ccPrefix)
 	mux.HandleFunc(ccPrefix+"/debug/", middlewareChain("debug", debugHandler()))
+}
+
+// registerPprof exposes the standard Go profiles under <context>/debug/pprof/.
+// Memstats alone cannot say WHAT is retaining memory, so a repeatedly
+// OOM-killed sloop (seen in CI with hundreds of CRD informers) could only be
+// diagnosed by inference. A heap profile names the retainer directly.
+//
+// The handlers live on their own mux behind StripPrefix because pprof.Index
+// derives the profile name by trimming the literal "/debug/pprof/" from the
+// request path: served under the context prefix it would never match, and
+// every profile request would silently render the index page instead.
+func registerPprof(mux *http.ServeMux, ccPrefix string) {
+	pprofMux := http.NewServeMux()
+	pprofMux.HandleFunc("/debug/pprof/", pprof.Index)
+	pprofMux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	pprofMux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	pprofMux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	pprofMux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	mux.Handle(ccPrefix+"/debug/pprof/", middlewareChain("pprof", http.StripPrefix(ccPrefix, pprofMux)))
 }
 
 func Run(config WebConfig, tables typed.Tables) error {

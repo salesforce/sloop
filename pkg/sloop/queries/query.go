@@ -23,6 +23,7 @@ var funcMap = map[string]ganttJsonQuery{
 	"EventHeatMap":      EventHeatMap3Query,
 	"GetEventData":      GetEventData,
 	"GetResPayload":     GetResPayload,
+	"GetResDescribe":    GetResDescribe,
 	"Namespaces":        NamespaceQuery,
 	"Kinds":             KindQuery,
 	"Queries":           QueryAvailableQueries,

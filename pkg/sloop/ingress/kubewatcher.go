@@ -28,6 +28,7 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/kubeextractor"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -81,6 +82,7 @@ var (
 	metricIngressKubewatchbytes         = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_ingress_kubewatchbytes"}, []string{"kind", "watchtype"})
 	metricCrdInformerStarted            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_started"})
 	metricCrdInformerRunning            = promauto.NewGauge(prometheus.GaugeOpts{Name: "sloop_crd_informer_running"})
+	metricCrdInformerWatchErrors        = promauto.NewCounterVec(prometheus.CounterOpts{Name: "sloop_crd_informer_watch_errors"}, []string{"kind", "group", "version"})
 )
 
 // Todo: Add additional parameters for filtering
@@ -93,40 +95,94 @@ func NewKubeWatcherSource(kubeClient kubernetes.Interface, outChan chan typed.Ku
 
 	kw.startWellKnownInformers(kubeClient, enableGranularMetrics)
 	if includeCrds {
-		err := kw.startCustomInformers(masterURL, kubeContext, enableGranularMetrics)
-		if err != nil {
-			return nil, err
-		}
-
+		// Arm the ticker BEFORE the first attempt: startCustomInformers fails
+		// wholesale on a transient CRD List error, and bailing out here meant
+		// the ticker was never created, so CRD watching stayed off for the
+		// life of the process while the well-known informers kept running and
+		// /healthz stayed green. With the ticker armed first, the refresh
+		// loop retries discovery every crdRefreshInterval until it succeeds.
+		// The goroutine is started only after the first attempt returns, so
+		// two startCustomInformers calls never race over the informer map.
 		kw.refreshCrd = time.NewTicker(crdRefreshInterval)
+		if err := kw.startCustomInformers(masterURL, kubeContext, enableGranularMetrics); err != nil {
+			glog.Errorf("Initial CRD discovery failed, retrying every %v: %v", crdRefreshInterval, err)
+		}
 		go kw.refreshCrdInformers(masterURL, kubeContext, enableGranularMetrics)
 	}
 
 	return kw, nil
 }
 
+// stripManagedFields drops metadata.managedFields before an object enters the
+// informer cache. Every informer keeps a decoded copy of every object it
+// watches, and sloop only ever consumes the event stream - no Lister or Store
+// read exists - so the cache is pure overhead that still has to be paid for.
+// managedFields is a large, purely administrative part of that: on a GDC
+// management plane it was 11% of recorded payload bytes, and it is dead weight
+// in the snapshots too. Removing it shrinks the caches, the badger store and
+// the backups at once.
+//
+// Mutating in place is safe ONLY on an object's first pass, while the informer
+// still owns it exclusively. The transform is not called once per object: the
+// DeltaFIFO applies it to every delta unconditionally, including Sync deltas
+// from the periodic resync and the tombstones a post-watch-gap relist produces.
+// Both of those carry the pointer already stored in the indexer - the same one
+// the handler goroutine may be marshaling right now - so a second write is a
+// data race. For unstructured objects (every CRD) SetManagedFields(nil) is a
+// map delete, and a map write concurrent with the json.Marshal walking that map
+// is a fatal, unrecoverable runtime abort, not a recoverable panic.
+//
+// So write only when there is something to remove. After the first pass the
+// field is gone, which makes every later pass a pure read.
+func stripManagedFields(obj any) (any, error) {
+	// A tombstone's inner object has already been through this transform on its
+	// way into the store, and is still the store's pointer; leave it alone.
+	if _, ok := obj.(cache.DeletedFinalStateUnknown); ok {
+		return obj, nil
+	}
+	accessor, err := meta.Accessor(obj)
+	if err != nil {
+		// Not a Kubernetes object; pass it through rather than dropping it.
+		return obj, nil
+	}
+	if len(accessor.GetManagedFields()) > 0 {
+		accessor.SetManagedFields(nil)
+	}
+	return obj, nil
+}
+
+// watchInformer wires one informer up to sloop: strip managedFields on the way
+// in, then emit each event. SetTransform must be installed before the informer
+// starts, so it goes first.
+func (i *kubeWatcherImpl) watchInformer(informer cache.SharedIndexInformer, kind string, enableGranularMetrics bool) {
+	if err := informer.SetTransform(stripManagedFields); err != nil {
+		glog.Errorf("Failed to install managedFields transform for %s: %v", kind, err)
+	}
+	informer.AddEventHandler(i.getEventHandlerForResource(kind, enableGranularMetrics))
+}
+
 func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interface, enableGranularMetrics bool) {
 	i.informerFactory = informers.NewSharedInformerFactory(kubeclient, i.resync)
 
-	i.informerFactory.Apps().V1().DaemonSets().Informer().AddEventHandler(i.getEventHandlerForResource("DaemonSet", enableGranularMetrics))
-	i.informerFactory.Apps().V1().Deployments().Informer().AddEventHandler(i.getEventHandlerForResource("Deployment", enableGranularMetrics))
-	i.informerFactory.Apps().V1().ReplicaSets().Informer().AddEventHandler(i.getEventHandlerForResource("ReplicaSet", enableGranularMetrics))
-	i.informerFactory.Apps().V1().StatefulSets().Informer().AddEventHandler(i.getEventHandlerForResource("StatefulSet", enableGranularMetrics))
-	i.informerFactory.Core().V1().ConfigMaps().Informer().AddEventHandler(i.getEventHandlerForResource("ConfigMap", enableGranularMetrics))
-	i.informerFactory.Core().V1().Endpoints().Informer().AddEventHandler(i.getEventHandlerForResource("Endpoint", enableGranularMetrics))
-	i.informerFactory.Core().V1().Events().Informer().AddEventHandler(i.getEventHandlerForResource("Event", enableGranularMetrics))
-	i.informerFactory.Autoscaling().V1().HorizontalPodAutoscalers().Informer().AddEventHandler(i.getEventHandlerForResource("HorizontalPodAutoscaler", enableGranularMetrics))
-	i.informerFactory.Batch().V1().Jobs().Informer().AddEventHandler(i.getEventHandlerForResource("Job", enableGranularMetrics))
-	i.informerFactory.Core().V1().Namespaces().Informer().AddEventHandler(i.getEventHandlerForResource("Namespace", enableGranularMetrics))
-	i.informerFactory.Core().V1().Nodes().Informer().AddEventHandler(i.getEventHandlerForResource("Node", enableGranularMetrics))
-	i.informerFactory.Core().V1().PersistentVolumeClaims().Informer().AddEventHandler(i.getEventHandlerForResource("PersistentVolumeClaim", enableGranularMetrics))
-	i.informerFactory.Core().V1().PersistentVolumes().Informer().AddEventHandler(i.getEventHandlerForResource("PersistentVolume", enableGranularMetrics))
-	i.informerFactory.Core().V1().Pods().Informer().AddEventHandler(i.getEventHandlerForResource("Pod", enableGranularMetrics))
-	i.informerFactory.Policy().V1beta1().PodDisruptionBudgets().Informer().AddEventHandler(i.getEventHandlerForResource("PodDisruptionBudget", enableGranularMetrics))
-	i.informerFactory.Core().V1().Services().Informer().AddEventHandler(i.getEventHandlerForResource("Service", enableGranularMetrics))
-	i.informerFactory.Core().V1().ReplicationControllers().Informer().AddEventHandler(i.getEventHandlerForResource("ReplicationController", enableGranularMetrics))
-	i.informerFactory.Storage().V1().StorageClasses().Informer().AddEventHandler(i.getEventHandlerForResource("StorageClass", enableGranularMetrics))
-	i.informerFactory.Admissionregistration().V1().MutatingWebhookConfigurations().Informer().AddEventHandler(i.getEventHandlerForResource("MutatingWebhookConfiguration", enableGranularMetrics))
+	i.watchInformer(i.informerFactory.Apps().V1().DaemonSets().Informer(), "DaemonSet", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Apps().V1().Deployments().Informer(), "Deployment", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Apps().V1().ReplicaSets().Informer(), "ReplicaSet", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Apps().V1().StatefulSets().Informer(), "StatefulSet", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().ConfigMaps().Informer(), "ConfigMap", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().Endpoints().Informer(), "Endpoint", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().Events().Informer(), "Event", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Autoscaling().V1().HorizontalPodAutoscalers().Informer(), "HorizontalPodAutoscaler", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Batch().V1().Jobs().Informer(), "Job", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().Namespaces().Informer(), "Namespace", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().Nodes().Informer(), "Node", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().PersistentVolumeClaims().Informer(), "PersistentVolumeClaim", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().PersistentVolumes().Informer(), "PersistentVolume", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().Pods().Informer(), "Pod", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Policy().V1().PodDisruptionBudgets().Informer(), "PodDisruptionBudget", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().Services().Informer(), "Service", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Core().V1().ReplicationControllers().Informer(), "ReplicationController", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Storage().V1().StorageClasses().Informer(), "StorageClass", enableGranularMetrics)
+	i.watchInformer(i.informerFactory.Admissionregistration().V1().MutatingWebhookConfigurations().Informer(), "MutatingWebhookConfiguration", enableGranularMetrics)
 	i.informerFactory.Start(i.stopChan)
 }
 
@@ -196,7 +252,19 @@ func (i *kubeWatcherImpl) startNewCrdInformer(crdInformer *crdInformerInfo, fact
 	gvr := schema.GroupVersionResource{Group: crdInformer.crd.group, Version: crdInformer.crd.version, Resource: crdInformer.crd.resource}
 	kind := crdInformer.crd.kind
 	informer := factory.ForResource(gvr)
-	informer.Informer().AddEventHandler(i.getEventHandlerForResource(kind, enableGranularMetrics))
+	i.watchInformer(informer.Informer(), kind, enableGranularMetrics)
+	// Reflector list/watch failures are otherwise invisible: Run() never
+	// returns an error and retries forever, and metricCrdInformerRunning is
+	// incremented before Run(), so a permanently failing informer (RBAC
+	// denied, unreachable apiserver) looks healthy from the outside while
+	// recording nothing. Count and log the failures so an empty database can
+	// be traced to its cause.
+	if err := informer.Informer().SetWatchErrorHandler(func(_ *cache.Reflector, err error) {
+		metricCrdInformerWatchErrors.WithLabelValues(kind, gvr.Group, gvr.Version).Inc()
+		glog.Errorf("CRD informer list/watch failed for %s (%v): %v", kind, gvr, err)
+	}); err != nil {
+		glog.Errorf("Failed to install watch error handler for %s (%v): %v", kind, gvr, err)
+	}
 
 	go func() {
 		glog.V(2).Infof("Starting CRD informer for: %s (%v)", kind, gvr)
@@ -227,11 +295,33 @@ func getCrdList(crdClient clientset.Interface) ([]crdGroupVersionResourceKind, e
 
 	var resources []crdGroupVersionResourceKind
 	for _, crd := range crdList.Items {
+		// Watch exactly one served version per CRD. The apiserver returns the
+		// same objects through every served version, so watching all of them
+		// wrote each object N times (observed: 220 watch events for 110
+		// Projects on a v1+v1alpha1 CRD), and an unserved version has no
+		// endpoint at all - its informer 404-loops forever while being
+		// counted as running. Prefer the storage version when it is served,
+		// else fall back to the first served one.
+		chosen := ""
 		for _, version := range crd.Spec.Versions {
-			gvrk := crdGroupVersionResourceKind{group: crd.Spec.Group, version: version.Name, resource: crd.Spec.Names.Plural, kind: crd.Spec.Names.Kind}
-			glog.V(2).Infof("CRD: group: %s, version: %s, kind: %s, plural:%s, singular:%s, short names:%v", crd.Spec.Group, version.Name, crd.Spec.Names.Kind, crd.Spec.Names.Plural, crd.Spec.Names.Singular, crd.Spec.Names.ShortNames)
-			resources = append(resources, gvrk)
+			if !version.Served {
+				continue
+			}
+			if chosen == "" {
+				chosen = version.Name
+			}
+			if version.Storage {
+				chosen = version.Name
+				break
+			}
 		}
+		if chosen == "" {
+			glog.V(2).Infof("CRD %s kind %s has no served versions; skipping", crd.Spec.Group, crd.Spec.Names.Kind)
+			continue
+		}
+		gvrk := crdGroupVersionResourceKind{group: crd.Spec.Group, version: chosen, resource: crd.Spec.Names.Plural, kind: crd.Spec.Names.Kind}
+		glog.V(2).Infof("CRD: group: %s, version: %s, kind: %s, plural:%s, singular:%s, short names:%v", crd.Spec.Group, chosen, crd.Spec.Names.Kind, crd.Spec.Names.Plural, crd.Spec.Names.Singular, crd.Spec.Names.ShortNames)
+		resources = append(resources, gvrk)
 	}
 	return resources, nil
 }
@@ -245,11 +335,28 @@ func getCrdListV1beta1(crdClient clientset.Interface) ([]crdGroupVersionResource
 	// duplicated code (see getCrdList), the types for crdList are different
 	var resources []crdGroupVersionResourceKind
 	for _, crd := range crdList.Items {
+		// See getCrdList: watch exactly one served version per CRD,
+		// preferring the storage version.
+		chosen := ""
 		for _, version := range crd.Spec.Versions {
-			gvrk := crdGroupVersionResourceKind{group: crd.Spec.Group, version: version.Name, resource: crd.Spec.Names.Plural, kind: crd.Spec.Names.Kind}
-			glog.V(2).Infof("CRD: group: %s, version: %s, kind: %s, plural:%s, singular:%s, short names:%v", crd.Spec.Group, version.Name, crd.Spec.Names.Kind, crd.Spec.Names.Plural, crd.Spec.Names.Singular, crd.Spec.Names.ShortNames)
-			resources = append(resources, gvrk)
+			if !version.Served {
+				continue
+			}
+			if chosen == "" {
+				chosen = version.Name
+			}
+			if version.Storage {
+				chosen = version.Name
+				break
+			}
 		}
+		if chosen == "" {
+			glog.V(2).Infof("CRD %s kind %s has no served versions; skipping", crd.Spec.Group, crd.Spec.Names.Kind)
+			continue
+		}
+		gvrk := crdGroupVersionResourceKind{group: crd.Spec.Group, version: chosen, resource: crd.Spec.Names.Plural, kind: crd.Spec.Names.Kind}
+		glog.V(2).Infof("CRD: group: %s, version: %s, kind: %s, plural:%s, singular:%s, short names:%v", crd.Spec.Group, chosen, crd.Spec.Names.Kind, crd.Spec.Names.Plural, crd.Spec.Names.Singular, crd.Spec.Names.ShortNames)
+		resources = append(resources, gvrk)
 	}
 	return resources, nil
 }
@@ -345,15 +452,24 @@ func (i *kubeWatcherImpl) processUpdate(kind string, obj interface{}, watchResul
 }
 
 func (i *kubeWatcherImpl) writeToOutChan(watchResult *typed.KubeWatchResult) {
-	// We need to ensure that no messages are written to outChan after stop is called
-	// Kube watch library has a way to tell it to stop, but no way to know it is complete
-	// Use a lock around output channel for this purpose
+	// We need to ensure that no messages are written to outChan after stop is called.
+	// The lock only guards the stopped check; we must NOT hold it across the channel
+	// send, otherwise a full channel would block here while holding i.protection, which
+	// deadlocks any other path that needs the lock (e.g. starting CRD informers during
+	// the initial sync of a cluster with many CRDs).
 	i.protection.Lock()
-	defer i.protection.Unlock()
-	if i.stopped {
+	stopped := i.stopped
+	i.protection.Unlock()
+	if stopped {
 		return
 	}
-	i.outchan <- *watchResult // WARNING - if this channel gets full, this push will block while holding i.protection in a locked state
+
+	// Send without holding the lock. Select on stopChan so that the send unblocks if the
+	// watcher is stopped while the channel is full, instead of blocking forever.
+	select {
+	case i.outchan <- *watchResult:
+	case <-i.stopChan:
+	}
 }
 
 func (i *kubeWatcherImpl) getResourceAsJsonString(kind string, obj interface{}) (string, error) {

@@ -170,6 +170,46 @@ For full license text, see LICENSE.txt file in the repo root or https://opensour
     });
 </script>
 
+<div id="resource_describe">
+    <h2>Describe</h2>
+    <p v-if="!describes.length"><i>No payloads found for this period</i></p>
+    <template v-if="describes.length">
+        <label for="describe_time">Resource state as of:</label>
+        <select id="describe_time" v-model="selectedIndex">
+            <option v-for="(item, index) in describes" :value="index">${ item.payloadTime | get_formatted_time }</option>
+        </select>
+        <pre id="describe_output">${ describes[selectedIndex].describe }</pre>
+    </template>
+</div>
+<script>
+    new Vue({
+        el: '#resource_describe',
+        delimiters: ['${', '}'],
+        data: {
+            describes: [],
+            selectedIndex: 0
+        },
+        filters: {
+            get_formatted_time(unixnano_time) {
+                return new Date(unixnano_time / 1000000).toISOString().split('T').join(' ');
+            }
+        },
+        mounted() {
+            axios
+                .get('{{.DescribeUrl}}')
+                .then(response => {
+                    if (response.data) {
+                        this.describes = response.data;
+                        // default to the most recent state in the window
+                        this.selectedIndex = this.describes.length - 1;
+                    } else {
+                        console.log("No describe data found for period")
+                    }
+                })
+        }
+    });
+</script>
+
 <div id="resource_events">
     <h2>Events</h2>
     <table id="resource_event_table">

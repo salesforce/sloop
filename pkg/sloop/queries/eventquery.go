@@ -33,7 +33,9 @@ type EventOutput struct {
 	EventKey       string                          `json:"eventKey"`
 }
 
-func GetEventData(params url.Values, t typed.Tables, startTime time.Time, endTime time.Time, requestId string) ([]byte, error) {
+// getEventWatchResults returns the watch records of the Events that involve the resource
+// selected by params, within [startTime, endTime].
+func getEventWatchResults(params url.Values, t typed.Tables, startTime time.Time, endTime time.Time, requestId string) (map[typed.WatchTableKey]*typed.KubeWatchResult, error) {
 	var watchEvents map[typed.WatchTableKey]*typed.KubeWatchResult
 	err := t.Db().View(func(txn badgerwrap.Txn) error {
 		var err2 error
@@ -68,6 +70,14 @@ func GetEventData(params url.Values, t typed.Tables, startTime time.Time, endTim
 		stats.Log(requestId)
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	return watchEvents, nil
+}
+
+func GetEventData(params url.Values, t typed.Tables, startTime time.Time, endTime time.Time, requestId string) ([]byte, error) {
+	watchEvents, err := getEventWatchResults(params, t, startTime, endTime, requestId)
 	if err != nil {
 		return []byte{}, err
 	}

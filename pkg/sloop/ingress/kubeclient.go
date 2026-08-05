@@ -54,6 +54,14 @@ func MakeKubernetesClient(masterURL string, kubeContext string, privilegedAccess
 	if privilegedAccess {
 		clientConfig := getConfig(masterURL, kubeContext)
 		config, err = ClientConfig(clientConfig)
+		// Check err before touching config: on failure config is nil and the
+		// former unconditional config.Host deref turned every config problem
+		// (missing kubeconfig, unresolvable context) into a panic/restart loop
+		// instead of an error the caller can retry.
+		if err != nil {
+			glog.Errorf("Cannot create config from kubeconfig (context=%v, masterURL=%v): %v", kubeContext, masterURL, err)
+			return nil, err
+		}
 		glog.Infof("Building k8sclient with context=%v, masterURL=%v, configFile=%v.", kubeContext, config.Host, clientConfig.ConfigAccess().GetLoadingPrecedence())
 	} else {
 		glog.Infof("Creating Config using BuildConfigFromFlags")

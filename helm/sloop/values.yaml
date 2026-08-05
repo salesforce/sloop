@@ -6,6 +6,19 @@ podLabels: {}
 podAnnotations: {}
 name: sloop
 replicas: 1
+## If set, mounts this Secret (expected to hold a kubeconfig under the key
+## "config") at /remote-kube and points sloop's KUBECONFIG at it, so this
+## instance watches the cluster described by that kubeconfig instead of the
+## cluster it runs on. Used to watch node-less clusters (e.g. a management
+## plane) from a cluster that has nodes.
+remoteKubeconfigSecret: ""
+## Soft memory limit for the Go runtime, as accepted by GOMEMLIMIT (e.g.
+## "6GiB"). Under a container memory limit the runtime is unaware of the
+## cgroup ceiling, so it happily grows past it and the kernel OOM-kills the
+## process mid-work; a soft limit makes the GC work harder as it approaches
+## instead. Set it BELOW resources.limits.memory (~85% is a reasonable start)
+## so non-heap memory still fits. Empty leaves the runtime default (no limit).
+goMemLimit: ""
 image:
   tag: latest
   repository: ghcr.io/salesforce/sloop

@@ -73,3 +73,28 @@ func TestBackupHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.NotNil(t, rr.Body.String())
 }
+
+func TestPprofHandler(t *testing.T) {
+	mux := http.NewServeMux()
+	registerPprof(mux, "/clusterContext")
+
+	// A named profile must return profile data, not the pprof index. Served
+	// under a context prefix without StripPrefix, pprof.Index fails to trim
+	// "/debug/pprof/" and falls through to the index page for every profile.
+	req, err := http.NewRequest("GET", "/clusterContext/debug/pprof/heap?debug=1", nil)
+	assert.Nil(t, err)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Contains(t, rr.Body.String(), "heap profile")
+
+	// The index itself still renders, and links to the profiles.
+	req, err = http.NewRequest("GET", "/clusterContext/debug/pprof/", nil)
+	assert.Nil(t, err)
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Contains(t, rr.Body.String(), "goroutine")
+}

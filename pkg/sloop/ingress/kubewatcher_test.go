@@ -23,8 +23,10 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	clientsetFake "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	dynamicFake "k8s.io/client-go/dynamic/fake"
 	kubernetesFake "k8s.io/client-go/kubernetes/fake"
@@ -39,11 +41,35 @@ type dummyData struct {
 
 // when fake client tries to list CRDs, return a list with one defined
 func reactionListOfOne(_ k8sTesting.Action) (bool, runtime.Object, error) {
-	versions := []apiextensionsv1.CustomResourceDefinitionVersion{{Name: "v1"}}
+	versions := []apiextensionsv1.CustomResourceDefinitionVersion{{Name: "v1", Served: true, Storage: true}}
 	name := apiextensionsv1.CustomResourceDefinitionNames{Plural: "things", Kind: "k"}
 	spec := apiextensionsv1.CustomResourceDefinitionSpec{Group: "g", Versions: versions, Names: name}
 	crd := apiextensionsv1.CustomResourceDefinition{Spec: spec}
 	list := apiextensionsv1.CustomResourceDefinitionList{Items: []apiextensionsv1.CustomResourceDefinition{crd}}
+	return true, &list, nil
+}
+
+// when fake client tries to list CRDs, return one CRD that serves two
+// versions (storage version listed second) plus one CRD with no served
+// version at all: getCrdList must pick exactly the storage version of the
+// first and skip the second entirely.
+func reactionMultiVersion(_ k8sTesting.Action) (bool, runtime.Object, error) {
+	dual := apiextensionsv1.CustomResourceDefinition{Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+		Group: "g",
+		Names: apiextensionsv1.CustomResourceDefinitionNames{Plural: "things", Kind: "k"},
+		Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
+			{Name: "v1alpha1", Served: true, Storage: false},
+			{Name: "v1", Served: true, Storage: true},
+		},
+	}}
+	unserved := apiextensionsv1.CustomResourceDefinition{Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+		Group: "g2",
+		Names: apiextensionsv1.CustomResourceDefinitionNames{Plural: "others", Kind: "o"},
+		Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
+			{Name: "v1", Served: false, Storage: true},
+		},
+	}}
+	list := apiextensionsv1.CustomResourceDefinitionList{Items: []apiextensionsv1.CustomResourceDefinition{dual, unserved}}
 	return true, &list, nil
 }
 
@@ -185,6 +211,15 @@ func Test_getCrdList(t *testing.T) {
 	crdList, err = getCrdList(crdClient)
 	assert.Len(t, crdList, 1)
 	assert.NoError(t, err)
+
+	// One informer per CRD, on the served storage version; CRDs with no
+	// served version are skipped entirely.
+	crdClient, _ = newTestCrdClient(reactionMultiVersion)(&rest.Config{})
+	crdList, err = getCrdList(crdClient)
+	assert.NoError(t, err)
+	assert.Len(t, crdList, 1)
+	assert.Equal(t, "v1", crdList[0].version)
+	assert.Equal(t, "k", crdList[0].kind)
 }
 
 func Test_getEventHandlerForResource(t *testing.T) {
@@ -333,4 +368,124 @@ func Test_existingOrStartNewCrdInformer(t *testing.T) {
 	for atomic.LoadInt64(&kw.activeCrdInformer) != 0 { // wait for the go routine to exit
 		time.Sleep(time.Millisecond)
 	}
+}
+
+func Test_stripManagedFields(t *testing.T) {
+	managed := []metav1.ManagedFieldsEntry{{Manager: "kubectl", Operation: metav1.ManagedFieldsOperationApply}}
+
+	// Typed object.
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "p1", ManagedFields: managed}}
+	out, err := stripManagedFields(pod)
+	assert.Nil(t, err)
+	assert.Empty(t, out.(*corev1.Pod).ManagedFields)
+	assert.Equal(t, "p1", out.(*corev1.Pod).Name)
+
+	// Unstructured object, as delivered by the CRD (dynamic) informers.
+	custom := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "resourcemanager.gdc.goog/v1alpha1",
+		"kind":       "Project",
+		"metadata": map[string]any{
+			"name":          "proj1",
+			"managedFields": []any{map[string]any{"manager": "kubectl"}},
+		},
+	}}
+	out, err = stripManagedFields(custom)
+	assert.Nil(t, err)
+	md := out.(*unstructured.Unstructured).Object["metadata"].(map[string]any)
+	_, stillThere := md["managedFields"]
+	assert.False(t, stillThere)
+	assert.Equal(t, "proj1", md["name"])
+
+	// A tombstone wraps the pointer the store already holds, which the handler
+	// goroutine may be serializing; it must be handed back untouched rather
+	// than written to a second time.
+	tombPod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "p2", ManagedFields: managed}}
+	out, err = stripManagedFields(cache.DeletedFinalStateUnknown{Key: "ns/p2", Obj: tombPod})
+	assert.Nil(t, err)
+	assert.Equal(t, managed, out.(cache.DeletedFinalStateUnknown).Obj.(*corev1.Pod).ManagedFields)
+
+	// Second pass over an already-stripped object must not write again.
+	stripped := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "p3", ManagedFields: managed}}
+	_, err = stripManagedFields(stripped)
+	assert.Nil(t, err)
+	assert.Empty(t, stripped.ManagedFields)
+	before := stripped.ManagedFields
+	_, err = stripManagedFields(stripped)
+	assert.Nil(t, err)
+	assert.Equal(t, fmt.Sprintf("%p", before), fmt.Sprintf("%p", stripped.ManagedFields))
+
+	// Non-Kubernetes payload passes through instead of being dropped.
+	out, err = stripManagedFields("not-an-object")
+	assert.Nil(t, err)
+	assert.Equal(t, "not-an-object", out)
+}
+
+// The DeltaFIFO applies the transform to every delta, not once per object: a
+// resync re-runs it against the pointer already in the store, which is the same
+// one the event handler is holding. This test fails under -race if the
+// transform writes to the object on that second pass. The informer floor for
+// resyncPeriod is 1s, so the window has to outlast it.
+func Test_stripManagedFieldsNoWriteOnResync(t *testing.T) {
+	obj := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "resourcemanager.gdc.goog/v1alpha1",
+		"kind":       "Project",
+		"metadata": map[string]any{
+			"name":          "p1",
+			"namespace":     "ns",
+			"managedFields": []any{map[string]any{"manager": "kubectl"}},
+		},
+	}}
+	lw := &cache.ListWatch{
+		ListFunc: func(_ metav1.ListOptions) (runtime.Object, error) {
+			return &unstructured.UnstructuredList{
+				Object: map[string]any{"apiVersion": "v1", "kind": "List", "metadata": map[string]any{"resourceVersion": "1"}},
+				Items:  []unstructured.Unstructured{*obj},
+			}, nil
+		},
+		WatchFunc: func(_ metav1.ListOptions) (watch.Interface, error) { return watch.NewFake(), nil },
+	}
+
+	informer := cache.NewSharedIndexInformer(lw, &unstructured.Unstructured{}, time.Second, cache.Indexers{})
+	assert.Nil(t, informer.SetTransform(stripManagedFields))
+
+	delivered := make(chan any, 1)
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(o any) {
+			select {
+			case delivered <- o:
+			default:
+			}
+		},
+	})
+
+	stop := make(chan struct{})
+	var running sync.WaitGroup
+	running.Add(1)
+	go func() {
+		defer running.Done()
+		informer.Run(stop)
+	}()
+	assert.True(t, cache.WaitForCacheSync(stop, informer.HasSynced))
+
+	got := <-delivered
+	// Serialize the delivered object the way getResourceAsJsonString does,
+	// spanning two resync ticks.
+	deadline := time.Now().Add(2500 * time.Millisecond)
+	var marshaling sync.WaitGroup
+	marshaling.Add(1)
+	go func() {
+		defer marshaling.Done()
+		for time.Now().Before(deadline) {
+			_, _ = json.Marshal(got)
+		}
+	}()
+	marshaling.Wait()
+
+	// Shut the informer down before returning so no goroutine outlives the test.
+	close(stop)
+	running.Wait()
+
+	md := got.(*unstructured.Unstructured).Object["metadata"].(map[string]any)
+	_, stillThere := md["managedFields"]
+	assert.False(t, stillThere)
 }

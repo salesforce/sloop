@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -96,18 +97,41 @@ func RealMain() error {
 	processor := processing.NewProcessing(kubeWatchChan, tables, conf.KeepMinorNodeUpdates, conf.MaxLookback)
 	processor.Start()
 
-	// Real kubernetes watcher
+	// Real kubernetes watcher.
+	//
+	// Setting up the watcher (especially CRD informers on clusters with many CRDs) can
+	// take a while during the initial sync. We start it in a background goroutine so that
+	// the webserver below can bind and start serving /healthz immediately, instead of the
+	// process appearing unhealthy (and being killed by liveness/startup probes) while the
+	// watcher is still coming up. Access to kubeWatcherSource is guarded by
+	// kubeWatcherMu because shutdown reads it from the main goroutine.
 	var kubeWatcherSource ingress.KubeWatcher
+	var kubeWatcherMu sync.Mutex
 	if !conf.DisableKubeWatcher {
-		kubeClient, err := ingress.MakeKubernetesClient(conf.ApiServerHost, kubeContext, conf.PrivilegedAccess)
-		if err != nil {
-			return errors.Wrap(err, "failed to create kubernetes client")
-		}
-
-		kubeWatcherSource, err = ingress.NewKubeWatcherSource(kubeClient, kubeWatchChan, conf.KubeWatchResyncInterval, conf.WatchCrds, conf.CrdRefreshInterval, conf.ApiServerHost, kubeContext, conf.EnableGranularMetrics, conf.ExclusionRules)
-		if err != nil {
-			return errors.Wrap(err, "failed to initialize kubeWatcher")
-		}
+		go func() {
+			// Retry forever instead of giving up on the first error: a
+			// transient API-server failure at startup (throttling, TLS
+			// timeout - common on management planes during a rollout, which
+			// is exactly when sloop starts) previously left the process
+			// running healthily for its whole life with zero watchers and an
+			// empty database, and nothing ever retried.
+			const retryDelay = time.Minute
+			for attempt := 1; ; attempt++ {
+				kubeClient, err := ingress.MakeKubernetesClient(conf.ApiServerHost, kubeContext, conf.PrivilegedAccess)
+				if err == nil {
+					var kw ingress.KubeWatcher
+					kw, err = ingress.NewKubeWatcherSource(kubeClient, kubeWatchChan, conf.KubeWatchResyncInterval, conf.WatchCrds, conf.CrdRefreshInterval, conf.ApiServerHost, kubeContext, conf.EnableGranularMetrics, conf.ExclusionRules)
+					if err == nil {
+						kubeWatcherMu.Lock()
+						kubeWatcherSource = kw
+						kubeWatcherMu.Unlock()
+						return
+					}
+				}
+				glog.Errorf("failed to initialize kubeWatcher (attempt %d, retrying in %v): %v", attempt, retryDelay, err)
+				time.Sleep(retryDelay)
+			}
+		}()
 	}
 
 	// File playback
@@ -175,8 +199,11 @@ func RealMain() error {
 	// 1. Shut down ingress so that it stops emitting events
 	// 2. Close the input channel which signals processing to finish work
 	// 3. Wait on processor to tell us all work is complete.  Store will not change after that
-	if kubeWatcherSource != nil {
-		kubeWatcherSource.Stop()
+	kubeWatcherMu.Lock()
+	kw := kubeWatcherSource
+	kubeWatcherMu.Unlock()
+	if kw != nil {
+		kw.Stop()
 	}
 	close(kubeWatchChan)
 	processor.Wait()

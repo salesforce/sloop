@@ -122,7 +122,9 @@ func Test_EventHeatMap3_SimpleTestWithOneDeployment(t *testing.T) {
 	assert.Nil(t, err)
 	expectedJson := `{
  "view_options": {
-  "sort": ""
+  "sort": "",
+  "query_start": 1551398400,
+  "query_end": 1551402000
  },
  "rows": [
   {
@@ -155,7 +157,9 @@ func Test_EventHeatMap3_OneDeploymentAnd3Events(t *testing.T) {
 	assert.Nil(t, err)
 	expectedJson := `{
  "view_options": {
-  "sort": ""
+  "sort": "",
+  "query_start": 1551398400,
+  "query_end": 1551402000
  },
  "rows": [
   {

@@ -94,7 +94,7 @@ func EventHeatMap3Query(params url.Values, t typed.Tables, queryStartTime time.T
 	sortParam := params.Get(SortParam)
 	outputRoot := TimelineRoot{
 		Rows:    outputRows,
-		ViewOpt: ViewOptions{Sort: sortParam},
+		ViewOpt: ViewOptions{Sort: sortParam, QueryStart: queryStartTime.Unix(), QueryEnd: queryEndTime.Unix()},
 	}
 
 	bytes, err := json.MarshalIndent(outputRoot, "", " ")

@@ -33,9 +33,12 @@ type PayloadOuput struct {
 	Payload     string `json:"payload,omitempty"`
 }
 
-func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTime time.Time, requestId string) ([]byte, error) {
+// getResPayloadWatchResults returns the watch records for the resource selected by params within
+// [startTime, endTime], plus the latest record just before startTime (so callers always have the
+// state of the resource as of the start of the window).
+func getResPayloadWatchResults(params url.Values, t typed.Tables, startTime time.Time, endTime time.Time, requestId string) (map[typed.WatchTableKey]*typed.KubeWatchResult, error) {
 
-	glog.V(common.GlogVerbose).Infof("GetResPayload: startTime: %v, endTime: %v", startTime.Unix(), endTime.Unix())
+	glog.V(common.GlogVerbose).Infof("getResPayloadWatchResults: startTime: %v, endTime: %v", startTime.Unix(), endTime.Unix())
 	var watchRes map[typed.WatchTableKey]*typed.KubeWatchResult
 	var previousKey *typed.WatchTableKey
 	var previousVal *typed.KubeWatchResult
@@ -83,6 +86,15 @@ func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTi
 		stats.Log(requestId)
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	return watchRes, nil
+}
+
+func GetResPayload(params url.Values, t typed.Tables, startTime time.Time, endTime time.Time, requestId string) ([]byte, error) {
+	watchRes, err := getResPayloadWatchResults(params, t, startTime, endTime, requestId)
 	if err != nil {
 		return []byte{}, err
 	}

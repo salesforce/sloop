@@ -89,7 +89,6 @@ $(document).ready(function(e) {
         var dateTimeValue = document.getElementById('selectedEndTime').value;
         var selectedEndTimeValue = dateTimeValue.toString();
         sessionStorage.setItem('selectedEndTime', selectedEndTimeValue);
-        sessionStorage.setItem('setSelectedEndTime', new Date().toISOString());
     });
 });
 
@@ -103,10 +102,11 @@ function setFiltersAndReturnQueryUrl(defaultLookback, defaultKind, defaultNamesp
     //       until we get the full list back
 
     selectedEndTime = sessionStorage.getItem('selectedEndTime')
-    // If user shut down the old window and open a new window, set the default ui displayed time to now
-    if (selectedEndTime === null) {
-        var now =  new Date().toISOString()
-        selectedEndTime = now.substring(0, now.length-5)
+    // With no explicit end time, send an empty end_time so the server anchors the window
+    // to the end of recorded data (see getEndOfTime in queries/timerange.go). On a live
+    // cluster that is "now"; when browsing a restored backup it is the backup's newest data.
+    if (selectedEndTime === null || selectedEndTime === "") {
+        selectedEndTime = ""
     }
     else {
         var endTime = new Date(selectedEndTime);

@@ -34,6 +34,7 @@ type resourceData struct {
 	Links         []ComputedLink
 	EventsUrl     string
 	PayloadUrl    string
+	DescribeUrl   string
 	PlusMinusTime time.Duration
 }
 
@@ -89,6 +90,9 @@ func resourceHandler(resLinks []ResourceLinkTemplate, currentContext string) htt
 
 		dataParams = fmt.Sprintf("?query=%v&namespace=%v&start_time=%v&end_time=%v&kind=%v&name=%v", "GetResPayload", d.Namespace, queryStart, queryEnd, d.Kind, d.Name)
 		d.PayloadUrl = path.Join("/", currentContext, "data"+dataParams)
+
+		dataParams = fmt.Sprintf("?query=%v&namespace=%v&start_time=%v&end_time=%v&kind=%v&name=%v", "GetResDescribe", d.Namespace, queryStart, queryEnd, d.Kind, d.Name)
+		d.DescribeUrl = path.Join("/", currentContext, "data"+dataParams)
 
 		err = resourceTemplate.Execute(writer, d)
 		if err != nil {
