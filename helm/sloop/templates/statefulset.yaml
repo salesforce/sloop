@@ -31,10 +31,16 @@ spec:
         - --config=/sloopconfig/sloop.json
         command:
         - /sloop
-        {{- if .Values.remoteKubeconfigSecret }}
+        {{- if or .Values.remoteKubeconfigSecret .Values.goMemLimit }}
         env:
+        {{- if .Values.remoteKubeconfigSecret }}
         - name: KUBECONFIG
           value: /remote-kube/config
+        {{- end }}
+        {{- if .Values.goMemLimit }}
+        - name: GOMEMLIMIT
+          value: {{ .Values.goMemLimit | quote }}
+        {{- end }}
         {{- end }}
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
